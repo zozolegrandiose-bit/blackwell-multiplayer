@@ -12,6 +12,33 @@ function publicRoster(gameState) {
   }));
 }
 
+// Shared by join:claim and game:requestReset (server/handlers/game.js) — the shape
+// a player's client expects, filtered to only the state slices their access allows.
+function buildSnapshot(gameState, player) {
+  const ownMail = gameState.mail.filter(m => m.fromPlayerId === player.id || m.toPlayerId === player.id);
+  const snapshot = {
+    players: publicRoster(gameState),
+    activityLog: gameState.activityLog,
+    financeKPIs: gameState.financeKPIs,
+    mail: ownMail,
+    playerScores: gameState.playerScores,
+    bankHealth: gameState.bankHealth,
+    bankrupt: gameState.bankrupt,
+    activeEvents: gameState.activeEvents
+  };
+  if (player.access.includes("ma")) snapshot.maDeals = gameState.maDeals;
+  if (player.access.includes("clients")) snapshot.clients = gameState.clients;
+  if (player.access.includes("compliance")) snapshot.complianceItems = gameState.complianceItems;
+  if (player.access.includes("hr")) {
+    snapshot.hr = gameState.hr;
+    snapshot.hrRoster = hrRosterView(gameState);
+  }
+  if (player.access.includes("agenda")) snapshot.agenda = gameState.agenda;
+  if (player.access.includes("documents")) snapshot.documents = gameState.documents;
+  if (player.access.includes("expenses")) snapshot.expenseReports = gameState.expenseReports;
+  return snapshot;
+}
+
 function registerJoinHandlers(io, socket, gameState) {
   socket.on("join:request", () => {
     socket.emit("join:roster", {
@@ -43,24 +70,7 @@ function registerJoinHandlers(io, socket, gameState) {
       text: player.fullName + " a rejoint la partie en tant que " + player.grade + ", " + player.dept + "."
     });
 
-    const ownMail = gameState.mail.filter(m => m.fromPlayerId === player.id || m.toPlayerId === player.id);
-    const snapshot = {
-      players: publicRoster(gameState),
-      activityLog: gameState.activityLog,
-      financeKPIs: gameState.financeKPIs,
-      mail: ownMail
-    };
-    if (player.access.includes("ma")) snapshot.maDeals = gameState.maDeals;
-    if (player.access.includes("clients")) snapshot.clients = gameState.clients;
-    if (player.access.includes("compliance")) snapshot.complianceItems = gameState.complianceItems;
-    if (player.access.includes("hr")) {
-      snapshot.hr = gameState.hr;
-      snapshot.hrRoster = hrRosterView(gameState);
-    }
-    if (player.access.includes("agenda")) snapshot.agenda = gameState.agenda;
-    if (player.access.includes("documents")) snapshot.documents = gameState.documents;
-    if (player.access.includes("expenses")) snapshot.expenseReports = gameState.expenseReports;
-    socket.emit("join:success", { player, snapshot });
+    socket.emit("join:success", { player, snapshot: buildSnapshot(gameState, player) });
     io.to("game").emit("roster:update", { players: publicRoster(gameState) });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
   });
@@ -78,4 +88,4 @@ function registerJoinHandlers(io, socket, gameState) {
   });
 }
 
-module.exports = { registerJoinHandlers, publicRoster };
+module.exports = { registerJoinHandlers, publicRoster, buildSnapshot };

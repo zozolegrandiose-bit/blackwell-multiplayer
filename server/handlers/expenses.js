@@ -1,4 +1,5 @@
 const { pushActivity } = require("../gameState");
+const { awardPoints } = require("../scoring");
 
 const EXPENSE_CATEGORIES = ["Transport", "Hôtel", "Repas d'affaires", "Divers"];
 let nextExpenseId = 1;
@@ -42,6 +43,7 @@ function registerExpensesHandlers(io, socket, gameState) {
       text: player.fullName + " a soumis une note de frais."
     });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
+    awardPoints(io, gameState, player, "expenses_submit");
   });
 
   socket.on("expenses:setStatus", payload => {
@@ -53,6 +55,7 @@ function registerExpensesHandlers(io, socket, gameState) {
 
     expense.status = payload.status;
     io.to("access:expenses").emit("expenses:update", gameState.expenseReports);
+    if (payload.status === "Approuvé") awardPoints(io, gameState, player, "expenses_approve");
   });
 }
 

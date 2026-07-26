@@ -12,7 +12,11 @@ const appState = {
   financeKPIs: {},
   agenda: [],
   documents: [],
-  expenseReports: []
+  expenseReports: [],
+  playerScores: {},
+  bankHealth: 100,
+  bankrupt: false,
+  activeEvents: []
 };
 
 const PAGE_RENDERERS = {};
@@ -60,6 +64,18 @@ function renderApp() {
         </div>
       </div>
       <div class="main-content">
+        ${appState.bankrupt ? `
+          <div class="bankruptcy-banner">
+            <div>💥 <b>Faillite de la banque.</b> La santé de la banque est tombée à zéro — la partie est terminée.</div>
+            ${player.hasFullAccess ? `<button id="btn-game-reset" class="btn-sm">Nouvelle partie</button>` : `<span style="font-size:11.5px; color:var(--text-muted);">Seule la Direction Générale peut relancer une partie.</span>`}
+          </div>
+        ` : ""}
+        ${(appState.activeEvents || []).map(ev => `
+          <div class="event-banner">
+            <div>${ev.type === "regulatory" ? "🚨" : ev.type === "client_unhappy" ? "😠" : "⭐"} <b>${escapeHtml(ev.label)}</b> — ${escapeHtml(ev.description)}</div>
+            ${ev.deadline ? `<div class="event-banner-deadline">⏱ ${Math.max(0, Math.round((ev.deadline - Date.now()) / 1000))}s</div>` : ""}
+          </div>
+        `).join("")}
         ${renderer ? renderer() : `<div class="page-empty">Page indisponible.</div>`}
       </div>
     </div>
@@ -71,6 +87,8 @@ function bindApp() {
   document.querySelectorAll("[data-nav-page]").forEach(el => {
     el.addEventListener("click", () => switchPage(el.getAttribute("data-nav-page")));
   });
+  const resetBtn = document.getElementById("btn-game-reset");
+  if (resetBtn) resetBtn.addEventListener("click", () => socket.emit("game:requestReset"));
   const binder = PAGE_BINDERS[appState.currentPage];
   if (binder) binder();
 }

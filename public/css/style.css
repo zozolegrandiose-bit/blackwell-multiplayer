@@ -242,4 +242,37 @@ body {
 .panel:hover { box-shadow: 0 2px 8px rgba(28,26,22,0.08); }
 
 .sparkline-wrap { display: flex; align-items: center; gap: 10px; }
+
+.bankruptcy-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: #fbe3e0;
+  border: 1px solid var(--series-red);
+  color: #6b2620;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 18px;
+  font-size: 13px;
+}
+
+.event-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: #fbeed9;
+  border: 1px solid var(--brass-500);
+  color: #6b4f1f;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+}
+.event-banner-deadline {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
 .tnum { font-variant-numeric: tabular-nums; }

@@ -1,4 +1,5 @@
 const { pushActivity } = require("../gameState");
+const { awardPoints } = require("../scoring");
 
 let nextDocId = 1;
 
@@ -35,6 +36,7 @@ function registerDocumentsHandlers(io, socket, gameState) {
       text: player.fullName + " a déposé un document : « " + name + " »."
     });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
+    awardPoints(io, gameState, player, "documents_upload");
   });
 }
 

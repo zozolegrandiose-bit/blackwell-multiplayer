@@ -11,9 +11,11 @@ const { registerComplianceHandlers } = require("./handlers/compliance");
 const { registerHrHandlers } = require("./handlers/hr");
 const { registerFinanceHandlers } = require("./handlers/finance");
 const { startAiLoop } = require("./ai");
+const { startEventLoops } = require("./events");
 const { registerAgendaHandlers } = require("./handlers/agenda");
 const { registerDocumentsHandlers } = require("./handlers/documents");
 const { registerExpensesHandlers } = require("./handlers/expenses");
+const { registerGameHandlers } = require("./handlers/game");
 
 const app = express();
 const httpServer = createServer(app);
@@ -33,9 +35,11 @@ io.on("connection", socket => {
   registerAgendaHandlers(io, socket, gameState);
   registerDocumentsHandlers(io, socket, gameState);
   registerExpensesHandlers(io, socket, gameState);
+  registerGameHandlers(io, socket, gameState);
 });
 
 startAiLoop(io, gameState);
+startEventLoops(io, gameState);
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {

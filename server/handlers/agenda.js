@@ -1,4 +1,5 @@
 const { pushActivity } = require("../gameState");
+const { awardPoints } = require("../scoring");
 
 let nextMeetingId = 1;
 
@@ -41,6 +42,7 @@ function registerAgendaHandlers(io, socket, gameState) {
       text: player.fullName + " a créé une réunion : « " + title + " »."
     });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
+    awardPoints(io, gameState, player, "agenda_create");
   });
 }
 

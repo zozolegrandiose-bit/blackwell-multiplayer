@@ -204,6 +204,46 @@ socket.on("expenses:submit:rejected", data => {
   if (errorEl) errorEl.textContent = data.reason;
 });
 
+socket.on("scoring:update", data => {
+  if (!window.currentPlayer) return;
+  appState.playerScores = data.playerScores;
+  appState.bankHealth = data.bankHealth;
+  if (appState.currentPage === "overview") renderApp();
+});
+
+socket.on("events:update", events => {
+  if (!window.currentPlayer) return;
+  appState.activeEvents = events;
+  renderApp();
+});
+
+socket.on("event:triggered", () => {
+  if (!window.currentPlayer) return;
+  renderApp();
+});
+
+socket.on("event:resolved", () => {
+  if (!window.currentPlayer) return;
+  renderApp();
+});
+
+socket.on("event:expired", () => {
+  if (!window.currentPlayer) return;
+  renderApp();
+});
+
+socket.on("game:bankrupt", () => {
+  if (!window.currentPlayer) return;
+  appState.bankrupt = true;
+  renderApp();
+});
+
+socket.on("game:reset", data => {
+  if (!window.currentPlayer) return;
+  window.currentPlayer = data.player;
+  initApp(data.player, data.snapshot);
+});
+
 socket.on("activity:update", entry => {
   if (!window.currentPlayer) return;
   appState.activityLog.unshift(entry);

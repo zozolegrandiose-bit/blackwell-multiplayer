@@ -1,4 +1,5 @@
 const { pushActivity } = require("../gameState");
+const { awardPoints, checkEventResolution } = require("../scoring");
 
 const COMPLIANCE_TYPES = ["Surveillance marché", "Éthique & Déontologie", "KYC/AML", "Réglementaire"];
 const COMPLIANCE_STATUSES = ["Ouvert", "En cours d'analyse", "Résolu", "Escaladé"];
@@ -24,6 +25,33 @@ function progressRandomComplianceItem(io, gameState, actor) {
   });
   io.to("game").emit("activity:update", gameState.activityLog[0]);
   return true;
+}
+
+// Reusable: mints a compliance item via the same id counter as compliance:create,
+// used by server/events.js to spawn a "Contrôle réglementaire" crisis.
+function createUrgentComplianceItem(io, gameState, flag) {
+  const item = {
+    id: "cp" + (nextItemId++),
+    type: "Réglementaire",
+    desk: "—",
+    flag,
+    status: "Ouvert",
+    ts: Date.now(),
+    raisedByPlayerId: null,
+    raisedByName: "Alerte automatique",
+    assignedToPlayerId: null,
+    assignedToName: null
+  };
+  gameState.complianceItems.push(item);
+  io.to("access:compliance").emit("compliance:update", gameState.complianceItems);
+  return item;
+}
+
+function escalateComplianceItem(io, gameState, itemId) {
+  const item = gameState.complianceItems.find(i => i.id === itemId);
+  if (!item) return;
+  item.status = "Escaladé";
+  io.to("access:compliance").emit("compliance:update", gameState.complianceItems);
 }
 
 function registerComplianceHandlers(io, socket, gameState) {
@@ -63,10 +91,17 @@ function registerComplianceHandlers(io, socket, gameState) {
 
   socket.on("compliance:updateStatus", payload => {
     if (!requireAccess(socket, "compliance")) return;
+    const player = gameState.players.find(p => p.id === socket.data.playerId);
     const item = gameState.complianceItems.find(i => i.id === payload.itemId);
     if (!item || !COMPLIANCE_STATUSES.includes(payload.status)) return;
+
+    const wasResolved = item.status === "Résolu";
     item.status = payload.status;
     io.to("access:compliance").emit("compliance:update", gameState.complianceItems);
+    if (!wasResolved && payload.status === "Résolu") {
+      awardPoints(io, gameState, player, "compliance_resolve");
+      checkEventResolution(io, gameState, item.id, player);
+    }
   });
 
   socket.on("compliance:assign", payload => {
@@ -86,4 +121,4 @@ function registerComplianceHandlers(io, socket, gameState) {
   });
 }
 
-module.exports = { registerComplianceHandlers, COMPLIANCE_TYPES, COMPLIANCE_STATUSES, progressRandomComplianceItem };
+module.exports = { registerComplianceHandlers, COMPLIANCE_TYPES, COMPLIANCE_STATUSES, progressRandomComplianceItem, createUrgentComplianceItem, escalateComplianceItem };

@@ -1,4 +1,5 @@
 const { pushActivity } = require("../gameState");
+const { awardPoints, checkEventResolution } = require("../scoring");
 
 const CLIENT_STATUSES = ["Prospect", "Actif", "En revue", "Inactif"];
 const CLIENT_RISKS = ["Low", "Medium", "High"];
@@ -65,14 +66,17 @@ function registerClientsHandlers(io, socket, gameState) {
       text: player.fullName + " a ajouté un nouveau client."
     });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
+    awardPoints(io, gameState, player, "clients_create");
   });
 
   socket.on("clients:updateStatus", payload => {
     if (!requireAccess(socket, "clients")) return;
+    const player = gameState.players.find(p => p.id === socket.data.playerId);
     const client = gameState.clients.find(c => c.id === payload.clientId);
     if (!client || !CLIENT_STATUSES.includes(payload.status)) return;
     client.status = payload.status;
     io.to("access:clients").emit("clients:update", gameState.clients);
+    if (payload.status !== "En revue") checkEventResolution(io, gameState, client.id, player);
   });
 
   socket.on("clients:addNote", payload => {
@@ -84,14 +88,20 @@ function registerClientsHandlers(io, socket, gameState) {
 
     client.notes.push({ authorPlayerId: player.id, authorName: player.fullName, ts: Date.now(), text });
     io.to("access:clients").emit("clients:update", gameState.clients);
+    awardPoints(io, gameState, player, "clients_note");
+    checkEventResolution(io, gameState, client.id, player);
   });
 
   socket.on("clients:toggleKyc", payload => {
     if (!requireAccess(socket, "clients")) return;
+    const player = gameState.players.find(p => p.id === socket.data.playerId);
     const client = gameState.clients.find(c => c.id === payload.clientId);
     if (!client || !client.kycChecklist || !client.kycChecklist[payload.index]) return;
-    client.kycChecklist[payload.index].done = !client.kycChecklist[payload.index].done;
+
+    const wasDone = client.kycChecklist[payload.index].done;
+    client.kycChecklist[payload.index].done = !wasDone;
     io.to("access:clients").emit("clients:update", gameState.clients);
+    if (!wasDone) awardPoints(io, gameState, player, "clients_kycDone");
   });
 }
 

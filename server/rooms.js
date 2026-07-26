@@ -1,6 +1,7 @@
 const { GRADES, DEPARTMENTS } = require("./seedData");
 const { getAccessForPosition, hasFullAccess } = require("./departmentAccess");
 const { ONBOARDING_ITEMS } = require("./handlers/hr");
+const { playerKey } = require("./scoring");
 
 function slotKey(grade, dept) {
   return grade + "|||" + dept;
@@ -13,6 +14,13 @@ function isValidPosition(grade, dept) {
 function isSlotTaken(gameState, grade, dept) {
   const key = slotKey(grade, dept);
   return gameState.players.some(p => slotKey(p.grade, p.dept) === key);
+}
+
+// Independent of the grade/dept slot system: guarantees playerScores keys
+// (keyed by firstName+lastName, see scoring.js) stay unique among live players.
+function isNameTaken(gameState, firstName, lastName) {
+  const key = playerKey({ firstName, lastName });
+  return gameState.players.some(p => playerKey(p) === key);
 }
 
 function getTakenSlots(gameState) {
@@ -34,6 +42,9 @@ function claimSlot(gameState, { socketId, firstName, lastName, grade, dept }) {
   }
   if (isSlotTaken(gameState, grade, dept)) {
     return { ok: false, reason: "Ce poste est déjà occupé." };
+  }
+  if (isNameTaken(gameState, firstName, lastName)) {
+    return { ok: false, reason: "Ce nom est déjà utilisé par un joueur connecté." };
   }
 
   const player = {
@@ -60,4 +71,4 @@ function releaseSlotBySocketId(gameState, socketId) {
   return removed;
 }
 
-module.exports = { slotKey, isValidPosition, isSlotTaken, getTakenSlots, claimSlot, releaseSlotBySocketId };
+module.exports = { slotKey, isValidPosition, isSlotTaken, isNameTaken, getTakenSlots, claimSlot, releaseSlotBySocketId };

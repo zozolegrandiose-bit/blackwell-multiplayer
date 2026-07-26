@@ -1,4 +1,5 @@
 const { pushActivity } = require("../gameState");
+const { awardPoints } = require("../scoring");
 
 const LEAVE_TYPES = ["Congés payés", "RTT", "Arrêt maladie", "Congé sans solde"];
 const ONBOARDING_ITEMS = ["Contrat signé", "Poste de travail", "Compte IT", "Badge d'accès", "Formation d'intégration"];
@@ -61,18 +62,24 @@ function registerHrHandlers(io, socket, gameState) {
 
   socket.on("hr:setLeaveStatus", payload => {
     if (!requireAccess(socket, "hr")) return;
+    const actor = gameState.players.find(p => p.id === socket.data.playerId);
     const request = gameState.hr.leaveRequests.find(r => r.id === payload.requestId);
     if (!request || !["Approuvé", "Refusé"].includes(payload.status)) return;
     request.status = payload.status;
     io.to("access:hr").emit("hr:update", gameState.hr);
+    if (payload.status === "Approuvé") awardPoints(io, gameState, actor, "hr_approveLeave");
   });
 
   socket.on("hr:toggleOnboarding", payload => {
     if (!requireAccess(socket, "hr")) return;
-    const player = gameState.players.find(p => p.id === payload.playerId);
-    if (!player || !player.onboarding || !player.onboarding[payload.index]) return;
-    player.onboarding[payload.index].done = !player.onboarding[payload.index].done;
+    const actor = gameState.players.find(p => p.id === socket.data.playerId);
+    const target = gameState.players.find(p => p.id === payload.playerId);
+    if (!target || !target.onboarding || !target.onboarding[payload.index]) return;
+
+    const wasDone = target.onboarding[payload.index].done;
+    target.onboarding[payload.index].done = !wasDone;
     io.to("access:hr").emit("hr:rosterUpdate", hrRosterView(gameState));
+    if (!wasDone) awardPoints(io, gameState, actor, "hr_onboardingDone");
   });
 }
 

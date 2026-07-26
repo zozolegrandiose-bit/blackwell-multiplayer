@@ -1,0 +1,98 @@
+const { pushActivity } = require("./gameState");
+
+const POINT_VALUES = {
+  ma_create: 10,
+  ma_advanceStage: 15,
+  ma_closeDeal: 50,
+  ma_checklistDone: 5,
+  ma_icVoteDone: 5,
+  clients_create: 10,
+  clients_note: 2,
+  clients_kycDone: 5,
+  compliance_resolve: 15,
+  hr_approveLeave: 3,
+  hr_onboardingDone: 3,
+  agenda_create: 3,
+  documents_upload: 3,
+  expenses_submit: 2,
+  expenses_approve: 3,
+  event_resolved: 25
+};
+
+// Health deltas tied to specific scored actions. Negative deltas from crisis
+// events (market crash, unresolved crises) are applied directly via applyHealthDelta,
+// not listed here.
+const HEALTH_DELTAS = {
+  compliance_resolve: 2,
+  ma_closeDeal: 5,
+  event_resolved: 5
+};
+
+// Ordered richest-first so getTier() can return the first match.
+const TIERS = [
+  { min: 500, label: "Légende", icon: "💎" },
+  { min: 200, label: "Senior", icon: "🥇" },
+  { min: 50, label: "Confirmé", icon: "🥈" },
+  { min: 0, label: "Stagiaire", icon: "🥉" }
+];
+
+function playerKey(player) {
+  return (player.firstName + "|" + player.lastName).trim().toLowerCase();
+}
+
+function getTier(score) {
+  return TIERS.find(t => score >= t.min) || TIERS[TIERS.length - 1];
+}
+
+function applyHealthDelta(io, gameState, delta) {
+  if (gameState.bankrupt || !delta) return;
+  gameState.bankHealth = Math.max(0, Math.min(100, gameState.bankHealth + delta));
+  if (gameState.bankHealth === 0) {
+    gameState.bankrupt = true;
+    io.to("game").emit("game:bankrupt", { playerScores: gameState.playerScores });
+  }
+}
+
+// Single choke point for all scoring: called from handlers at meaningful state
+// transitions only (never on raw handler invocation) to avoid spam-farming points.
+// AI-driven actions (actor.id === null) never earn a human score.
+// Called from handlers (compliance/clients/ma) right after their normal mutation,
+// to detect whether that action just resolved an active crisis/opportunity event
+// tied to the same target (see server/events.js). Lives here rather than in
+// events.js to avoid a circular require (events.js needs to create compliance
+// items / deals via those handlers' own exports).
+function checkEventResolution(io, gameState, targetId, actor) {
+  const idx = gameState.activeEvents.findIndex(e => e.targetId === targetId);
+  if (idx === -1) return;
+  const [event] = gameState.activeEvents.splice(idx, 1);
+
+  awardPoints(io, gameState, actor, "event_resolved");
+  pushActivity(gameState, {
+    actorPlayerId: actor ? actor.id : null,
+    page: "overview",
+    text: (actor ? actor.fullName : "Quelqu'un") + " a résolu à temps : " + event.label + "."
+  });
+  io.to("game").emit("events:update", gameState.activeEvents);
+  io.to("game").emit("event:resolved", { id: event.id, type: event.type, label: event.label });
+  io.to("game").emit("activity:update", gameState.activityLog[0]);
+}
+
+function awardPoints(io, gameState, player, actionType, extraHealthDelta) {
+  if (gameState.bankrupt) return;
+  if (!player || player.id === null) return;
+
+  const points = POINT_VALUES[actionType] || 0;
+  const key = playerKey(player);
+  if (!gameState.playerScores[key]) {
+    gameState.playerScores[key] = { fullName: player.fullName, score: 0 };
+  }
+  gameState.playerScores[key].score += points;
+  gameState.playerScores[key].fullName = player.fullName;
+
+  const healthDelta = (HEALTH_DELTAS[actionType] || 0) + (extraHealthDelta || 0);
+  applyHealthDelta(io, gameState, healthDelta);
+
+  io.to("game").emit("scoring:update", { playerScores: gameState.playerScores, bankHealth: gameState.bankHealth });
+}
+
+module.exports = { awardPoints, applyHealthDelta, checkEventResolution, playerKey, getTier, TIERS, POINT_VALUES };

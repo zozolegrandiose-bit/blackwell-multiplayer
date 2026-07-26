@@ -70,6 +70,30 @@ function deptBadgeHtml(dept) {
   return `<span class="dept-badge" style="background:${color}22; color:${color}; border:1px solid ${color}55;">${escapeHtml(dept)}</span>`;
 }
 
+const PROGRESSION_TIERS = [
+  { min: 500, label: "Légende", icon: "💎" },
+  { min: 200, label: "Senior", icon: "🥇" },
+  { min: 50, label: "Confirmé", icon: "🥈" },
+  { min: 0, label: "Stagiaire", icon: "🥉" }
+];
+
+function getProgressionTier(score) {
+  return PROGRESSION_TIERS.find(t => score >= t.min) || PROGRESSION_TIERS[PROGRESSION_TIERS.length - 1];
+}
+
+// Server keys playerScores by firstName|lastName, which isn't exposed in the
+// public roster — look up by fullName instead (guaranteed unique among
+// connected players since Patch 3's name-uniqueness check in rooms.js).
+function scoreForPlayer(playerScores, fullName) {
+  const entry = Object.values(playerScores || {}).find(e => e.fullName === fullName);
+  return entry ? entry.score : 0;
+}
+
+function tierBadgeHtml(score) {
+  const tier = getProgressionTier(score || 0);
+  return `<span title="${tier.label} — ${score || 0} pts">${tier.icon}</span>`;
+}
+
 function sparklineSvg(values, width, height) {
   width = width || 120;
   height = height || 32;

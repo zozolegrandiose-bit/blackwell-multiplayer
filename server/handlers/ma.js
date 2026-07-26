@@ -1,4 +1,5 @@
 const { pushActivity } = require("../gameState");
+const { awardPoints, checkEventResolution } = require("../scoring");
 
 const MA_STAGES = ["Screening", "Due Diligence", "Négociation", "Signing", "Clôturé"];
 const IC_VOTE_ITEMS = ["Validation Risques", "Validation Juridique", "Validation Direction Générale"];
@@ -25,6 +26,33 @@ function advanceRandomDeal(io, gameState, actor) {
   });
   io.to("game").emit("activity:update", gameState.activityLog[0]);
   return true;
+}
+
+// Reusable: mints a bonus deal via the same id counter as ma:create, used by
+// server/events.js to spawn an "Opportunité de marché" event.
+function createBonusDeal(io, gameState, { name, valuation }) {
+  const deal = {
+    id: "deal" + (nextDealId++),
+    name,
+    stage: "Screening",
+    valuation,
+    synergies: 0,
+    leadBankerPlayerId: null,
+    leadBankerName: "Poste vacant",
+    description: "Opportunité de marché à durée limitée.",
+    ddChecklist: [],
+    icVote: [],
+    createdByPlayerId: null,
+    updatedAt: Date.now()
+  };
+  gameState.maDeals.push(deal);
+  io.to("access:ma").emit("ma:update", gameState.maDeals);
+  return deal;
+}
+
+function removeDeal(io, gameState, dealId) {
+  gameState.maDeals = gameState.maDeals.filter(d => d.id !== dealId);
+  io.to("access:ma").emit("ma:update", gameState.maDeals);
 }
 
 function registerMaHandlers(io, socket, gameState) {
@@ -66,6 +94,7 @@ function registerMaHandlers(io, socket, gameState) {
       text: player.fullName + " a créé un nouveau projet M&A."
     });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
+    awardPoints(io, gameState, player, "ma_create");
   });
 
   socket.on("ma:updateStage", payload => {
@@ -84,27 +113,35 @@ function registerMaHandlers(io, socket, gameState) {
       text: player.fullName + " a fait avancer un projet M&A à l'étape « " + payload.stage + " »."
     });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
+    awardPoints(io, gameState, player, payload.stage === "Clôturé" ? "ma_closeDeal" : "ma_advanceStage");
+    checkEventResolution(io, gameState, deal.id, player);
   });
 
   socket.on("ma:toggleChecklist", payload => {
     if (!requireAccess(socket, "ma")) return;
+    const player = gameState.players.find(p => p.id === socket.data.playerId);
     const deal = gameState.maDeals.find(d => d.id === payload.dealId);
     if (!deal || !deal.ddChecklist[payload.index]) return;
 
-    deal.ddChecklist[payload.index].done = !deal.ddChecklist[payload.index].done;
+    const wasDone = deal.ddChecklist[payload.index].done;
+    deal.ddChecklist[payload.index].done = !wasDone;
     deal.updatedAt = Date.now();
     io.to("access:ma").emit("ma:update", gameState.maDeals);
+    if (!wasDone) awardPoints(io, gameState, player, "ma_checklistDone");
   });
 
   socket.on("ma:toggleIcVote", payload => {
     if (!requireAccess(socket, "ma")) return;
+    const player = gameState.players.find(p => p.id === socket.data.playerId);
     const deal = gameState.maDeals.find(d => d.id === payload.dealId);
     if (!deal || !deal.icVote || !deal.icVote[payload.index]) return;
 
-    deal.icVote[payload.index].done = !deal.icVote[payload.index].done;
+    const wasDone = deal.icVote[payload.index].done;
+    deal.icVote[payload.index].done = !wasDone;
     deal.updatedAt = Date.now();
     io.to("access:ma").emit("ma:update", gameState.maDeals);
+    if (!wasDone) awardPoints(io, gameState, player, "ma_icVoteDone");
   });
 }
 
-module.exports = { registerMaHandlers, MA_STAGES, IC_VOTE_ITEMS, advanceRandomDeal };
+module.exports = { registerMaHandlers, MA_STAGES, IC_VOTE_ITEMS, advanceRandomDeal, createBonusDeal, removeDeal };

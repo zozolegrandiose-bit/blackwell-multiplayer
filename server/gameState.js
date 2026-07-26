@@ -75,7 +75,11 @@ function createGameState() {
         { dept: "Ressources Humaines", budget: 25, actual: 24 }
       ]
     },
-    activityLog: []
+    activityLog: [],
+    playerScores: {},
+    bankHealth: 100,
+    bankrupt: false,
+    activeEvents: []
   };
 }
 
@@ -88,6 +92,20 @@ function pushActivity(gameState, entry) {
   }
 }
 
+// Rebuilds all business state in place (same object reference, so every module
+// that captured `gameState` by reference stays valid) while preserving the
+// array of currently-connected players — resetting must not drop live
+// Socket.io room memberships or force a reconnect.
+function resetGame(gameState) {
+  const preservedPlayers = gameState.players;
+  const fresh = createGameState();
+  Object.keys(fresh).forEach(key => {
+    gameState[key] = fresh[key];
+  });
+  gameState.players = preservedPlayers;
+  return gameState;
+}
+
 const gameState = createGameState();
 
-module.exports = { gameState, createGameState, pushActivity };
+module.exports = { gameState, createGameState, pushActivity, resetGame };
