@@ -23,6 +23,7 @@ function renderFinance() {
   return `
     <div class="page-title">Finance</div>
     <div class="page-sub">Indicateurs financiers du groupe, éditables et historisés.</div>
+    ${taskPanelHtml("finance")}
     <div class="kpi-grid">
       ${Object.keys(FIELD_LABELS).map(f => `
         <div class="kpi-card">
@@ -55,7 +56,7 @@ function renderFinance() {
               <td class="tnum">${r.actual}</td>
               <td><span class="chip ${cls}">${variance >= 0 ? "+" : ""}${variance}</span></td>
               <td>
-                <input data-fin-budget-input="${escapeHtml(r.dept)}" type="number" step="1" placeholder="Nouveau réalisé" style="width:110px; padding:5px 7px; border-radius:6px; border:1px solid var(--line-200); font-size:12px;"/>
+                <input data-fin-budget-input="${escapeHtml(r.dept)}" type="number" step="1" placeholder="Nouveau réalisé" style="width:110px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
                 <button data-fin-budget-btn="${escapeHtml(r.dept)}" class="btn-sm">OK</button>
               </td>
             </tr>
@@ -95,6 +96,7 @@ function bindFinance() {
       socket.emit("finance:updateBudgetActual", { dept, actual });
     });
   });
+  bindTaskPanel();
 }
 
 PAGE_RENDERERS.finance = renderFinance;

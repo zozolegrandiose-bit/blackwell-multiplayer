@@ -19,7 +19,9 @@ const appState = {
   activeEvents: [],
   campaignGoal: { targetAUM: 500000, maxQuarters: 20 },
   victory: false,
-  currentQuarter: 1
+  currentQuarter: 1,
+  taskQueue: [],
+  tasksSummary: {}
 };
 
 const PAGE_RENDERERS = {};

@@ -85,7 +85,8 @@ function createGameState() {
     quarterDeadline: null,
     quarterDecisions: {},
     campaignGoal: { targetAUM: 500000, maxQuarters: 20 },
-    victory: false
+    victory: false,
+    taskQueue: []
   };
 }
 

@@ -20,10 +20,11 @@ function renderMa() {
   return `
     <div class="page-title">M&amp;A</div>
     <div class="page-sub">Pipeline d'opérations — visible par Direction Générale et les métiers de dealmaking.</div>
+    ${taskPanelHtml("ma")}
     <div class="panel" style="margin-bottom:16px;">
       <div class="panel-title">Nouveau projet</div>
       <div class="form-row"><label>Nom du projet</label><input id="ma-name" type="text" placeholder="ex. Projet Atlas — acquisition XYZ"/></div>
-      <div class="form-row"><label>Description</label><textarea id="ma-desc" rows="2" placeholder="Résumé de l'opération…" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--line-200); font-size:13px;"></textarea></div>
+      <div class="form-row"><label>Description</label><textarea id="ma-desc" rows="2" placeholder="Résumé de l'opération…" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); font-size:13px;"></textarea></div>
       <div class="form-row"><label>Valorisation estimée (M$)</label><input id="ma-valuation" type="number" placeholder="ex. 500"/></div>
       <div class="form-row"><label>Synergies estimées (M$)</label><input id="ma-synergies" type="number" placeholder="ex. 20"/></div>
       <div id="ma-error" class="join-error"></div>
@@ -126,6 +127,7 @@ function bindMa() {
     });
   });
   bindMaValuationSim();
+  bindTaskPanel();
 }
 
 PAGE_RENDERERS.ma = renderMa;

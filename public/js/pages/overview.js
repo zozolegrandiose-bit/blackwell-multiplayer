@@ -1,7 +1,27 @@
 function bankHealthColor(health) {
   if (health >= 60) return "var(--series-green)";
-  if (health >= 30) return "#c98a1f";
+  if (health >= 30) return "#f5b942";
   return "var(--series-red)";
+}
+
+const TASK_SUMMARY_LABELS = { ma: "M&A", clients: "Clients", compliance: "Conformité", hr: "RH", finance: "Finance" };
+
+function taskSummaryPanelHtml() {
+  const summary = appState.tasksSummary || {};
+  const total = Object.values(summary).reduce((a, b) => a + b, 0);
+  return `
+    <div class="panel task-panel" style="margin-bottom:16px;">
+      <div class="panel-title">⚡ Tâches rapides en cours (${total})</div>
+      <div class="task-summary-grid">
+        ${Object.keys(TASK_SUMMARY_LABELS).map(page => `
+          <div class="task-summary-item">
+            <div class="task-summary-count">${summary[page] || 0}</div>
+            <div class="task-summary-label">${TASK_SUMMARY_LABELS[page]}</div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
 }
 
 function renderOverview() {
@@ -12,11 +32,12 @@ function renderOverview() {
   return `
     <div class="page-title">Vue d'ensemble</div>
     <div class="page-sub">Tableau de bord partagé — visible par tous les joueurs.</div>
+    ${taskSummaryPanelHtml()}
     <div class="panel-row" style="margin-bottom:16px;">
       <div class="panel">
         <div class="panel-title">Santé de la banque</div>
         <div style="display:flex; align-items:center; gap:14px;">
-          <div style="flex:1; height:16px; background:var(--line-200); border-radius:8px; overflow:hidden;">
+          <div style="flex:1; height:16px; background:var(--border); border-radius:8px; overflow:hidden;">
             <div style="width:${health}%; height:100%; background:${bankHealthColor(health)}; transition:width 0.3s;"></div>
           </div>
           <div style="font-weight:700; font-size:15px; min-width:48px; text-align:right;">${Math.round(health)}%</div>
@@ -29,8 +50,8 @@ function renderOverview() {
           const pct = Math.min(100, Math.round((kpis.aum || 0) / goal.targetAUM * 100));
           return `
           <div style="display:flex; align-items:center; gap:14px;">
-            <div style="flex:1; height:16px; background:var(--line-200); border-radius:8px; overflow:hidden;">
-              <div style="width:${pct}%; height:100%; background:var(--brass-700); transition:width 0.3s;"></div>
+            <div style="flex:1; height:16px; background:var(--border); border-radius:8px; overflow:hidden;">
+              <div style="width:${pct}%; height:100%; background:var(--accent-2); transition:width 0.3s;"></div>
             </div>
             <div style="font-weight:700; font-size:15px; min-width:48px; text-align:right;">${pct}%</div>
           </div>

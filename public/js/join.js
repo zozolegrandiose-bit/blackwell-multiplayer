@@ -232,6 +232,18 @@ socket.on("event:expired", () => {
   renderApp();
 });
 
+socket.on("tasks:update", data => {
+  if (!window.currentPlayer) return;
+  appState.taskQueue = appState.taskQueue.filter(t => t.page !== data.page).concat(data.tasks);
+  if (appState.currentPage === data.page) renderApp();
+});
+
+socket.on("tasks:summary", summary => {
+  if (!window.currentPlayer) return;
+  appState.tasksSummary = summary;
+  if (appState.currentPage === "overview") renderApp();
+});
+
 socket.on("game:bankrupt", () => {
   if (!window.currentPlayer) return;
   appState.bankrupt = true;

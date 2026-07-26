@@ -16,7 +16,7 @@ function renderMail() {
         </select>
       </div>
       <div class="form-row"><label>Objet</label><input id="mail-subject" type="text" placeholder="Objet"/></div>
-      <div class="form-row"><label>Message</label><textarea id="mail-body" rows="3" placeholder="Votre message…" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--line-200); font-size:13px;"></textarea></div>
+      <div class="form-row"><label>Message</label><textarea id="mail-body" rows="3" placeholder="Votre message…" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); font-size:13px;"></textarea></div>
       <div id="mail-error" class="join-error"></div>
       <button id="mail-send" class="btn-sm" ${recipients.length === 0 ? "disabled" : ""}>Envoyer</button>
     </div>

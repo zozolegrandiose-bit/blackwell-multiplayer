@@ -6,6 +6,7 @@ function renderClients() {
   return `
     <div class="page-title">Clients</div>
     <div class="page-sub">Portefeuille clients partagé — dealmaking, marchés, gestion de fortune.</div>
+    ${taskPanelHtml("clients")}
     <div class="panel" style="margin-bottom:16px;">
       <div class="panel-title">Nouveau client</div>
       <div class="form-row"><label>Nom</label><input id="cl-name" type="text" placeholder="ex. Kestrel Infrastructure Partners"/></div>
@@ -47,7 +48,7 @@ function renderClients() {
             ${c.notes.map(n => `<div style="font-size:11.5px; margin-bottom:2px;"><b>${escapeHtml(n.authorName)}</b> (${fmtTime(n.ts)}) : ${escapeHtml(n.text)}</div>`).join("")}
           </div>
           <div style="display:flex; gap:6px; margin-top:6px;">
-            <input data-cl-note-input="${c.id}" type="text" placeholder="Ajouter une note…" style="flex:1; padding:6px 8px; border-radius:6px; border:1px solid var(--line-200); font-size:12px;"/>
+            <input data-cl-note-input="${c.id}" type="text" placeholder="Ajouter une note…" style="flex:1; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
             <button data-cl-note-btn="${c.id}" class="btn-sm">Ajouter</button>
           </div>
         </div>
@@ -87,6 +88,7 @@ function bindClients() {
       socket.emit("clients:toggleKyc", { clientId, index: Number(index) });
     });
   });
+  bindTaskPanel();
 }
 
 PAGE_RENDERERS.clients = renderClients;

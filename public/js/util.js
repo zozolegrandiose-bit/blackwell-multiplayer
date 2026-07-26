@@ -27,7 +27,7 @@ function initials(name) {
   return String(name || "").split(" ").filter(Boolean).map(w => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-const AVATAR_PALETTE = ["#8a6d2f", "#3d6b52", "#5a4a7c", "#8a3e3e", "#2f5c7a", "#7a5a2f", "#4a6b3d"];
+const AVATAR_PALETTE = ["#2ee6a6", "#6c8dff", "#e8b64a", "#ff8fa3", "#5ee0e0", "#b58cff", "#7ee08a"];
 
 function hashString(str) {
   let hash = 0;
@@ -46,7 +46,7 @@ function avatarHtml(name, size) {
   return `<span class="avatar" style="width:${size}px; height:${size}px; line-height:${size}px; font-size:${fontSize}px; background:${color};">${escapeHtml(initials(name))}</span>`;
 }
 
-const CLUSTER_BADGE_COLOR = { A: "#8a6d2f", B: "#2f5c7a", C: "#5a4a7c", D: "#8a3e3e", E: "#4a6b3d", F: "#7a5a2f", G: "#1c1a16" };
+const CLUSTER_BADGE_COLOR = { A: "#e8b64a", B: "#6c8dff", C: "#b58cff", D: "#ff8fa3", E: "#2ee6a6", F: "#5ee0e0", G: "#f5f7fb" };
 
 const CLIENT_DEPARTMENT_CLUSTER = {
   "Direction Générale": "G",
@@ -66,7 +66,7 @@ const CLIENT_DEPARTMENT_CLUSTER = {
 
 function deptBadgeHtml(dept) {
   const cluster = CLIENT_DEPARTMENT_CLUSTER[dept] || null;
-  const color = cluster ? CLUSTER_BADGE_COLOR[cluster] : "#8a8371";
+  const color = cluster ? CLUSTER_BADGE_COLOR[cluster] : "#6c7488";
   return `<span class="dept-badge" style="background:${color}22; color:${color}; border:1px solid ${color}55;">${escapeHtml(dept)}</span>`;
 }
 
@@ -94,6 +94,34 @@ function tierBadgeHtml(score) {
   return `<span title="${tier.label} — ${score || 0} pts">${tier.icon}</span>`;
 }
 
+// Shared "always something to do" quick-task panel, reused identically across the
+// 5 operational pages (M&A, Clients, Compliance, HR, Finance) — filters appState's
+// shared taskQueue down to this page's items each render.
+function taskPanelHtml(page) {
+  const tasks = (appState.taskQueue || []).filter(t => t.page === page);
+  if (!tasks.length) return "";
+  return `
+    <div class="panel task-panel">
+      <div class="panel-title">⚡ Tâches rapides (${tasks.length})</div>
+      ${tasks.map(t => `
+        <div class="task-row">
+          <span class="task-row-text">${escapeHtml(t.label)}</span>
+          <span class="task-row-timer">⏱ ${Math.max(0, Math.round((t.expiresAt - Date.now()) / 1000))}s</span>
+          <button class="btn-sm" data-task-complete="${t.id}">Traiter</button>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function bindTaskPanel() {
+  document.querySelectorAll("[data-task-complete]").forEach(el => {
+    el.addEventListener("click", () => {
+      socket.emit("tasks:complete", { taskId: el.getAttribute("data-task-complete") });
+    });
+  });
+}
+
 function sparklineSvg(values, width, height) {
   width = width || 120;
   height = height || 32;
@@ -108,7 +136,7 @@ function sparklineSvg(values, width, height) {
     return x + "," + y;
   }).join(" ");
   const lastUp = values[values.length - 1] >= values[0];
-  const strokeColor = lastUp ? "#1f7a3d" : "#b23b2e";
+  const strokeColor = lastUp ? "#2ee6a6" : "#ff5c7a";
   return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
     <polyline points="${points}" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
   </svg>`;

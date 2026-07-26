@@ -1,5 +1,26 @@
 # Journal des mises à jour
 
+## Patch 5 — Modernisation graphique & tâches rapides continues (2026-07-26)
+
+### Ajouts
+- **Refonte visuelle complète** : nouveau thème sombre moderne (fintech) sur tout le jeu — fond profond, accents vert menthe / bleu / or, cartes et panneaux avec ombre et coins arrondis. Aucune structure ni logique n'a changé, uniquement l'habillage visuel.
+- **File de tâches rapides** ("⚡ Tâches rapides") sur M&A, Clients, Conformité, RH et Finance : de petites tâches ponctuelles apparaissent en continu (toutes les 15 à 30 secondes) sur les pages opérationnelles, à traiter en un clic avant leur expiration (75 secondes) — de quoi toujours avoir quelque chose à faire, même entre deux crises ou deux trimestres.
+- **Résumé des tâches en cours** sur Vue d'ensemble : compteur global + répartition par page, visible par tous.
+- Chaque tâche traitée rapporte des points individuels, sans jamais pénaliser si elle expire — un levier d'activité purement positif, en complément des enjeux (crises, trimestres) déjà en place.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu des Patchs 1-4 corrigé dans ce patch — il s'agit uniquement d'ajouts.
+
+### Notes techniques
+- `server/tasks.js` (nouveau) suit le même schéma que `server/ai.js`/`server/events.js`/`server/strategy.js` : deux boucles `setTimeout` auto-reprogrammées indépendantes (apparition et balayage d'expiration), jamais `setInterval`.
+- Diffusion scindée par page (`access:<page>`) comme le reste du jeu — une tâche Conformité n'est jamais visible par un joueur sans accès à Conformité.
+- Thème : variables CSS centralisées dans `:root` (`public/css/style.css`), aucune classe renommée — la refonte ne touche que les valeurs, jamais le HTML généré par le JS.
+
+---
+
 ## Patch 4 — Rounds stratégiques : le vrai cœur du jeu (2026-07-26)
 
 ### Ajouts

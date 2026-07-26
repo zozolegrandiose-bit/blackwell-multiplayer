@@ -16,7 +16,8 @@ const POINT_VALUES = {
   documents_upload: 3,
   expenses_submit: 2,
   expenses_approve: 3,
-  event_resolved: 25
+  event_resolved: 25,
+  task_completed: 5
 };
 
 // Health deltas tied to specific scored actions. Negative deltas from crisis

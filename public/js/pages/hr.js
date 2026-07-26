@@ -15,6 +15,7 @@ function renderHr() {
   return `
     <div class="page-title">RH</div>
     <div class="page-sub">Effectif de la partie, intégration et congés.</div>
+    ${taskPanelHtml("hr")}
     <div class="kpi-grid">
       <div class="kpi-card"><div class="kpi-label">Effectif total</div><div class="kpi-value">${appState.players.length}</div></div>
       <div class="kpi-card"><div class="kpi-label">Pool de bonus (10% du résultat net)</div><div class="kpi-value">${fmtMoney(bonusPool)}</div></div>
@@ -111,6 +112,7 @@ function bindHr() {
       socket.emit("hr:toggleOnboarding", { playerId, index: Number(index) });
     });
   });
+  bindTaskPanel();
 }
 
 PAGE_RENDERERS.hr = renderHr;

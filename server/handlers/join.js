@@ -3,6 +3,7 @@ const { claimSlot, releaseSlotBySocketId, getTakenSlots } = require("../rooms");
 const { pushActivity } = require("../gameState");
 const { hrRosterView } = require("./hr");
 const { buildDecisionsView } = require("../strategy");
+const { summarizeTasks } = require("../tasks");
 
 function publicRoster(gameState) {
   return gameState.players.map(p => ({
@@ -31,7 +32,9 @@ function buildSnapshot(gameState, player) {
     currentQuarter: gameState.currentQuarter,
     quarterPhase: gameState.quarterPhase,
     quarterDeadline: gameState.quarterDeadline,
-    quarterDecisions: buildDecisionsView(gameState, player.cluster)
+    quarterDecisions: buildDecisionsView(gameState, player.cluster),
+    tasksSummary: summarizeTasks(gameState),
+    taskQueue: gameState.taskQueue.filter(t => player.access.includes(t.page))
   };
   if (player.access.includes("ma")) snapshot.maDeals = gameState.maDeals;
   if (player.access.includes("clients")) snapshot.clients = gameState.clients;
