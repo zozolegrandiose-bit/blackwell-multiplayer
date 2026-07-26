@@ -2,10 +2,34 @@ const { pushActivity } = require("../gameState");
 
 const CLIENT_STATUSES = ["Prospect", "Actif", "En revue", "Inactif"];
 const CLIENT_RISKS = ["Low", "Medium", "High"];
+const KYC_ITEMS = ["Vérification d'identité", "Origine des fonds", "Sanctions & PEP", "Validation Conformité"];
+const AMBIENT_NOTES = [
+  "Suivi de routine effectué, rien à signaler.",
+  "Relance programmée pour le prochain trimestre.",
+  "Point de synthèse partagé avec l'équipe.",
+  "Dossier vérifié, aucune action requise pour l'instant."
+];
 let nextClientId = 1;
 
 function requireAccess(socket, page) {
   return socket.rooms.has("access:" + page);
+}
+
+// Reusable: mutate + broadcast + log, callable from the socket handler (real player)
+// or from server/ai.js (synthetic actor) when nobody has access to the "clients" page.
+function addRandomClientNote(io, gameState, actor) {
+  if (!gameState.clients.length) return false;
+  const client = gameState.clients[Math.floor(Math.random() * gameState.clients.length)];
+  const text = AMBIENT_NOTES[Math.floor(Math.random() * AMBIENT_NOTES.length)];
+  client.notes.push({ authorPlayerId: actor.id, authorName: actor.fullName, ts: Date.now(), text });
+  io.to("access:clients").emit("clients:update", gameState.clients);
+  pushActivity(gameState, {
+    actorPlayerId: actor.id,
+    page: "clients",
+    text: actor.fullName + " a ajouté une note sur « " + client.name + " »."
+  });
+  io.to("game").emit("activity:update", gameState.activityLog[0]);
+  return true;
 }
 
 function registerClientsHandlers(io, socket, gameState) {
@@ -29,7 +53,8 @@ function registerClientsHandlers(io, socket, gameState) {
       rmName: player.fullName,
       risk: CLIENT_RISKS.includes(payload.risk) ? payload.risk : "Medium",
       status: "Prospect",
-      notes: []
+      notes: [],
+      kycChecklist: KYC_ITEMS.map(item => ({ item, done: false }))
     };
     gameState.clients.push(client);
 
@@ -60,6 +85,14 @@ function registerClientsHandlers(io, socket, gameState) {
     client.notes.push({ authorPlayerId: player.id, authorName: player.fullName, ts: Date.now(), text });
     io.to("access:clients").emit("clients:update", gameState.clients);
   });
+
+  socket.on("clients:toggleKyc", payload => {
+    if (!requireAccess(socket, "clients")) return;
+    const client = gameState.clients.find(c => c.id === payload.clientId);
+    if (!client || !client.kycChecklist || !client.kycChecklist[payload.index]) return;
+    client.kycChecklist[payload.index].done = !client.kycChecklist[payload.index].done;
+    io.to("access:clients").emit("clients:update", gameState.clients);
+  });
 }
 
-module.exports = { registerClientsHandlers, CLIENT_STATUSES, CLIENT_RISKS };
+module.exports = { registerClientsHandlers, CLIENT_STATUSES, CLIENT_RISKS, KYC_ITEMS, addRandomClientNote };

@@ -1,6 +1,9 @@
 const NAV = [
   { id: "overview", label: "Vue d'ensemble", icon: "◈" },
   { id: "mail", label: "Mail", icon: "✉" },
+  { id: "agenda", label: "Agenda", icon: "📅" },
+  { id: "documents", label: "Documents", icon: "▣" },
+  { id: "expenses", label: "Notes de frais", icon: "🧾" },
   { id: "ma", label: "M&A", icon: "🤝" },
   { id: "clients", label: "Clients", icon: "◐" },
   { id: "compliance", label: "Conformité", icon: "🛡" },

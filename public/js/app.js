@@ -8,7 +8,11 @@ const appState = {
   clients: [],
   complianceItems: [],
   hr: { leaveRequests: [] },
-  financeKPIs: {}
+  hrRoster: [],
+  financeKPIs: {},
+  agenda: [],
+  documents: [],
+  expenseReports: []
 };
 
 const PAGE_RENDERERS = {};
@@ -38,8 +42,14 @@ function renderApp() {
       <div class="sidebar">
         <div class="sidebar-header">
           <div class="sidebar-title">Blackwell &amp; Co</div>
-          <div class="sidebar-user">${escapeHtml(player.fullName)}</div>
-          <div class="sidebar-role">${escapeHtml(player.grade)} — ${escapeHtml(player.dept)}</div>
+          <div class="person-row" style="margin-top:10px;">
+            ${avatarHtml(player.fullName, 32)}
+            <div>
+              <div class="sidebar-user">${escapeHtml(player.fullName)}</div>
+              <div class="sidebar-role">${escapeHtml(player.grade)}</div>
+            </div>
+          </div>
+          <div class="online-indicator"><span class="online-dot"></span>${appState.players.length} joueur${appState.players.length > 1 ? "s" : ""} en ligne</div>
         </div>
         <div class="sidebar-nav">
           ${nav.map(item => `

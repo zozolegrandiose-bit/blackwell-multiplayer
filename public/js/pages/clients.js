@@ -1,4 +1,5 @@
 const CLIENT_STATUSES = ["Prospect", "Actif", "En revue", "Inactif"];
+const CLIENT_FEE_RATE = 0.015;
 
 function renderClients() {
   const clients = appState.clients || [];
@@ -18,7 +19,11 @@ function renderClients() {
     </div>
     <div class="panel">
       <div class="panel-title">Portefeuille (${clients.length})</div>
-      ${clients.map(c => `
+      ${clients.map(c => {
+        const kyc = c.kycChecklist || [];
+        const kycDone = kyc.filter(k => k.done).length;
+        const feeEstimate = c.aum * CLIENT_FEE_RATE;
+        return `
         <div class="activity-row" style="display:block; padding:10px 0;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div style="font-weight:700; font-size:13px;">${escapeHtml(c.name)}</div>
@@ -27,6 +32,17 @@ function renderClients() {
             </select>
           </div>
           <div style="font-size:11px; color:var(--text-muted); margin:4px 0;">${escapeHtml(c.industry)} · AUM ${fmtMoney(c.aum)} · Risque ${escapeHtml(c.risk)} · Chargé de relation : ${escapeHtml(c.rmName)}</div>
+          <div style="font-size:11.5px; margin-bottom:6px;">Revenus de frais estimés (1,5 % AUM) : <b>${fmtMoney(feeEstimate)}</b>/an</div>
+          <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:8px;">
+            <div>
+              <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:4px;">KYC / Onboarding (${kycDone}/${kyc.length})</div>
+              ${kyc.map((k, i) => `
+                <label style="display:block; font-size:12px; margin-bottom:2px;">
+                  <input type="checkbox" data-cl-kyc="${c.id}|${i}" ${k.done ? "checked" : ""}/> ${escapeHtml(k.item)}
+                </label>
+              `).join("")}
+            </div>
+          </div>
           <div style="margin-top:6px;">
             ${c.notes.map(n => `<div style="font-size:11.5px; margin-bottom:2px;"><b>${escapeHtml(n.authorName)}</b> (${fmtTime(n.ts)}) : ${escapeHtml(n.text)}</div>`).join("")}
           </div>
@@ -35,7 +51,8 @@ function renderClients() {
             <button data-cl-note-btn="${c.id}" class="btn-sm">Ajouter</button>
           </div>
         </div>
-      `).join("") || `<div class="empty-cell">Aucun client pour l'instant.</div>`}
+      `;
+      }).join("") || `<div class="empty-cell">Aucun client pour l'instant.</div>`}
     </div>
   `;
 }
@@ -62,6 +79,12 @@ function bindClients() {
       const text = input.value.trim();
       if (!text) return;
       socket.emit("clients:addNote", { clientId, text });
+    });
+  });
+  document.querySelectorAll("[data-cl-kyc]").forEach(el => {
+    el.addEventListener("change", () => {
+      const [clientId, index] = el.getAttribute("data-cl-kyc").split("|");
+      socket.emit("clients:toggleKyc", { clientId, index: Number(index) });
     });
   });
 }

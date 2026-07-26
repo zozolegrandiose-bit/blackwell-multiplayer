@@ -1,5 +1,6 @@
 const { GRADES, DEPARTMENTS } = require("./seedData");
 const { getAccessForPosition, hasFullAccess } = require("./departmentAccess");
+const { ONBOARDING_ITEMS } = require("./handlers/hr");
 
 function slotKey(grade, dept) {
   return grade + "|||" + dept;
@@ -45,7 +46,8 @@ function claimSlot(gameState, { socketId, firstName, lastName, grade, dept }) {
     dept,
     access: getAccessForPosition(dept, grade),
     hasFullAccess: hasFullAccess(dept, grade),
-    joinedAt: Date.now()
+    joinedAt: Date.now(),
+    onboarding: ONBOARDING_ITEMS.map(item => ({ item, done: false }))
   };
   gameState.players.push(player);
   return { ok: true, player };

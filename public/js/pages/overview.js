@@ -16,7 +16,7 @@ function renderOverview() {
           <thead><tr><th>Nom</th><th>Grade</th><th>Département</th></tr></thead>
           <tbody>
             ${appState.players.map(p => `
-              <tr><td>${escapeHtml(p.fullName)}</td><td>${escapeHtml(p.grade)}</td><td>${escapeHtml(p.dept)}</td></tr>
+              <tr><td><div class="person-row">${avatarHtml(p.fullName, 24)}<span class="person-row-name">${escapeHtml(p.fullName)}</span></div></td><td>${escapeHtml(p.grade)}</td><td>${deptBadgeHtml(p.dept)}</td></tr>
             `).join("") || `<tr><td colspan="3" class="empty-cell">Personne d'autre pour l'instant.</td></tr>`}
           </tbody>
         </table>

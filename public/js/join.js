@@ -148,6 +148,12 @@ socket.on("hr:update", hr => {
   if (appState.currentPage === "hr") renderApp();
 });
 
+socket.on("hr:rosterUpdate", hrRoster => {
+  if (!window.currentPlayer) return;
+  appState.hrRoster = hrRoster;
+  if (appState.currentPage === "hr") renderApp();
+});
+
 socket.on("hr:requestLeave:rejected", data => {
   const errorEl = document.getElementById("hr-error");
   if (errorEl) errorEl.textContent = data.reason;
@@ -163,6 +169,39 @@ socket.on("overview:kpis", kpis => {
   if (!window.currentPlayer) return;
   appState.financeKPIs = kpis;
   if (appState.currentPage === "overview") renderApp();
+});
+
+socket.on("agenda:update", agenda => {
+  if (!window.currentPlayer) return;
+  appState.agenda = agenda;
+  if (appState.currentPage === "agenda") renderApp();
+});
+
+socket.on("agenda:create:rejected", data => {
+  const errorEl = document.getElementById("ag-error");
+  if (errorEl) errorEl.textContent = data.reason;
+});
+
+socket.on("documents:update", docs => {
+  if (!window.currentPlayer) return;
+  appState.documents = docs;
+  if (appState.currentPage === "documents") renderApp();
+});
+
+socket.on("documents:upload:rejected", data => {
+  const errorEl = document.getElementById("doc-error");
+  if (errorEl) errorEl.textContent = data.reason;
+});
+
+socket.on("expenses:update", reports => {
+  if (!window.currentPlayer) return;
+  appState.expenseReports = reports;
+  if (appState.currentPage === "expenses") renderApp();
+});
+
+socket.on("expenses:submit:rejected", data => {
+  const errorEl = document.getElementById("exp-error");
+  if (errorEl) errorEl.textContent = data.reason;
 });
 
 socket.on("activity:update", entry => {

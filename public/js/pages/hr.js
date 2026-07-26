@@ -1,18 +1,32 @@
 const LEAVE_TYPES = ["Congés payés", "RTT", "Arrêt maladie", "Congé sans solde"];
 const LEAVE_STATUS_CLASS = { "En attente": "chip-warning", "Approuvé": "chip-good", "Refusé": "chip-critical" };
+const BONUS_POOL_RATE = 0.10;
 
 function renderHr() {
   const requests = (appState.hr && appState.hr.leaveRequests) || [];
+  const hrRoster = appState.hrRoster || [];
+  const netIncome = (appState.financeKPIs && appState.financeKPIs.netIncome) || 0;
+  const bonusPool = netIncome * BONUS_POOL_RATE;
+  const perPlayer = appState.players.length ? bonusPool / appState.players.length : 0;
+
+  const headcountByDept = {};
+  appState.players.forEach(p => { headcountByDept[p.dept] = (headcountByDept[p.dept] || 0) + 1; });
+
   return `
     <div class="page-title">RH</div>
-    <div class="page-sub">Effectif de la partie et demandes de congé.</div>
+    <div class="page-sub">Effectif de la partie, intégration et congés.</div>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Effectif total</div><div class="kpi-value">${appState.players.length}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Pool de bonus (10% du résultat net)</div><div class="kpi-value">${fmtMoney(bonusPool)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Part individuelle estimée</div><div class="kpi-value">${fmtMoney(perPlayer)}</div></div>
+    </div>
     <div class="panel-row" style="margin-bottom:16px;">
       <div class="panel">
-        <div class="panel-title">Effectif (${appState.players.length})</div>
+        <div class="panel-title">Effectif par département</div>
         <table class="data-table">
-          <thead><tr><th>Nom</th><th>Grade</th><th>Département</th></tr></thead>
+          <thead><tr><th>Département</th><th>Effectif</th></tr></thead>
           <tbody>
-            ${appState.players.map(p => `<tr><td>${escapeHtml(p.fullName)}</td><td>${escapeHtml(p.grade)}</td><td>${escapeHtml(p.dept)}</td></tr>`).join("")}
+            ${Object.keys(headcountByDept).map(dept => `<tr><td>${deptBadgeHtml(dept)}</td><td class="tnum">${headcountByDept[dept]}</td></tr>`).join("") || `<tr><td colspan="2" class="empty-cell">Aucun joueur.</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -26,6 +40,29 @@ function renderHr() {
         <div id="hr-error" class="join-error"></div>
         <button id="hr-leave-submit" class="btn-sm">Soumettre</button>
       </div>
+    </div>
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">Intégration des joueurs</div>
+      ${hrRoster.map(p => {
+        const onboarding = p.onboarding || [];
+        const done = onboarding.filter(o => o.done).length;
+        return `
+        <div class="activity-row" style="display:block; padding:8px 0;">
+          <div class="person-row" style="margin-bottom:6px;">
+            ${avatarHtml(p.fullName, 22)}
+            <span class="person-row-name" style="font-size:12.5px;">${escapeHtml(p.fullName)}</span>
+            <span style="font-size:11px; color:var(--text-muted);">(${done}/${onboarding.length})</span>
+          </div>
+          <div style="display:flex; gap:14px; flex-wrap:wrap;">
+            ${onboarding.map((o, i) => `
+              <label style="font-size:11.5px;">
+                <input type="checkbox" data-hr-onboard="${p.id}|${i}" ${o.done ? "checked" : ""}/> ${escapeHtml(o.item)}
+              </label>
+            `).join("")}
+          </div>
+        </div>
+      `;
+      }).join("") || `<div class="empty-cell">Aucun joueur pour l'instant.</div>`}
     </div>
     <div class="panel">
       <div class="panel-title">Demandes de congé (${requests.length})</div>
@@ -67,6 +104,12 @@ function bindHr() {
   });
   document.querySelectorAll("[data-hr-deny]").forEach(el => {
     el.addEventListener("click", () => socket.emit("hr:setLeaveStatus", { requestId: el.getAttribute("data-hr-deny"), status: "Refusé" }));
+  });
+  document.querySelectorAll("[data-hr-onboard]").forEach(el => {
+    el.addEventListener("change", () => {
+      const [playerId, index] = el.getAttribute("data-hr-onboard").split("|");
+      socket.emit("hr:toggleOnboarding", { playerId, index: Number(index) });
+    });
   });
 }
 

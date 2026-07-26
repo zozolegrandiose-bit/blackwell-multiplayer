@@ -1,6 +1,7 @@
 const { GRADES, DEPARTMENTS } = require("../seedData");
 const { claimSlot, releaseSlotBySocketId, getTakenSlots } = require("../rooms");
 const { pushActivity } = require("../gameState");
+const { hrRosterView } = require("./hr");
 
 function publicRoster(gameState) {
   return gameState.players.map(p => ({
@@ -52,7 +53,13 @@ function registerJoinHandlers(io, socket, gameState) {
     if (player.access.includes("ma")) snapshot.maDeals = gameState.maDeals;
     if (player.access.includes("clients")) snapshot.clients = gameState.clients;
     if (player.access.includes("compliance")) snapshot.complianceItems = gameState.complianceItems;
-    if (player.access.includes("hr")) snapshot.hr = gameState.hr;
+    if (player.access.includes("hr")) {
+      snapshot.hr = gameState.hr;
+      snapshot.hrRoster = hrRosterView(gameState);
+    }
+    if (player.access.includes("agenda")) snapshot.agenda = gameState.agenda;
+    if (player.access.includes("documents")) snapshot.documents = gameState.documents;
+    if (player.access.includes("expenses")) snapshot.expenseReports = gameState.expenseReports;
     socket.emit("join:success", { player, snapshot });
     io.to("game").emit("roster:update", { players: publicRoster(gameState) });
     io.to("game").emit("activity:update", gameState.activityLog[0]);

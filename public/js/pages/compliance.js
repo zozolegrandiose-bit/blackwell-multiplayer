@@ -1,8 +1,15 @@
 const COMPLIANCE_TYPES = ["Surveillance marché", "Éthique & Déontologie", "KYC/AML", "Réglementaire"];
 const COMPLIANCE_STATUSES = ["Ouvert", "En cours d'analyse", "Résolu", "Escaladé"];
 
+function slaBadge(ts) {
+  const days = Math.floor((Date.now() - ts) / 86400000);
+  const cls = days >= 7 ? "chip-critical" : days >= 3 ? "chip-warning" : "chip-good";
+  return `<span class="chip ${cls}">${days} j</span>`;
+}
+
 function renderCompliance() {
   const items = [...(appState.complianceItems || [])].sort((a, b) => b.ts - a.ts);
+  const assignableplayers = appState.players || [];
   return `
     <div class="page-title">Conformité</div>
     <div class="page-sub">Alertes et suivi réglementaire.</div>
@@ -19,17 +26,23 @@ function renderCompliance() {
     <div class="panel">
       <div class="panel-title">Alertes (${items.length})</div>
       <table class="data-table">
-        <thead><tr><th>Type</th><th>Desk</th><th>Description</th><th>Signalé par</th><th>Statut</th></tr></thead>
+        <thead><tr><th>Type</th><th>Desk</th><th>Description</th><th>Ancienneté</th><th>Assigné à</th><th>Statut</th></tr></thead>
         <tbody>
           ${items.map(i => `
             <tr>
               <td>${escapeHtml(i.type)}</td>
               <td>${escapeHtml(i.desk)}</td>
               <td>${escapeHtml(i.flag)}</td>
-              <td>${escapeHtml(i.raisedByName)}</td>
+              <td>${slaBadge(i.ts)}</td>
+              <td>
+                <select data-cp-assign="${i.id}" class="btn-sm">
+                  <option value="">— Non assigné —</option>
+                  ${assignableplayers.map(p => `<option value="${p.id}" ${i.assignedToPlayerId === p.id ? "selected" : ""}>${escapeHtml(p.fullName)}</option>`).join("")}
+                </select>
+              </td>
               <td><select data-cp-status="${i.id}" class="btn-sm">${COMPLIANCE_STATUSES.map(s => `<option value="${s}" ${i.status === s ? "selected" : ""}>${s}</option>`).join("")}</select></td>
             </tr>
-          `).join("") || `<tr><td colspan="5" class="empty-cell">Aucune alerte pour l'instant.</td></tr>`}
+          `).join("") || `<tr><td colspan="6" class="empty-cell">Aucune alerte pour l'instant.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -48,6 +61,11 @@ function bindCompliance() {
   document.querySelectorAll("[data-cp-status]").forEach(el => {
     el.addEventListener("change", () => {
       socket.emit("compliance:updateStatus", { itemId: el.getAttribute("data-cp-status"), status: el.value });
+    });
+  });
+  document.querySelectorAll("[data-cp-assign]").forEach(el => {
+    el.addEventListener("change", () => {
+      socket.emit("compliance:assign", { itemId: el.getAttribute("data-cp-assign"), playerId: el.value || null });
     });
   });
 }

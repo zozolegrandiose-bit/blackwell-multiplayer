@@ -196,3 +196,50 @@ body {
 .chip-warning { background: #fbeed9; color: #9a6b1f; }
 .chip-critical { background: #fbe3e0; color: var(--series-red); }
 .chip-neutral { background: #eceae4; color: var(--text-600); }
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.dept-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.online-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #b8e6c4;
+  margin-top: 10px;
+}
+.online-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--series-green);
+  box-shadow: 0 0 0 2px rgba(31,122,61,0.25);
+}
+
+.person-row { display: flex; align-items: center; gap: 10px; }
+.person-row-name { font-weight: 600; }
+
+.panel {
+  box-shadow: 0 1px 2px rgba(28,26,22,0.06);
+  transition: box-shadow 0.15s ease;
+}
+.panel:hover { box-shadow: 0 2px 8px rgba(28,26,22,0.08); }
+
+.sparkline-wrap { display: flex; align-items: center; gap: 10px; }
+.tnum { font-variant-numeric: tabular-nums; }

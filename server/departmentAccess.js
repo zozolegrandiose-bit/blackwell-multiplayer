@@ -1,13 +1,15 @@
 const { GRADES } = require("./seedData");
 
+const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses"];
+
 const CLUSTER_PAGES = {
-  A: ["overview", "mail", "ma", "clients"],
-  B: ["overview", "mail", "clients"],
-  C: ["overview", "mail", "clients"],
-  D: ["overview", "mail", "compliance"],
-  E: ["overview", "mail", "finance"],
-  F: ["overview", "mail", "hr"],
-  G: ["overview", "mail", "ma", "clients", "compliance", "finance", "hr"]
+  A: [...UNIVERSAL_PAGES, "ma", "clients"],
+  B: [...UNIVERSAL_PAGES, "clients"],
+  C: [...UNIVERSAL_PAGES, "clients"],
+  D: [...UNIVERSAL_PAGES, "compliance"],
+  E: [...UNIVERSAL_PAGES, "finance"],
+  F: [...UNIVERSAL_PAGES, "hr"],
+  G: [...UNIVERSAL_PAGES, "ma", "clients", "compliance", "finance", "hr"]
 };
 
 const DEPARTMENT_CLUSTER = {
