@@ -2,6 +2,7 @@ const { GRADES, DEPARTMENTS } = require("../seedData");
 const { claimSlot, releaseSlotBySocketId, getTakenSlots } = require("../rooms");
 const { pushActivity } = require("../gameState");
 const { hrRosterView } = require("./hr");
+const { buildDecisionsView } = require("../strategy");
 
 function publicRoster(gameState) {
   return gameState.players.map(p => ({
@@ -24,7 +25,13 @@ function buildSnapshot(gameState, player) {
     playerScores: gameState.playerScores,
     bankHealth: gameState.bankHealth,
     bankrupt: gameState.bankrupt,
-    activeEvents: gameState.activeEvents
+    activeEvents: gameState.activeEvents,
+    campaignGoal: gameState.campaignGoal,
+    victory: gameState.victory,
+    currentQuarter: gameState.currentQuarter,
+    quarterPhase: gameState.quarterPhase,
+    quarterDeadline: gameState.quarterDeadline,
+    quarterDecisions: buildDecisionsView(gameState, player.cluster)
   };
   if (player.access.includes("ma")) snapshot.maDeals = gameState.maDeals;
   if (player.access.includes("clients")) snapshot.clients = gameState.clients;

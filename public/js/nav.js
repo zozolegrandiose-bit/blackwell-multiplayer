@@ -1,5 +1,6 @@
 const NAV = [
   { id: "overview", label: "Vue d'ensemble", icon: "◈" },
+  { id: "strategy", label: "Comité de Direction", icon: "🏛" },
   { id: "mail", label: "Mail", icon: "✉" },
   { id: "agenda", label: "Agenda", icon: "📅" },
   { id: "documents", label: "Documents", icon: "▣" },

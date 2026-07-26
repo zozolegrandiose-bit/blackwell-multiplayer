@@ -16,7 +16,10 @@ const appState = {
   playerScores: {},
   bankHealth: 100,
   bankrupt: false,
-  activeEvents: []
+  activeEvents: [],
+  campaignGoal: { targetAUM: 500000, maxQuarters: 20 },
+  victory: false,
+  currentQuarter: 1
 };
 
 const PAGE_RENDERERS = {};
@@ -64,7 +67,12 @@ function renderApp() {
         </div>
       </div>
       <div class="main-content">
-        ${appState.bankrupt ? `
+        ${appState.victory ? `
+          <div class="victory-banner">
+            <div>🎉 <b>Victoire !</b> L'objectif de ${fmtMoney(appState.campaignGoal.targetAUM)} d'AUM est atteint.</div>
+            ${player.hasFullAccess ? `<button id="btn-game-reset" class="btn-sm">Nouvelle partie</button>` : `<span style="font-size:11.5px; color:var(--text-muted);">Seule la Direction Générale peut relancer une partie.</span>`}
+          </div>
+        ` : appState.bankrupt ? `
           <div class="bankruptcy-banner">
             <div>💥 <b>Faillite de la banque.</b> La santé de la banque est tombée à zéro — la partie est terminée.</div>
             ${player.hasFullAccess ? `<button id="btn-game-reset" class="btn-sm">Nouvelle partie</button>` : `<span style="font-size:11.5px; color:var(--text-muted);">Seule la Direction Générale peut relancer une partie.</span>`}

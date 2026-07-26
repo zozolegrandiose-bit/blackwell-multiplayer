@@ -1,5 +1,28 @@
 # Journal des mises à jour
 
+## Patch 4 — Rounds stratégiques : le vrai cœur du jeu (2026-07-26)
+
+### Ajouts
+- **Comité de Direction** (nouvelle page) : le jeu avance par trimestres de 90 secondes. Chaque département (6 clusters opérationnels + Direction Générale) verrouille une décision stratégique à compromis visibles parmi 2-3 cartes — plus de formulaires, de vraies décisions avec de vrais compromis.
+- **Objectif de campagne positif** : barre de progression vers 500 Md$ d'AUM (contre 284,6 Md$ au départ), affichée à côté de la santé de la banque sur Vue d'ensemble. Bannière de victoire + bouton "Nouvelle partie" quand l'objectif est atteint.
+- **Interdépendance réelle entre joueurs** : Direction Générale voit en direct les choix réels déjà verrouillés par les autres départements avant de fixer son propre multiplicateur trimestriel (Croissance / Stabilité / Réduction des coûts) — tout le monde d'autre ne voit qu'un statut "soumis/en attente", jamais les choix des autres (mais toujours son propre choix).
+- **Rythme accéléré** : dès que les 7 décisions du trimestre sont verrouillées, résolution immédiate (pas besoin d'attendre les 90 secondes) — sinon résolution automatique à l'échéance, avec option neutre appliquée à tout département non pourvu.
+- Chaque trimestre résolu ajuste AUM, revenus, résultat net et santé de la banque selon la combinaison des 6 décisions + le multiplicateur de Direction Générale, avec un compte-rendu dans le fil d'activité.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu des Patchs 1-3 corrigé dans ce patch — il s'agit uniquement d'ajouts.
+
+### Notes techniques
+- `resolveQuarter()` (`server/strategy.js`) est une fonction quasi pure testée unitairement avec des jeux de décisions synthétiques, indépendamment de tout minuteur.
+- Garde d'idempotence (`quarterPhase !== "deciding"` vérifié et modifié de façon synchrone) empêchant une double résolution du même trimestre entre le déclenchement immédiat (7 décisions soumises) et la boucle de balayage par échéance — troisième boucle indépendante du même principe que `server/ai.js`/`server/events.js`.
+- Nouveau champ `player.cluster` (A-G) distinct de `player.access`, utilisé pour savoir quel département un joueur représente sur la page Comité de Direction.
+- `buildDecisionsView()` construit une vue personnalisée par joueur (pas une simple diffusion de salle) : chacun voit son propre choix en clair, les autres redigés en statut, Direction Générale voit tout.
+
+---
+
 ## Patch 3 — Couche jeu : score, santé de la banque, événements (2026-07-26)
 
 ### Ajouts

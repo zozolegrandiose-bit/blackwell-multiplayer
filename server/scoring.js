@@ -53,9 +53,6 @@ function applyHealthDelta(io, gameState, delta) {
   }
 }
 
-// Single choke point for all scoring: called from handlers at meaningful state
-// transitions only (never on raw handler invocation) to avoid spam-farming points.
-// AI-driven actions (actor.id === null) never earn a human score.
 // Called from handlers (compliance/clients/ma) right after their normal mutation,
 // to detect whether that action just resolved an active crisis/opportunity event
 // tied to the same target (see server/events.js). Lives here rather than in
@@ -77,6 +74,20 @@ function checkEventResolution(io, gameState, targetId, actor) {
   io.to("game").emit("activity:update", gameState.activityLog[0]);
 }
 
+// Mirrors applyHealthDelta's bankruptcy trigger: checked wherever financeKPIs.aum
+// can move (finance:updateKPI, the AI's nudgeRandomKPI, market-crash events, and
+// eventually resolveQuarter() in server/strategy.js).
+function checkVictory(io, gameState) {
+  if (gameState.bankrupt || gameState.victory) return;
+  if (gameState.financeKPIs.aum >= gameState.campaignGoal.targetAUM) {
+    gameState.victory = true;
+    io.to("game").emit("game:victory", { aum: gameState.financeKPIs.aum, quarter: gameState.currentQuarter });
+  }
+}
+
+// Single choke point for all scoring: called from handlers at meaningful state
+// transitions only (never on raw handler invocation) to avoid spam-farming points.
+// AI-driven actions (actor.id === null) never earn a human score.
 function awardPoints(io, gameState, player, actionType, extraHealthDelta) {
   if (gameState.bankrupt) return;
   if (!player || player.id === null) return;
@@ -95,4 +106,4 @@ function awardPoints(io, gameState, player, actionType, extraHealthDelta) {
   io.to("game").emit("scoring:update", { playerScores: gameState.playerScores, bankHealth: gameState.bankHealth });
 }
 
-module.exports = { awardPoints, applyHealthDelta, checkEventResolution, playerKey, getTier, TIERS, POINT_VALUES };
+module.exports = { awardPoints, applyHealthDelta, checkEventResolution, checkVictory, playerKey, getTier, TIERS, POINT_VALUES };

@@ -238,6 +238,20 @@ socket.on("game:bankrupt", () => {
   renderApp();
 });
 
+socket.on("strategy:update", data => {
+  if (!window.currentPlayer) return;
+  appState.quarterDecisions = data.quarterDecisions;
+  if (data.currentQuarter != null) appState.currentQuarter = data.currentQuarter;
+  if (data.quarterDeadline != null) appState.quarterDeadline = data.quarterDeadline;
+  renderApp();
+});
+
+socket.on("game:victory", () => {
+  if (!window.currentPlayer) return;
+  appState.victory = true;
+  renderApp();
+});
+
 socket.on("game:reset", data => {
   if (!window.currentPlayer) return;
   window.currentPlayer = data.player;

@@ -16,6 +16,7 @@ const { registerAgendaHandlers } = require("./handlers/agenda");
 const { registerDocumentsHandlers } = require("./handlers/documents");
 const { registerExpensesHandlers } = require("./handlers/expenses");
 const { registerGameHandlers } = require("./handlers/game");
+const { registerStrategyHandlers, startStrategyLoop } = require("./strategy");
 
 const app = express();
 const httpServer = createServer(app);
@@ -36,10 +37,12 @@ io.on("connection", socket => {
   registerDocumentsHandlers(io, socket, gameState);
   registerExpensesHandlers(io, socket, gameState);
   registerGameHandlers(io, socket, gameState);
+  registerStrategyHandlers(io, socket, gameState);
 });
 
 startAiLoop(io, gameState);
 startEventLoops(io, gameState);
+startStrategyLoop(io, gameState);
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {

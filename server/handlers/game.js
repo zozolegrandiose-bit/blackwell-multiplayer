@@ -1,5 +1,6 @@
 const { resetGame, pushActivity } = require("../gameState");
 const { buildSnapshot } = require("./join");
+const { QUARTER_LENGTH_MS } = require("../strategy");
 
 function registerGameHandlers(io, socket, gameState) {
   socket.on("game:requestReset", () => {
@@ -9,6 +10,7 @@ function registerGameHandlers(io, socket, gameState) {
     const topScore = Object.values(gameState.playerScores).sort((a, b) => b.score - a.score)[0] || null;
 
     resetGame(gameState);
+    gameState.quarterDeadline = Date.now() + QUARTER_LENGTH_MS;
 
     pushActivity(gameState, {
       actorPlayerId: player.id,

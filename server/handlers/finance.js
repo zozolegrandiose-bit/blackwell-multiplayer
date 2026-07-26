@@ -1,4 +1,5 @@
 const { pushActivity } = require("../gameState");
+const { checkVictory } = require("../scoring");
 
 const EDITABLE_FIELDS = ["revenue", "netIncome", "aum", "costIncomeRatio"];
 const FIELD_LABELS = {
@@ -33,6 +34,7 @@ function nudgeRandomKPI(io, gameState, actor) {
     text: actor.fullName + " a mis à jour " + FIELD_LABELS[field] + "."
   });
   io.to("game").emit("activity:update", gameState.activityLog[0]);
+  checkVictory(io, gameState);
   return true;
 }
 
@@ -66,6 +68,7 @@ function registerFinanceHandlers(io, socket, gameState) {
       text: player.fullName + " a mis à jour " + FIELD_LABELS[payload.field] + "."
     });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
+    checkVictory(io, gameState);
   });
 
   socket.on("finance:updateBudgetActual", payload => {

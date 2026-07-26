@@ -1,5 +1,5 @@
 const { GRADES, DEPARTMENTS } = require("./seedData");
-const { getAccessForPosition, hasFullAccess } = require("./departmentAccess");
+const { getAccessForPosition, hasFullAccess, getClusterForPosition } = require("./departmentAccess");
 const { ONBOARDING_ITEMS } = require("./handlers/hr");
 const { playerKey } = require("./scoring");
 
@@ -57,6 +57,7 @@ function claimSlot(gameState, { socketId, firstName, lastName, grade, dept }) {
     dept,
     access: getAccessForPosition(dept, grade),
     hasFullAccess: hasFullAccess(dept, grade),
+    cluster: getClusterForPosition(dept, grade),
     joinedAt: Date.now(),
     onboarding: ONBOARDING_ITEMS.map(item => ({ item, done: false }))
   };

@@ -1,6 +1,6 @@
 const { GRADES } = require("./seedData");
 
-const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses"];
+const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses", "strategy"];
 
 const CLUSTER_PAGES = {
   A: [...UNIVERSAL_PAGES, "ma", "clients"],
@@ -76,4 +76,11 @@ function getAccessForPosition(dept, grade) {
   return [...CLUSTER_PAGES[cluster]];
 }
 
-module.exports = { DEPARTMENT_CLUSTER, CLUSTER_PAGES, hasFullAccess, getAccessForPosition };
+// Which cluster letter (A-G) a position represents on the Strategy page — distinct
+// from getAccessForPosition, which returns the pages a player can navigate to.
+function getClusterForPosition(dept, grade) {
+  if (hasFullAccess(dept, grade)) return "G";
+  return DEPARTMENT_CLUSTER[dept] || null;
+}
+
+module.exports = { DEPARTMENT_CLUSTER, CLUSTER_PAGES, UNIVERSAL_PAGES, hasFullAccess, getAccessForPosition, getClusterForPosition };

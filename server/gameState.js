@@ -79,7 +79,13 @@ function createGameState() {
     playerScores: {},
     bankHealth: 100,
     bankrupt: false,
-    activeEvents: []
+    activeEvents: [],
+    currentQuarter: 1,
+    quarterPhase: "deciding",
+    quarterDeadline: null,
+    quarterDecisions: {},
+    campaignGoal: { targetAUM: 500000, maxQuarters: 20 },
+    victory: false
   };
 }
 

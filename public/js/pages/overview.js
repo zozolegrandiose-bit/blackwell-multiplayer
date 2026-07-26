@@ -12,13 +12,31 @@ function renderOverview() {
   return `
     <div class="page-title">Vue d'ensemble</div>
     <div class="page-sub">Tableau de bord partagé — visible par tous les joueurs.</div>
-    <div class="panel" style="margin-bottom:16px;">
-      <div class="panel-title">Santé de la banque</div>
-      <div style="display:flex; align-items:center; gap:14px;">
-        <div style="flex:1; height:16px; background:var(--line-200); border-radius:8px; overflow:hidden;">
-          <div style="width:${health}%; height:100%; background:${bankHealthColor(health)}; transition:width 0.3s;"></div>
+    <div class="panel-row" style="margin-bottom:16px;">
+      <div class="panel">
+        <div class="panel-title">Santé de la banque</div>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div style="flex:1; height:16px; background:var(--line-200); border-radius:8px; overflow:hidden;">
+            <div style="width:${health}%; height:100%; background:${bankHealthColor(health)}; transition:width 0.3s;"></div>
+          </div>
+          <div style="font-weight:700; font-size:15px; min-width:48px; text-align:right;">${Math.round(health)}%</div>
         </div>
-        <div style="font-weight:700; font-size:15px; min-width:48px; text-align:right;">${Math.round(health)}%</div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">🎯 Objectif de campagne</div>
+        ${(() => {
+          const goal = appState.campaignGoal || { targetAUM: 500000 };
+          const pct = Math.min(100, Math.round((kpis.aum || 0) / goal.targetAUM * 100));
+          return `
+          <div style="display:flex; align-items:center; gap:14px;">
+            <div style="flex:1; height:16px; background:var(--line-200); border-radius:8px; overflow:hidden;">
+              <div style="width:${pct}%; height:100%; background:var(--brass-700); transition:width 0.3s;"></div>
+            </div>
+            <div style="font-weight:700; font-size:15px; min-width:48px; text-align:right;">${pct}%</div>
+          </div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:6px;">${fmtMoney(kpis.aum)} / ${fmtMoney(goal.targetAUM)} visé</div>
+          `;
+        })()}
       </div>
     </div>
     <div class="kpi-grid">
