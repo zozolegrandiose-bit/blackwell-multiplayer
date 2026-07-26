@@ -1,0 +1,15 @@
+{
+  "name": "blackwell-multiplayer",
+  "version": "1.0.0",
+  "description": "Version multijoueur du portail Blackwell & Co Capital",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
