@@ -5,8 +5,8 @@ const { Server } = require("socket.io");
 const { gameState } = require("./gameState");
 const { registerJoinHandlers } = require("./handlers/join");
 const { registerMailHandlers } = require("./handlers/mail");
-const { registerMaHandlers } = require("./handlers/ma");
-const { registerClientsHandlers } = require("./handlers/clients");
+const { registerMaHandlers, scheduleDealRiskLoop } = require("./handlers/ma");
+const { registerClientsHandlers, scheduleChurnRiskLoop } = require("./handlers/clients");
 const { registerComplianceHandlers } = require("./handlers/compliance");
 const { registerHrHandlers } = require("./handlers/hr");
 const { registerFinanceHandlers } = require("./handlers/finance");
@@ -46,6 +46,8 @@ startAiLoop(io, gameState);
 startEventLoops(io, gameState);
 startStrategyLoop(io, gameState);
 startTaskLoop(io, gameState);
+scheduleDealRiskLoop(io, gameState);
+scheduleChurnRiskLoop(io, gameState);
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {

@@ -1,5 +1,35 @@
 # Journal des mises à jour
 
+## Patch 7 — Enjeux, progression et outils de partie (2026-07-26)
+
+### Ajouts
+- **Conformité** : audit trimestriel — les alertes laissées ouvertes trop longtemps coûtent une vraie amende (résultat net) et une pénalité de santé à chaque trimestre.
+- **M&A** : un deal qu'on laisse stagner trop longtemps risque de tomber à l'eau tout seul ; nouvel événement « Enchère concurrente » — une banque rivale menace de rafler un deal si on ne le fait pas avancer à temps.
+- **Clients** : risque de churn ambiant — un client actif délaissé trop longtemps peut basculer inactif de lui-même ; cross-sell — un client actif à fort AUM peut faire émerger une piste M&A bonus.
+- **Score ESG** (page Comité de Direction) : jauge parallèle à l'objectif d'AUM, pilotée par les décisions du cluster Conformité/Risque/Juridique.
+- **Historique des trimestres résolus** sur la page Comité de Direction.
+- **Hall of Fame** : les meilleurs scores survivent désormais à une réinitialisation de partie, affichés sur Vue d'ensemble.
+- **Badges de réussite** (🏅 Clôtureur, 🛡️ Bouclier, 🎯 Recruteur, 💰 Généreux, ⚡ Rapide), affichés à côté du nom partout où il apparaît.
+- **Classement par département** sur Vue d'ensemble, en plus du classement individuel.
+- **Panneau GM** (Direction Générale uniquement, sur Comité de Direction) : mettre la partie en pause/reprendre, prolonger le trimestre en cours de 60s, déclencher un événement manuellement, changer le mode de difficulté.
+- **Modes de difficulté** (Détente / Standard / Intense) : ajustent la fréquence des événements, des tâches rapides et la durée des trimestres.
+- **Notifications** : un petit message apparaît quand une tâche surgit sur une page où vous n'êtes pas ; l'onglet du navigateur clignote lors d'une crise tant qu'on n'y revient pas.
+- **Tutoriel de démarrage** pour les nouveaux joueurs (affiché une seule fois).
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Corrigé : la bannière d'événement affichait la mauvaise icône pour un krach boursier (tombait dans le cas par défaut ⭐ au lieu d'une icône dédiée).
+- Corrigé : un message `strategy:update` sans `quarterDecisions` (ex. après prolongation du trimestre ou reprise de pause) effaçait par erreur les décisions déjà affichées côté client.
+
+### Notes techniques
+- `server/difficulty.js` (nouveau) centralise les multiplicateurs de rythme — chaque boucle auto-reprogrammée (tâches, événements, risque de deal stagnant, risque de churn) lit `gameState.difficulty` à chaque tick plutôt que de dupliquer des constantes.
+- Mettre la partie en pause fige l'action de chaque boucle temporisée (`gameState.paused` vérifié à chaque tick) sans jamais détruire de timer ; la reprise décale le compte à rebours du trimestre de la durée exacte de la pause.
+- Les badges sont une fonction pure (`getBadges()`, server/scoring.js) des compteurs d'actions déjà suivis par `awardPoints()` — aucune logique de seuil dupliquée côté client.
+
+---
+
 ## Patch 6 — Finance & RH réalistes et connectés au reste du jeu (2026-07-26)
 
 ### Ajouts

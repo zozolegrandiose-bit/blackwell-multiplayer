@@ -1,5 +1,6 @@
 const { pushActivity } = require("./gameState");
 const { awardPoints } = require("./scoring");
+const { getDifficultyPreset } = require("./difficulty");
 
 // The "always something to do" layer: small, fast, purely positive micro-tasks —
 // unlike the Patch 3 crisis events, these never penalize if left unaddressed, they
@@ -93,15 +94,16 @@ function sweepExpiredTasks(io, gameState) {
 
 function scheduleTaskSpawnLoop(io, gameState) {
   function tick() {
-    spawnTask(io, gameState);
-    setTimeout(tick, randomDelay(TASK_SPAWN_MIN_MS, TASK_SPAWN_MAX_MS));
+    const freq = getDifficultyPreset(gameState.difficulty).taskFreq;
+    if (!gameState.paused) spawnTask(io, gameState);
+    setTimeout(tick, randomDelay(TASK_SPAWN_MIN_MS, TASK_SPAWN_MAX_MS) * freq);
   }
   setTimeout(tick, randomDelay(TASK_SPAWN_MIN_MS, TASK_SPAWN_MAX_MS));
 }
 
 function scheduleTaskSweepLoop(io, gameState) {
   function tick() {
-    sweepExpiredTasks(io, gameState);
+    if (!gameState.paused) sweepExpiredTasks(io, gameState);
     setTimeout(tick, randomDelay(TASK_SWEEP_MIN_MS, TASK_SWEEP_MAX_MS));
   }
   setTimeout(tick, randomDelay(TASK_SWEEP_MIN_MS, TASK_SWEEP_MAX_MS));

@@ -2,6 +2,12 @@ const { pushActivity } = require("./gameState");
 const { applyHealthDelta, checkVictory } = require("./scoring");
 const { recomputeAum, recomputeCapitalRatio, recomputeBudgetPool, CAPITAL_RATIO_FLOOR } = require("./handlers/finance");
 const { openPosition } = require("./handlers/hr");
+const { countStaleOpenItems } = require("./handlers/compliance");
+const { getDifficultyPreset } = require("./difficulty");
+
+const QUARTER_HISTORY_MAX = 12;
+const COMPLIANCE_FINE_PER_STALE_ITEM = 4; // M$ off netIncome, per audit-flagged open item
+const ESG_SCORE_MIN = 0, ESG_SCORE_MAX = 100;
 
 const QUARTER_LENGTH_MS = 90 * 1000;
 
@@ -39,9 +45,9 @@ const CLUSTER_OPTIONS = {
     { id: "retention", label: "Fidélisation", description: "Renforcer la relation avec les clients existants.", aumPct: 0.005, netIncomePct: 0.005, health: 1 }
   ],
   D: [
-    { id: "minimal", label: "Minimal", description: "Réduire les contrôles pour économiser.", aumPct: 0, netIncomePct: 0.01, health: -3 },
-    { id: "standard", label: "Standard", description: "Maintenir le niveau de contrôle actuel.", aumPct: 0, netIncomePct: 0, health: 0 },
-    { id: "reinforced", label: "Renforcé", description: "Investir dans la conformité.", aumPct: 0, netIncomePct: -0.005, health: 3 }
+    { id: "minimal", label: "Minimal", description: "Réduire les contrôles pour économiser.", aumPct: 0, netIncomePct: 0.01, health: -3, esgDelta: -4 },
+    { id: "standard", label: "Standard", description: "Maintenir le niveau de contrôle actuel.", aumPct: 0, netIncomePct: 0, health: 0, esgDelta: 0 },
+    { id: "reinforced", label: "Renforcé", description: "Investir dans la conformité.", aumPct: 0, netIncomePct: -0.005, health: 3, esgDelta: 5 }
   ],
   E: [
     { id: "invest", label: "Investir", description: "Financer la croissance.", aumPct: 0.01, netIncomePct: 0.015, health: -1 },
@@ -120,6 +126,9 @@ function resolveQuarter(io, gameState) {
     if (cluster === "F" && optionId === "recruit") {
       openPosition(gameState);
     }
+    if (cluster === "D" && option.esgDelta) {
+      gameState.financeKPIs.esgScore = Math.max(ESG_SCORE_MIN, Math.min(ESG_SCORE_MAX, gameState.financeKPIs.esgScore + option.esgDelta));
+    }
   });
 
   const gOptionId = decisions.G || "stability";
@@ -144,8 +153,19 @@ function resolveQuarter(io, gameState) {
   if (kpis.capitalRatio < CAPITAL_RATIO_FLOOR) healthDelta -= 5;
   if (gameState.hr.morale < 40) healthDelta -= 3;
 
+  // Quarterly regulatory audit: alerts left open too long (server/handlers/compliance.js)
+  // cost real money and health, mirroring the capital-ratio/morale checks above.
+  const staleComplianceCount = countStaleOpenItems(gameState);
+  if (staleComplianceCount > 0) {
+    kpis.netIncome = Math.round((kpis.netIncome - staleComplianceCount * COMPLIANCE_FINE_PER_STALE_ITEM) * 10) / 10;
+    healthDelta -= Math.min(10, staleComplianceCount * 2);
+  }
+
   const resolvedQuarter = gameState.currentQuarter;
-  const report = { quarter: resolvedQuarter, decisions: { ...decisions }, aumPct, netIncomePct, healthDelta, newAum: kpis.aum, newNetIncome: kpis.netIncome };
+  const report = { quarter: resolvedQuarter, decisions: { ...decisions }, aumPct, netIncomePct, healthDelta, newAum: kpis.aum, newNetIncome: kpis.netIncome, esgScore: kpis.esgScore, staleComplianceCount, ts: Date.now() };
+
+  gameState.quarterHistory.unshift(report);
+  if (gameState.quarterHistory.length > QUARTER_HISTORY_MAX) gameState.quarterHistory.length = QUARTER_HISTORY_MAX;
 
   pushActivity(gameState, {
     actorPlayerId: null,
@@ -156,7 +176,7 @@ function resolveQuarter(io, gameState) {
   gameState.currentQuarter += 1;
   gameState.quarterDecisions = {};
   gameState.quarterPhase = "deciding";
-  gameState.quarterDeadline = Date.now() + QUARTER_LENGTH_MS;
+  gameState.quarterDeadline = Date.now() + QUARTER_LENGTH_MS * getDifficultyPreset(gameState.difficulty).quarterLength;
 
   applyHealthDelta(io, gameState, healthDelta);
   io.to("game").emit("finance:update", kpis);
@@ -204,6 +224,16 @@ function registerStrategyHandlers(io, socket, gameState) {
     const allSubmitted = OPERATIONAL_CLUSTERS.every(c => gameState.quarterDecisions[c]) && gameState.quarterDecisions.G;
     if (allSubmitted) resolveQuarter(io, gameState);
   });
+
+  socket.on("strategy:extendQuarter", () => {
+    const player = gameState.players.find(p => p.id === socket.data.playerId);
+    if (!player || !player.hasFullAccess) return;
+    if (gameState.quarterPhase !== "deciding") return;
+    gameState.quarterDeadline = (gameState.quarterDeadline || Date.now()) + 60 * 1000;
+    io.to("game").emit("strategy:update", { quarterDeadline: gameState.quarterDeadline });
+    pushActivity(gameState, { actorPlayerId: player.id, page: "strategy", text: player.fullName + " a prolongé le trimestre en cours de 60 secondes." });
+    io.to("game").emit("activity:update", gameState.activityLog[0]);
+  });
 }
 
 const RESOLUTION_SWEEP_MIN_MS = 2000;
@@ -219,7 +249,7 @@ function randomSweepDelay() {
 // for this to overlap with the immediate-resolution shortcut above.
 function scheduleResolutionLoop(io, gameState) {
   function tick() {
-    if (gameState.quarterPhase === "deciding" && gameState.quarterDeadline && Date.now() >= gameState.quarterDeadline) {
+    if (!gameState.paused && gameState.quarterPhase === "deciding" && gameState.quarterDeadline && Date.now() >= gameState.quarterDeadline) {
       resolveQuarter(io, gameState);
     }
     setTimeout(tick, randomSweepDelay());

@@ -33,8 +33,14 @@ global.document = {
   querySelectorAll() { return []; },
   createElement() { return makeStubEl(); }
 };
-global.window = {};
+global.window = { addEventListener() {}, removeEventListener() {} };
 global.socket = { emit() {}, on() {} };
+global.localStorage = {
+  _store: {},
+  getItem(k) { return Object.prototype.hasOwnProperty.call(this._store, k) ? this._store[k] : null; },
+  setItem(k, v) { this._store[k] = String(v); },
+  removeItem(k) { delete this._store[k]; }
+};
 
 const fs = require("fs");
 

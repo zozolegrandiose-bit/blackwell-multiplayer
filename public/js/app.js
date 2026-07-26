@@ -21,11 +21,81 @@ const appState = {
   victory: false,
   currentQuarter: 1,
   taskQueue: [],
-  tasksSummary: {}
+  tasksSummary: {},
+  quarterHistory: [],
+  hallOfFame: [],
+  paused: false,
+  difficulty: "standard"
 };
 
 const PAGE_RENDERERS = {};
 const PAGE_BINDERS = {};
+
+const EVENT_TYPE_ICONS = {
+  regulatory: "🚨",
+  client_unhappy: "😠",
+  market_crash: "📉",
+  opportunity: "⭐",
+  competing_bid: "⚔️"
+};
+
+// Toasts + tab-title flash: lightweight awareness for activity happening on pages
+// the player isn't currently looking at — the toast container lives outside #app
+// so it survives renderApp()'s innerHTML replacement.
+function notify(message) {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.textContent = message;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 4500);
+}
+
+const ORIGINAL_TITLE = document.title;
+let titleFlashInterval = null;
+
+function startTitleFlash(flashText) {
+  if (titleFlashInterval) return;
+  let on = false;
+  titleFlashInterval = setInterval(() => {
+    document.title = on ? ORIGINAL_TITLE : flashText;
+    on = !on;
+  }, 1000);
+}
+
+function stopTitleFlash() {
+  if (!titleFlashInterval) return;
+  clearInterval(titleFlashInterval);
+  titleFlashInterval = null;
+  document.title = ORIGINAL_TITLE;
+}
+
+window.addEventListener("focus", stopTitleFlash);
+
+const TUTORIAL_SEEN_KEY = "blackwell_tutorial_seen";
+
+function maybeShowTutorial() {
+  const overlay = document.getElementById("tutorial-overlay");
+  if (!overlay || localStorage.getItem(TUTORIAL_SEEN_KEY)) return;
+  overlay.innerHTML = `
+    <div class="tutorial-modal">
+      <h2>Bienvenue chez Blackwell &amp; Co Capital</h2>
+      <p>Vous gérez une banque d'investissement avec d'autres joueurs, en temps réel. Quelques repères :</p>
+      <ul>
+        <li><b>Comité de Direction</b> — chaque trimestre, votre département verrouille une décision stratégique à compromis.</li>
+        <li><b>Pages opérationnelles</b> (M&amp;A, Clients, Conformité, RH, Finance) — de petites tâches ⚡ apparaissent en continu, à traiter vite.</li>
+        <li>Des <b>événements aléatoires</b> et des <b>risques ambiants</b> (deals qui stagnent, clients délaissés) créent de vraies urgences.</li>
+        <li>Votre <b>score</b> et vos <b>badges</b> sont visibles sur Vue d'ensemble, avec un Hall of Fame qui survit aux resets de partie.</li>
+      </ul>
+      <button id="tutorial-dismiss" class="btn-sm">J'ai compris</button>
+    </div>
+  `;
+  document.getElementById("tutorial-dismiss").addEventListener("click", () => {
+    localStorage.setItem(TUTORIAL_SEEN_KEY, "1");
+    overlay.innerHTML = "";
+  });
+}
 
 function initApp(player, snapshot) {
   appState.player = player;
@@ -34,6 +104,7 @@ function initApp(player, snapshot) {
     appState.currentPage = visibleNav(player)[0] ? visibleNav(player)[0].id : "overview";
   }
   renderApp();
+  maybeShowTutorial();
 }
 
 function switchPage(pageId) {
@@ -69,6 +140,11 @@ function renderApp() {
         </div>
       </div>
       <div class="main-content">
+        ${appState.paused ? `
+          <div class="event-banner">
+            <div>⏸ <b>Partie en pause.</b> Toutes les mécaniques temporisées sont figées${player.hasFullAccess ? " — utilisez le panneau GM sur Comité de Direction pour reprendre." : "."}</div>
+          </div>
+        ` : ""}
         ${appState.victory ? `
           <div class="victory-banner">
             <div>🎉 <b>Victoire !</b> L'objectif de ${fmtMoney(appState.campaignGoal.targetAUM)} d'AUM est atteint.</div>
@@ -82,7 +158,7 @@ function renderApp() {
         ` : ""}
         ${(appState.activeEvents || []).map(ev => `
           <div class="event-banner">
-            <div>${ev.type === "regulatory" ? "🚨" : ev.type === "client_unhappy" ? "😠" : "⭐"} <b>${escapeHtml(ev.label)}</b> — ${escapeHtml(ev.description)}</div>
+            <div>${EVENT_TYPE_ICONS[ev.type] || "⚠️"} <b>${escapeHtml(ev.label)}</b> — ${escapeHtml(ev.description)}</div>
             ${ev.deadline ? `<div class="event-banner-deadline">⏱ ${Math.max(0, Math.round((ev.deadline - Date.now()) / 1000))}s</div>` : ""}
           </div>
         `).join("")}

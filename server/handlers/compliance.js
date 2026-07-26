@@ -54,6 +54,16 @@ function escalateComplianceItem(io, gameState, itemId) {
   io.to("access:compliance").emit("compliance:update", gameState.complianceItems);
 }
 
+const AUDIT_STALE_MS = 4 * 60 * 1000; // items open this long are flagged at the quarterly audit
+
+// Called from server/strategy.js's resolveQuarter() — a quarterly regulatory audit,
+// mirroring the Finance capital-ratio / HR morale checks: alerts left open too long
+// cost the bank real money and health, not just a color-coded badge.
+function countStaleOpenItems(gameState) {
+  const now = Date.now();
+  return gameState.complianceItems.filter(i => (i.status === "Ouvert" || i.status === "Escaladé") && now - i.ts >= AUDIT_STALE_MS).length;
+}
+
 function registerComplianceHandlers(io, socket, gameState) {
   socket.on("compliance:create", payload => {
     if (!requireAccess(socket, "compliance")) return;
@@ -121,4 +131,4 @@ function registerComplianceHandlers(io, socket, gameState) {
   });
 }
 
-module.exports = { registerComplianceHandlers, COMPLIANCE_TYPES, COMPLIANCE_STATUSES, progressRandomComplianceItem, createUrgentComplianceItem, escalateComplianceItem };
+module.exports = { registerComplianceHandlers, COMPLIANCE_TYPES, COMPLIANCE_STATUSES, progressRandomComplianceItem, createUrgentComplianceItem, escalateComplianceItem, countStaleOpenItems, AUDIT_STALE_MS };

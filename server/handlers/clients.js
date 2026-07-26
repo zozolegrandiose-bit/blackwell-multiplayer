@@ -1,6 +1,15 @@
 const { pushActivity } = require("../gameState");
-const { awardPoints, checkEventResolution } = require("../scoring");
+const { awardPoints, checkEventResolution, applyHealthDelta } = require("../scoring");
 const { recomputeAum } = require("./finance");
+const { createBonusDeal } = require("./ma");
+const { getDifficultyPreset } = require("../difficulty");
+
+const CROSS_SELL_AUM_THRESHOLD = 1500;
+const CROSS_SELL_PROBABILITY = 0.35;
+const CHURN_SWEEP_MIN_MS = 60 * 1000;
+const CHURN_SWEEP_MAX_MS = 90 * 1000;
+const CHURN_THRESHOLD_MS = 4 * 60 * 1000;
+const CHURN_PROBABILITY = 0.2;
 
 const CLIENT_STATUSES = ["Prospect", "Actif", "En revue", "Inactif"];
 const CLIENT_RISKS = ["Low", "Medium", "High"];
@@ -24,6 +33,7 @@ function addRandomClientNote(io, gameState, actor) {
   const client = gameState.clients[Math.floor(Math.random() * gameState.clients.length)];
   const text = AMBIENT_NOTES[Math.floor(Math.random() * AMBIENT_NOTES.length)];
   client.notes.push({ authorPlayerId: actor.id, authorName: actor.fullName, ts: Date.now(), text });
+  client.lastTouchedAt = Date.now();
   io.to("access:clients").emit("clients:update", gameState.clients);
   pushActivity(gameState, {
     actorPlayerId: actor.id,
@@ -32,6 +42,58 @@ function addRandomClientNote(io, gameState, actor) {
   });
   io.to("game").emit("activity:update", gameState.activityLog[0]);
   return true;
+}
+
+// Ambient churn risk: an "Actif" client nobody has touched (note or status change)
+// in a while can quietly go inactive on its own — symmetric to the task queue's
+// "always something to do" pressure, but as a cost for neglect rather than a reward.
+function sweepChurnRisk(io, gameState) {
+  const now = Date.now();
+  const atRisk = gameState.clients.filter(c => c.status === "Actif" && now - (c.lastTouchedAt || 0) >= CHURN_THRESHOLD_MS);
+  let aumChanged = false;
+  atRisk.forEach(client => {
+    if (Math.random() >= CHURN_PROBABILITY) return;
+    client.status = "Inactif";
+    client.aum = Math.round(client.aum * 0.85);
+    client.lastTouchedAt = now;
+    aumChanged = true;
+    pushActivity(gameState, { actorPlayerId: null, page: "clients", text: "📉 « " + client.name + " » est passé inactif, faute de suivi." });
+  });
+  if (!atRisk.length) return;
+  io.to("access:clients").emit("clients:update", gameState.clients);
+  io.to("game").emit("activity:update", gameState.activityLog[0]);
+  if (aumChanged) {
+    applyHealthDelta(io, gameState, -2);
+    recomputeAum(gameState);
+    io.to("access:finance").emit("finance:update", gameState.financeKPIs);
+    io.to("game").emit("overview:kpis", gameState.financeKPIs);
+    io.to("game").emit("scoring:update", { playerScores: gameState.playerScores, bankHealth: gameState.bankHealth });
+  }
+}
+
+function randomDelay(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function scheduleChurnRiskLoop(io, gameState) {
+  function tick() {
+    if (!gameState.paused) sweepChurnRisk(io, gameState);
+    setTimeout(tick, randomDelay(CHURN_SWEEP_MIN_MS, CHURN_SWEEP_MAX_MS) * getDifficultyPreset(gameState.difficulty).eventFreq);
+  }
+  setTimeout(tick, randomDelay(CHURN_SWEEP_MIN_MS, CHURN_SWEEP_MAX_MS));
+}
+
+// Cross-sell: a client that just became a real Actif relationship, with enough AUM
+// to matter, occasionally surfaces a related M&A opportunity — a thematic bridge
+// between the Clients and M&A desks rather than two isolated pages.
+function maybeSpawnCrossSellDeal(io, gameState, client) {
+  if (client.aum < CROSS_SELL_AUM_THRESHOLD) return;
+  if (Math.random() >= CROSS_SELL_PROBABILITY) return;
+  const valuation = Math.round(client.aum * (0.15 + Math.random() * 0.25));
+  const deal = createBonusDeal(io, gameState, { name: "🔗 Cross-sell — " + client.name, valuation });
+  pushActivity(gameState, { actorPlayerId: null, page: "ma", text: "🔗 « " + client.name + " » ouvre une piste M&A (" + valuation + " M$)." });
+  io.to("game").emit("activity:update", gameState.activityLog[0]);
+  return deal;
 }
 
 function registerClientsHandlers(io, socket, gameState) {
@@ -56,7 +118,8 @@ function registerClientsHandlers(io, socket, gameState) {
       risk: CLIENT_RISKS.includes(payload.risk) ? payload.risk : "Medium",
       status: "Prospect",
       notes: [],
-      kycChecklist: KYC_ITEMS.map(item => ({ item, done: false }))
+      kycChecklist: KYC_ITEMS.map(item => ({ item, done: false })),
+      lastTouchedAt: Date.now()
     };
     gameState.clients.push(client);
 
@@ -77,11 +140,13 @@ function registerClientsHandlers(io, socket, gameState) {
     if (!client || !CLIENT_STATUSES.includes(payload.status)) return;
     const wasActive = client.status === "Actif";
     client.status = payload.status;
+    client.lastTouchedAt = Date.now();
     io.to("access:clients").emit("clients:update", gameState.clients);
     if (wasActive !== (client.status === "Actif")) {
       recomputeAum(gameState);
       io.to("access:finance").emit("finance:update", gameState.financeKPIs);
       io.to("game").emit("overview:kpis", gameState.financeKPIs);
+      if (!wasActive && client.status === "Actif") maybeSpawnCrossSellDeal(io, gameState, client);
     }
     if (payload.status !== "En revue") checkEventResolution(io, gameState, client.id, player);
   });
@@ -94,6 +159,7 @@ function registerClientsHandlers(io, socket, gameState) {
     if (!player || !client || !text) return;
 
     client.notes.push({ authorPlayerId: player.id, authorName: player.fullName, ts: Date.now(), text });
+    client.lastTouchedAt = Date.now();
     io.to("access:clients").emit("clients:update", gameState.clients);
     awardPoints(io, gameState, player, "clients_note");
     checkEventResolution(io, gameState, client.id, player);
@@ -112,4 +178,4 @@ function registerClientsHandlers(io, socket, gameState) {
   });
 }
 
-module.exports = { registerClientsHandlers, CLIENT_STATUSES, CLIENT_RISKS, KYC_ITEMS, addRandomClientNote };
+module.exports = { registerClientsHandlers, CLIENT_STATUSES, CLIENT_RISKS, KYC_ITEMS, addRandomClientNote, scheduleChurnRiskLoop, sweepChurnRisk, maybeSpawnCrossSellDeal, CHURN_THRESHOLD_MS, CROSS_SELL_AUM_THRESHOLD };

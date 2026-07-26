@@ -209,6 +209,7 @@ function registerHrHandlers(io, socket, gameState) {
     entries.forEach(({ target, amount }) => {
       awardCustomPoints(io, gameState, target, Math.round(amount * 10), amount);
     });
+    awardPoints(io, gameState, actor, "hr_distributeBonus");
 
     adjustMorale(gameState, 5);
     io.to("access:hr").emit("hr:update", gameState.hr);

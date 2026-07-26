@@ -63,6 +63,61 @@ function renderDecisionStatus(cluster, value) {
   return `<span class="chip chip-good">✅ ${escapeHtml(strategyOptionLabel(cluster, value))}</span>`;
 }
 
+const DIFFICULTY_LABELS = { detente: "Détente", standard: "Standard", intense: "Intense" };
+
+function esgColor(score) {
+  if (score >= 60) return "var(--series-green)";
+  if (score >= 35) return "#f5b942";
+  return "var(--series-red)";
+}
+
+function gmPanelHtml() {
+  if (!appState.player.hasFullAccess) return "";
+  const paused = appState.paused;
+  const difficulty = appState.difficulty || "standard";
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🎛 Panneau GM — Direction Générale</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+        ${paused
+          ? `<button id="gm-resume" class="btn-sm">▶️ Reprendre la partie</button>`
+          : `<button id="gm-pause" class="btn-sm">⏸ Mettre en pause</button>`}
+        <button id="gm-extend" class="btn-sm">⏱ Prolonger le trimestre (+60s)</button>
+        <button id="gm-trigger-event" class="btn-sm">🎲 Déclencher un événement</button>
+      </div>
+      <div class="form-row"><label>Difficulté</label>
+        <select id="gm-difficulty">
+          ${Object.keys(DIFFICULTY_LABELS).map(d => `<option value="${d}" ${d === difficulty ? "selected" : ""}>${DIFFICULTY_LABELS[d]}</option>`).join("")}
+        </select>
+      </div>
+    </div>
+  `;
+}
+
+function quarterHistoryHtml() {
+  const history = appState.quarterHistory || [];
+  if (!history.length) return "";
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">Historique des trimestres résolus</div>
+      <table class="data-table">
+        <thead><tr><th>Trimestre</th><th>AUM</th><th>Résultat net</th><th>Santé</th><th>ESG</th></tr></thead>
+        <tbody>
+          ${history.map(r => `
+            <tr>
+              <td class="tnum">T${r.quarter}</td>
+              <td class="tnum">${r.aumPct >= 0 ? "+" : ""}${Math.round(r.aumPct * 1000) / 10}%</td>
+              <td class="tnum">${r.netIncomePct >= 0 ? "+" : ""}${Math.round(r.netIncomePct * 1000) / 10}%</td>
+              <td class="tnum">${r.healthDelta >= 0 ? "+" : ""}${r.healthDelta}</td>
+              <td class="tnum">${r.esgScore != null ? r.esgScore + "%" : "—"}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderStrategy() {
   const quarter = appState.currentQuarter || 1;
   const deadline = appState.quarterDeadline;
@@ -72,14 +127,26 @@ function renderStrategy() {
   const myOptions = myCluster === "G" ? STRATEGY_G_MULTIPLIERS : (myCluster ? STRATEGY_CLUSTER_OPTIONS[myCluster] : null);
   const myOptionsList = myCluster === "G" ? Object.keys(STRATEGY_G_MULTIPLIERS).map(id => ({ id, ...STRATEGY_G_MULTIPLIERS[id] })) : myOptions;
   const alreadySubmitted = myCluster && !!decisions[myCluster];
+  const esgScore = (appState.financeKPIs && appState.financeKPIs.esgScore) || 0;
 
   return `
     <div class="page-title">Comité de Direction</div>
     <div class="page-sub">Décisions stratégiques trimestrielles — chaque département verrouille un choix pour le trimestre en cours.</div>
+    ${gmPanelHtml()}
     <div class="kpi-grid" style="margin-bottom:16px;">
       <div class="kpi-card"><div class="kpi-label">Trimestre en cours</div><div class="kpi-value">T${quarter}</div></div>
       <div class="kpi-card"><div class="kpi-label">Temps restant</div><div class="kpi-value">${secondsLeft !== null ? secondsLeft + "s" : "—"}</div></div>
     </div>
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🌱 Score ESG (piloté par Conformité, Risque &amp; Juridique)</div>
+      <div style="display:flex; align-items:center; gap:14px;">
+        <div style="flex:1; height:16px; background:var(--border); border-radius:8px; overflow:hidden;">
+          <div style="width:${esgScore}%; height:100%; background:${esgColor(esgScore)}; transition:width 0.3s;"></div>
+        </div>
+        <div style="font-weight:700; font-size:15px; min-width:48px; text-align:right;">${esgScore}%</div>
+      </div>
+    </div>
+    ${quarterHistoryHtml()}
     ${myCluster && myOptionsList ? `
       <div class="panel" style="margin-bottom:16px;">
         <div class="panel-title">Votre décision — ${escapeHtml(STRATEGY_CLUSTER_LABELS[myCluster])}</div>
@@ -124,6 +191,18 @@ function bindStrategy() {
     el.addEventListener("click", () => {
       socket.emit("strategy:submitDecision", { optionId: el.getAttribute("data-strategy-submit") });
     });
+  });
+  const pauseBtn = document.getElementById("gm-pause");
+  if (pauseBtn) pauseBtn.addEventListener("click", () => socket.emit("game:pause"));
+  const resumeBtn = document.getElementById("gm-resume");
+  if (resumeBtn) resumeBtn.addEventListener("click", () => socket.emit("game:resume"));
+  const extendBtn = document.getElementById("gm-extend");
+  if (extendBtn) extendBtn.addEventListener("click", () => socket.emit("strategy:extendQuarter"));
+  const triggerBtn = document.getElementById("gm-trigger-event");
+  if (triggerBtn) triggerBtn.addEventListener("click", () => socket.emit("game:triggerEvent"));
+  const difficultySelect = document.getElementById("gm-difficulty");
+  if (difficultySelect) difficultySelect.addEventListener("change", () => {
+    socket.emit("game:setDifficulty", { difficulty: difficultySelect.value });
   });
 }
 

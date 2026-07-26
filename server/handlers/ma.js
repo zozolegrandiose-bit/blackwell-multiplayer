@@ -1,6 +1,7 @@
 const { pushActivity } = require("../gameState");
-const { awardPoints, checkEventResolution } = require("../scoring");
+const { awardPoints, checkEventResolution, applyHealthDelta } = require("../scoring");
 const { applyDealRevenue } = require("./finance");
+const { getDifficultyPreset } = require("../difficulty");
 
 const MA_STAGES = ["Screening", "Due Diligence", "Négociation", "Signing", "Clôturé"];
 const IC_VOTE_ITEMS = ["Validation Risques", "Validation Juridique", "Validation Direction Générale"];
@@ -59,6 +60,39 @@ function createBonusDeal(io, gameState, { name, valuation }) {
 function removeDeal(io, gameState, dealId) {
   gameState.maDeals = gameState.maDeals.filter(d => d.id !== dealId);
   io.to("access:ma").emit("ma:update", gameState.maDeals);
+}
+
+// Stalled-deal risk: a deal nobody has touched in a while can fall through on its
+// own, independent of the "Enchère concurrente" crisis event — real urgency to keep
+// the pipeline moving, not just react to crises.
+const STALL_SWEEP_MIN_MS = 60 * 1000;
+const STALL_SWEEP_MAX_MS = 90 * 1000;
+const STALL_THRESHOLD_MS = 3 * 60 * 1000;
+const STALL_COLLAPSE_PROBABILITY = 0.25;
+
+function randomDelay(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function sweepStalledDeals(io, gameState) {
+  const now = Date.now();
+  const stale = gameState.maDeals.filter(d => d.stage !== "Clôturé" && now - d.updatedAt >= STALL_THRESHOLD_MS);
+  stale.forEach(deal => {
+    if (Math.random() >= STALL_COLLAPSE_PROBABILITY) return;
+    removeDeal(io, gameState, deal.id);
+    applyHealthDelta(io, gameState, -3);
+    pushActivity(gameState, { actorPlayerId: null, page: "ma", text: "💤 « " + deal.name + " » est tombé à l'eau, faute d'avancement depuis trop longtemps." });
+    io.to("game").emit("activity:update", gameState.activityLog[0]);
+    io.to("game").emit("scoring:update", { playerScores: gameState.playerScores, bankHealth: gameState.bankHealth });
+  });
+}
+
+function scheduleDealRiskLoop(io, gameState) {
+  function tick() {
+    if (!gameState.paused) sweepStalledDeals(io, gameState);
+    setTimeout(tick, randomDelay(STALL_SWEEP_MIN_MS, STALL_SWEEP_MAX_MS) * getDifficultyPreset(gameState.difficulty).eventFreq);
+  }
+  setTimeout(tick, randomDelay(STALL_SWEEP_MIN_MS, STALL_SWEEP_MAX_MS));
 }
 
 function registerMaHandlers(io, socket, gameState) {
@@ -155,4 +189,4 @@ function registerMaHandlers(io, socket, gameState) {
   });
 }
 
-module.exports = { registerMaHandlers, MA_STAGES, IC_VOTE_ITEMS, advanceRandomDeal, createBonusDeal, removeDeal };
+module.exports = { registerMaHandlers, MA_STAGES, IC_VOTE_ITEMS, advanceRandomDeal, createBonusDeal, removeDeal, scheduleDealRiskLoop, sweepStalledDeals, STALL_THRESHOLD_MS };

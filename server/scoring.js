@@ -20,8 +20,24 @@ const POINT_VALUES = {
   expenses_submit: 2,
   expenses_approve: 3,
   event_resolved: 25,
-  task_completed: 5
+  task_completed: 5,
+  hr_distributeBonus: 0
 };
+
+// Achievement badges — pure function of the same actionCounts already tracked by
+// awardPoints() below, so no separate bookkeeping is needed to compute them.
+const ACHIEVEMENTS = [
+  { id: "closer", icon: "🏅", label: "Clôtureur", description: "5 deals M&A clôturés", actionType: "ma_closeDeal", threshold: 5 },
+  { id: "shield", icon: "🛡️", label: "Bouclier", description: "5 crises résolues à temps", actionType: "event_resolved", threshold: 5 },
+  { id: "recruiter", icon: "🎯", label: "Recruteur", description: "3 candidats embauchés", actionType: "hr_hireCandidate", threshold: 3 },
+  { id: "generous", icon: "💰", label: "Généreux", description: "A distribué des primes", actionType: "hr_distributeBonus", threshold: 1 },
+  { id: "speedy", icon: "⚡", label: "Rapide", description: "15 tâches rapides traitées", actionType: "task_completed", threshold: 15 }
+];
+
+function getBadges(actionCounts) {
+  if (!actionCounts) return [];
+  return ACHIEVEMENTS.filter(a => (actionCounts[a.actionType] || 0) >= a.threshold);
+}
 
 // Health deltas tied to specific scored actions. Negative deltas from crisis
 // events (market crash, unresolved crises) are applied directly via applyHealthDelta,
@@ -99,10 +115,14 @@ function awardPoints(io, gameState, player, actionType, extraHealthDelta) {
   const points = POINT_VALUES[actionType] || 0;
   const key = playerKey(player);
   if (!gameState.playerScores[key]) {
-    gameState.playerScores[key] = { fullName: player.fullName, score: 0 };
+    gameState.playerScores[key] = { fullName: player.fullName, score: 0, actionCounts: {} };
   }
-  gameState.playerScores[key].score += points;
-  gameState.playerScores[key].fullName = player.fullName;
+  const entry = gameState.playerScores[key];
+  entry.score += points;
+  entry.fullName = player.fullName;
+  entry.actionCounts = entry.actionCounts || {};
+  entry.actionCounts[actionType] = (entry.actionCounts[actionType] || 0) + 1;
+  entry.badges = getBadges(entry.actionCounts);
 
   const healthDelta = (HEALTH_DELTAS[actionType] || 0) + (extraHealthDelta || 0);
   applyHealthDelta(io, gameState, healthDelta);
@@ -128,4 +148,4 @@ function awardCustomPoints(io, gameState, player, amount, bonusEarned) {
   io.to("game").emit("scoring:update", { playerScores: gameState.playerScores, bankHealth: gameState.bankHealth });
 }
 
-module.exports = { awardPoints, awardCustomPoints, applyHealthDelta, checkEventResolution, checkVictory, playerKey, getTier, TIERS, POINT_VALUES };
+module.exports = { awardPoints, awardCustomPoints, applyHealthDelta, checkEventResolution, checkVictory, playerKey, getTier, TIERS, POINT_VALUES, ACHIEVEMENTS, getBadges };

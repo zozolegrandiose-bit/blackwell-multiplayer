@@ -45,9 +45,9 @@ function createGameState() {
       }
     ],
     clients: [
-      { id: "cl-seed-1", name: "Kestrel Infrastructure Partners", industry: "Fonds d'infrastructure", aum: 3800, rmPlayerId: null, rmName: "Poste vacant", risk: "Medium", status: "Prospect", notes: [], kycChecklist: [{ item: "Vérification d'identité", done: true }, { item: "Origine des fonds", done: false }, { item: "Sanctions & PEP", done: false }, { item: "Validation Conformité", done: false }] },
-      { id: "cl-seed-2", name: "Meridian Family Office", industry: "Gestion de fortune", aum: 1200, rmPlayerId: null, rmName: "Poste vacant", risk: "Low", status: "Actif", notes: [], kycChecklist: [{ item: "Vérification d'identité", done: true }, { item: "Origine des fonds", done: true }, { item: "Sanctions & PEP", done: true }, { item: "Validation Conformité", done: true }] },
-      { id: "cl-seed-3", name: "Halcyon Digital Assets Fund", industry: "Actifs numériques", aum: 850, rmPlayerId: null, rmName: "Poste vacant", risk: "High", status: "En revue", notes: [], kycChecklist: [{ item: "Vérification d'identité", done: true }, { item: "Origine des fonds", done: false }, { item: "Sanctions & PEP", done: false }, { item: "Validation Conformité", done: false }] }
+      { id: "cl-seed-1", name: "Kestrel Infrastructure Partners", industry: "Fonds d'infrastructure", aum: 3800, rmPlayerId: null, rmName: "Poste vacant", risk: "Medium", status: "Prospect", notes: [], kycChecklist: [{ item: "Vérification d'identité", done: true }, { item: "Origine des fonds", done: false }, { item: "Sanctions & PEP", done: false }, { item: "Validation Conformité", done: false }], lastTouchedAt: now },
+      { id: "cl-seed-2", name: "Meridian Family Office", industry: "Gestion de fortune", aum: 1200, rmPlayerId: null, rmName: "Poste vacant", risk: "Low", status: "Actif", notes: [], kycChecklist: [{ item: "Vérification d'identité", done: true }, { item: "Origine des fonds", done: true }, { item: "Sanctions & PEP", done: true }, { item: "Validation Conformité", done: true }], lastTouchedAt: now },
+      { id: "cl-seed-3", name: "Halcyon Digital Assets Fund", industry: "Actifs numériques", aum: 850, rmPlayerId: null, rmName: "Poste vacant", risk: "High", status: "En revue", notes: [], kycChecklist: [{ item: "Vérification d'identité", done: true }, { item: "Origine des fonds", done: false }, { item: "Sanctions & PEP", done: false }, { item: "Validation Conformité", done: false }], lastTouchedAt: now }
     ],
     complianceItems: [
       { id: "cp-seed-1", type: "Surveillance marché", desk: "Bureau Actions", flag: "Volume inhabituel constaté avant une annonce de résultats.", status: "Ouvert", ts: now - 4 * 86400000, raisedByPlayerId: null, raisedByName: "Surveillance automatique", assignedToPlayerId: null, assignedToName: null }
@@ -83,6 +83,7 @@ function createGameState() {
       equity: 18000,
       riskWeightedAssets: 145000,
       capitalRatio: Math.round((18000 / 145000) * 1000) / 10,
+      esgScore: 60,
       budgetPool: { total: Math.round(1420 * 0.4), allocated: 555 },
       lastDividendQuarter: 0,
       lastRetainQuarter: 0,
@@ -106,7 +107,12 @@ function createGameState() {
     quarterDecisions: {},
     campaignGoal: { targetAUM: 500000, maxQuarters: 20 },
     victory: false,
-    taskQueue: []
+    taskQueue: [],
+    quarterHistory: [],
+    paused: false,
+    pausedAt: null,
+    difficulty: "standard",
+    hallOfFame: []
   };
 }
 
@@ -125,11 +131,13 @@ function pushActivity(gameState, entry) {
 // Socket.io room memberships or force a reconnect.
 function resetGame(gameState) {
   const preservedPlayers = gameState.players;
+  const preservedHallOfFame = gameState.hallOfFame || [];
   const fresh = createGameState();
   Object.keys(fresh).forEach(key => {
     gameState[key] = fresh[key];
   });
   gameState.players = preservedPlayers;
+  gameState.hallOfFame = preservedHallOfFame;
   return gameState;
 }
 

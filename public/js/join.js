@@ -237,25 +237,35 @@ socket.on("events:update", events => {
   renderApp();
 });
 
-socket.on("event:triggered", () => {
+socket.on("event:triggered", ev => {
   if (!window.currentPlayer) return;
+  notify((EVENT_TYPE_ICONS[ev.type] || "⚠️") + " " + ev.label);
+  startTitleFlash("🚨 " + ev.label);
   renderApp();
 });
 
 socket.on("event:resolved", () => {
   if (!window.currentPlayer) return;
+  if (!(appState.activeEvents || []).length) stopTitleFlash();
   renderApp();
 });
 
 socket.on("event:expired", () => {
   if (!window.currentPlayer) return;
+  if (!(appState.activeEvents || []).length) stopTitleFlash();
   renderApp();
 });
 
 socket.on("tasks:update", data => {
   if (!window.currentPlayer) return;
+  const previousIds = new Set(appState.taskQueue.filter(t => t.page === data.page).map(t => t.id));
+  const hasNewTask = data.tasks.some(t => !previousIds.has(t.id));
   appState.taskQueue = appState.taskQueue.filter(t => t.page !== data.page).concat(data.tasks);
-  if (appState.currentPage === data.page) renderApp();
+  if (appState.currentPage === data.page) {
+    renderApp();
+  } else if (hasNewTask) {
+    notify("⚡ Nouvelle tâche sur " + (TASK_SUMMARY_LABELS[data.page] || data.page));
+  }
 });
 
 socket.on("tasks:summary", summary => {
@@ -272,10 +282,28 @@ socket.on("game:bankrupt", () => {
 
 socket.on("strategy:update", data => {
   if (!window.currentPlayer) return;
-  appState.quarterDecisions = data.quarterDecisions;
+  if (data.quarterDecisions != null) appState.quarterDecisions = data.quarterDecisions;
   if (data.currentQuarter != null) appState.currentQuarter = data.currentQuarter;
   if (data.quarterDeadline != null) appState.quarterDeadline = data.quarterDeadline;
   renderApp();
+});
+
+socket.on("strategy:quarterResolved", report => {
+  if (!window.currentPlayer) return;
+  appState.quarterHistory = [report, ...(appState.quarterHistory || [])].slice(0, 12);
+  if (appState.currentPage === "strategy") renderApp();
+});
+
+socket.on("game:pauseState", data => {
+  if (!window.currentPlayer) return;
+  appState.paused = data.paused;
+  renderApp();
+});
+
+socket.on("game:difficultyChanged", data => {
+  if (!window.currentPlayer) return;
+  appState.difficulty = data.difficulty;
+  if (appState.currentPage === "strategy") renderApp();
 });
 
 socket.on("game:victory", () => {

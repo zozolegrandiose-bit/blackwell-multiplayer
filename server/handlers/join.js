@@ -10,7 +10,8 @@ function publicRoster(gameState) {
     id: p.id,
     fullName: p.fullName,
     grade: p.grade,
-    dept: p.dept
+    dept: p.dept,
+    cluster: p.cluster
   }));
 }
 
@@ -34,7 +35,11 @@ function buildSnapshot(gameState, player) {
     quarterDeadline: gameState.quarterDeadline,
     quarterDecisions: buildDecisionsView(gameState, player.cluster),
     tasksSummary: summarizeTasks(gameState),
-    taskQueue: gameState.taskQueue.filter(t => player.access.includes(t.page))
+    taskQueue: gameState.taskQueue.filter(t => player.access.includes(t.page)),
+    quarterHistory: gameState.quarterHistory,
+    hallOfFame: gameState.hallOfFame,
+    paused: gameState.paused,
+    difficulty: gameState.difficulty
   };
   if (player.access.includes("ma")) snapshot.maDeals = gameState.maDeals;
   if (player.access.includes("clients")) snapshot.clients = gameState.clients;

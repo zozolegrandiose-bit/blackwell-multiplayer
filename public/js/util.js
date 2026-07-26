@@ -94,6 +94,19 @@ function tierBadgeHtml(score) {
   return `<span title="${tier.label} — ${score || 0} pts">${tier.icon}</span>`;
 }
 
+// Achievement badges are computed server-side (server/scoring.js's getBadges(),
+// a pure function of actionCounts) and travel on each playerScores entry — this
+// just renders whatever list arrives, no client-side threshold logic to keep in sync.
+function badgesForPlayer(playerScores, fullName) {
+  const entry = Object.values(playerScores || {}).find(e => e.fullName === fullName);
+  return (entry && entry.badges) || [];
+}
+
+function badgesHtml(badges) {
+  if (!badges || !badges.length) return "";
+  return badges.map(b => `<span title="${escapeHtml(b.label)} — ${escapeHtml(b.description)}">${b.icon}</span>`).join(" ");
+}
+
 // Shared "always something to do" quick-task panel, reused identically across the
 // 5 operational pages (M&A, Clients, Compliance, HR, Finance) — filters appState's
 // shared taskQueue down to this page's items each render.
