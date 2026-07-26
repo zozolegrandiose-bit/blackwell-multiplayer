@@ -6,6 +6,74 @@ function bankHealthColor(health) {
 
 const TASK_SUMMARY_LABELS = { ma: "M&A", clients: "Clients", compliance: "Conformité", hr: "RH", finance: "Finance" };
 
+// The direct answer to "on ne sait pas quoi faire" — a live, always-accurate list
+// computed from real state (never scripted/fake), warning early (roughly half the
+// real penalty threshold) so players see a priority before the actual consequence
+// (fine, churn, collapsed deal) hits. Filtered to pages the player can act on.
+function computePriorities() {
+  const items = [];
+  const access = (appState.player && appState.player.access) || [];
+  const now = Date.now();
+
+  if (access.includes("compliance")) {
+    const stale = (appState.complianceItems || []).filter(i => (i.status === "Ouvert" || i.status === "Escaladé") && now - i.ts >= 2 * 60 * 1000);
+    if (stale.length) items.push({ icon: "🚨", page: "compliance", text: stale.length + " alerte(s) de conformité en attente depuis plus de 2 minutes — risque d'amende à l'audit trimestriel." });
+  }
+  if (access.includes("ma")) {
+    const stalling = (appState.maDeals || []).filter(d => d.stage !== "Clôturé" && now - d.updatedAt >= 90 * 1000);
+    if (stalling.length) items.push({ icon: "💤", page: "ma", text: stalling.length + " deal(s) M&A sans avancée récente — risque qu'ils tombent à l'eau." });
+  }
+  if (access.includes("clients")) {
+    const atRisk = (appState.clients || []).filter(c => c.status === "Actif" && now - (c.lastTouchedAt || 0) >= 2 * 60 * 1000);
+    if (atRisk.length) items.push({ icon: "📉", page: "clients", text: atRisk.length + " client(s) actif(s) sans suivi récent — risque de passer inactif." });
+  }
+  if (access.includes("hr")) {
+    const hr = appState.hr || {};
+    const openPos = (hr.openPositions || []).filter(p => p.status === "Ouvert").length;
+    if (openPos) items.push({ icon: "🎯", page: "hr", text: openPos + " poste(s) ouvert(s) à pourvoir." });
+    const pendingLeave = (hr.leaveRequests || []).filter(r => r.status === "En attente").length;
+    if (pendingLeave) items.push({ icon: "🗓️", page: "hr", text: pendingLeave + " demande(s) de congé en attente de décision." });
+  }
+  if (access.includes("finance")) {
+    const kpis = appState.financeKPIs || {};
+    if (kpis.budgetPool) {
+      const remaining = Math.round((kpis.budgetPool.total - kpis.budgetPool.allocated) * 10) / 10;
+      if (remaining < 0) items.push({ icon: "⚠️", page: "finance", text: "Budgets départementaux dépassent le pool de " + Math.abs(remaining) + " M$ — à corriger." });
+    }
+    if (kpis.capitalRatio != null && kpis.capitalRatio < 8) items.push({ icon: "🏦", page: "finance", text: "Ratio de fonds propres sous le seuil réglementaire (" + kpis.capitalRatio + "%)." });
+  }
+  if (access.includes("strategy")) {
+    const myCluster = appState.player && appState.player.cluster;
+    if (myCluster && !(appState.quarterDecisions || {})[myCluster]) items.push({ icon: "📋", page: "strategy", text: "Votre département n'a pas encore verrouillé sa décision pour ce trimestre." });
+  }
+  const taskCount = Object.values(appState.tasksSummary || {}).reduce((a, b) => a + b, 0);
+  if (taskCount) items.push({ icon: "⚡", page: null, text: taskCount + " tâche(s) rapide(s) en attente sur vos pages." });
+
+  return items;
+}
+
+function prioritiesPanelHtml() {
+  const items = computePriorities();
+  if (!items.length) {
+    return `
+      <div class="panel task-panel" style="margin-bottom:16px;">
+        <div class="panel-title">✅ Priorités</div>
+        <div style="font-size:12.5px; color:var(--text-muted);">Rien d'urgent pour l'instant — tout est sous contrôle sur vos pages.</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="panel task-panel" style="margin-bottom:16px;">
+      <div class="panel-title">🧭 Priorités (${items.length})</div>
+      ${items.map(item => `
+        <div class="task-row" ${item.page ? `data-nav-page="${item.page}" style="cursor:pointer;"` : ""}>
+          <span class="task-row-text">${item.icon} ${escapeHtml(item.text)}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function taskSummaryPanelHtml() {
   const summary = appState.tasksSummary || {};
   const total = Object.values(summary).reduce((a, b) => a + b, 0);
@@ -81,7 +149,8 @@ function renderOverview() {
 
   return `
     <div class="page-title">Vue d'ensemble</div>
-    <div class="page-sub">Tableau de bord partagé — visible par tous les joueurs.</div>
+    <div class="page-sub">Tableau de bord partagé — visible par tous les joueurs. Vous reprenez une banque avec des années d'historique : consultez les priorités ci-dessous pour savoir où intervenir en premier.</div>
+    ${prioritiesPanelHtml()}
     ${taskSummaryPanelHtml()}
     ${hallOfFameHtml()}
     <div class="panel-row" style="margin-bottom:16px;">

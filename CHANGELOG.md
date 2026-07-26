@@ -1,5 +1,26 @@
 # Journal des mises à jour
 
+## Patch 8 — Reprise d'une banque avec un vrai historique, et un cap clair (2026-07-26)
+
+### Ajouts
+- **Toute nouvelle partie démarre en pleine reprise d'entreprise**, pas d'une page blanche : 10 clients en portefeuille avec des mois/années de relation (notes datées, statuts variés, dont un client déjà « Inactif » et un dossier « En revue »), 7 projets M&A à tous les stades — dont 2 déjà clôturés sous la direction précédente, revenus déjà comptabilisés —, 6 alertes de conformité d'ancienneté variée (dont une déjà résolue et une déjà escaladée), un historique financier sur ~2 ans (8 points par indicateur au lieu de 5), 2 postes RH déjà ouverts, 2 demandes de congé en attente, un agenda et une base documentaire étoffés.
+- **Premier dossier concret à régler** : les budgets départementaux hérités dépassent le pool disponible de 232 M$ — un vrai point de départ pour la nouvelle Finance, pas un chiffre en l'air.
+- **Panneau 🧭 Priorités** sur Vue d'ensemble : liste calculée en direct (jamais scriptée) de ce qui a besoin d'attention — alertes conformité qui traînent, deals sans avancée, clients délaissés, postes à pourvoir, congés en attente, budgets dépassés, ratio de fonds propres bas, décision stratégique non soumise, tâches rapides en attente. Chaque ligne renvoie directement à la bonne page. Répond concrètement à « on ne sait pas quoi faire ».
+- **Tutoriel de démarrage réécrit**, qui pose le cadre de la reprise d'entreprise et pointe explicitement vers le panneau Priorités comme point de départ.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Corrigé : une fois le pool budgétaire dépassé, il était impossible de réduire un budget département pour revenir dans les clous (le contrôle rejetait même une baisse) — les réductions sont désormais toujours autorisées, seule une hausse au-delà du disponible est refusée.
+- Corrigé : le texte de la page Finance affichait « 15 % — 40 % des revenus » pour le pool budgétaire trimestriel, alors que le taux réel est fixe à 40 %.
+
+### Notes techniques
+- `computePriorities()` (`public/js/pages/overview.js`) est une fonction pure calculée à chaque rendu à partir de l'état déjà présent côté client — aucune donnée serveur supplémentaire, et le filtrage par accès (`player.access`) empêche qu'un joueur voie une priorité sur une page qu'il ne peut pas ouvrir.
+- `aumLegacyBase` recalculé pour rester cohérent avec les 10 nouveaux clients : AUM affiché (284 600 M$) = base hors portefeuille suivi (261 750 M$) + somme des clients « Actif » (22 850 M$).
+
+---
+
 ## Patch 7 — Enjeux, progression et outils de partie (2026-07-26)
 
 ### Ajouts

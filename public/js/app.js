@@ -80,15 +80,16 @@ function maybeShowTutorial() {
   if (!overlay || localStorage.getItem(TUTORIAL_SEEN_KEY)) return;
   overlay.innerHTML = `
     <div class="tutorial-modal">
-      <h2>Bienvenue chez Blackwell &amp; Co Capital</h2>
-      <p>Vous gérez une banque d'investissement avec d'autres joueurs, en temps réel. Quelques repères :</p>
+      <h2>Bienvenue à la direction de Blackwell &amp; Co Capital</h2>
+      <p>Vous ne partez pas de zéro : vous reprenez une banque d'investissement en pleine activité, avec des années d'historique — des clients déjà en portefeuille, des deals en cours, un bilan, une équipe, et quelques dossiers laissés en plan par la direction précédente. À vous de la faire tourner, avec d'autres joueurs, en temps réel.</p>
+      <p><b>Par où commencer ?</b> Sur Vue d'ensemble, le panneau <b>🧭 Priorités</b> vous dit en direct ce qui a besoin d'attention là, maintenant — cliquez dessus pour aller droit au but. Il ne sera jamais vide bien longtemps.</p>
       <ul>
-        <li><b>Comité de Direction</b> — chaque trimestre, votre département verrouille une décision stratégique à compromis.</li>
-        <li><b>Pages opérationnelles</b> (M&amp;A, Clients, Conformité, RH, Finance) — de petites tâches ⚡ apparaissent en continu, à traiter vite.</li>
-        <li>Des <b>événements aléatoires</b> et des <b>risques ambiants</b> (deals qui stagnent, clients délaissés) créent de vraies urgences.</li>
-        <li>Votre <b>score</b> et vos <b>badges</b> sont visibles sur Vue d'ensemble, avec un Hall of Fame qui survit aux resets de partie.</li>
+        <li><b>Comité de Direction</b> — chaque trimestre, votre département verrouille une décision stratégique à compromis (pas de bon choix évident, que des arbitrages).</li>
+        <li><b>Pages opérationnelles</b> (M&amp;A, Clients, Conformité, RH, Finance) — vous héritez de dossiers réels : deals à faire avancer, clients à suivre, alertes à traiter, postes à pourvoir, budgets à corriger. En plus, de petites tâches ⚡ apparaissent en continu.</li>
+        <li><b>Rien n'attend patiemment</b> : un deal qu'on laisse traîner peut tomber à l'eau, un client délaissé peut partir, une alerte non traitée coûte une amende au trimestre suivant.</li>
+        <li>Votre <b>score</b>, vos <b>badges</b> et le <b>Hall of Fame</b> (qui survit aux resets) sont sur Vue d'ensemble.</li>
       </ul>
-      <button id="tutorial-dismiss" class="btn-sm">J'ai compris</button>
+      <button id="tutorial-dismiss" class="btn-sm">J'ai compris, on y va</button>
     </div>
   `;
   document.getElementById("tutorial-dismiss").addEventListener("click", () => {

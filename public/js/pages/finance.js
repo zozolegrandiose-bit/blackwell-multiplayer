@@ -64,7 +64,7 @@ function renderFinance() {
       </div>
       <div class="panel">
         <div class="panel-title">Pool budgétaire trimestriel</div>
-        <div style="font-size:12.5px; margin-bottom:10px;">Alloué <b>${pool.allocated}</b> / <b>${pool.total}</b> M$ — reste <b>${remaining}</b> M$ à répartir (15 % — 40 % des revenus selon le trimestre).</div>
+        <div style="font-size:12.5px; margin-bottom:10px;">Alloué <b>${pool.allocated}</b> / <b>${pool.total}</b> M$ (40 % des revenus) — ${remaining >= 0 ? `reste <b>${remaining}</b> M$ à répartir.` : `<span style="color:var(--series-red); font-weight:700;">dépassement de ${Math.abs(remaining)} M$ — réduisez des budgets ci-dessous.</span>`}</div>
       </div>
     </div>
     <div class="panel" style="margin-bottom:16px;">

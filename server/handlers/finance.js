@@ -116,8 +116,13 @@ function registerFinanceHandlers(io, socket, gameState) {
     const newBudget = Number(payload.budget);
     if (!row || Number.isNaN(newBudget) || newBudget < 0) return;
 
+    // Reductions are always allowed, even if the pool is already over-allocated
+    // (e.g. inherited from a prior quarter's revenue drop, or from the game's seed
+    // data) — only an INCREASE beyond what's available gets rejected. Without this,
+    // a department already over budget could get permanently stuck unable to trim
+    // back down, since even newBudget=0 could exceed a negative "available".
     const availableWithoutRow = kpis.budgetPool.total - (kpis.budgetPool.allocated - row.budget);
-    if (newBudget > availableWithoutRow) {
+    if (newBudget > row.budget && newBudget > availableWithoutRow) {
       socket.emit("finance:allocateBudget:rejected", { reason: "Pool budgétaire insuffisant — il reste " + round1(availableWithoutRow) + " M$ disponibles." });
       return;
     }
