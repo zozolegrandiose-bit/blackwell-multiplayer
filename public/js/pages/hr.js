@@ -8,6 +8,57 @@ function moraleColor(morale) {
   return "var(--series-red)";
 }
 
+const LEAVE_CALENDAR_DOW = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
+function buildMonthDays(year, month) {
+  const firstDay = new Date(year, month, 1);
+  const startWeekday = (firstDay.getDay() + 6) % 7; // Monday = 0
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const days = [];
+  for (let i = 0; i < startWeekday; i++) days.push(null);
+  for (let d = 1; d <= daysInMonth; d++) days.push(new Date(year, month, d));
+  return days;
+}
+
+function isoDate(date) {
+  return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+}
+
+// Visual leave planning, built entirely from the same leaveRequests already used by
+// the table below — a request's start/end (ISO date strings) sort/compare correctly
+// as plain strings, no date parsing needed to test day-in-range.
+function leaveCalendarHtml(requests) {
+  const now = new Date();
+  const year = now.getFullYear(), month = now.getMonth();
+  const days = buildMonthDays(year, month);
+  const monthLabel = now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const todayIso = isoDate(now);
+
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">📅 Planning des congés — ${monthLabel}</div>
+      <div class="leave-calendar-grid">
+        ${LEAVE_CALENDAR_DOW.map(d => `<div class="leave-calendar-dow">${d}</div>`).join("")}
+        ${days.map(day => {
+          if (!day) return `<div class="leave-calendar-cell leave-calendar-empty"></div>`;
+          const iso = isoDate(day);
+          const onLeave = requests.filter(r => r.status !== "Refusé" && iso >= r.start && iso <= r.end);
+          return `
+            <div class="leave-calendar-cell ${iso === todayIso ? "leave-calendar-today" : ""}">
+              <div class="leave-calendar-daynum">${day.getDate()}</div>
+              ${onLeave.map(r => `<div class="leave-calendar-chip ${r.status === "Approuvé" ? "leave-chip-approved" : "leave-chip-pending"}" title="${escapeHtml(r.playerName)} — ${escapeHtml(r.type)} (${r.status})">${escapeHtml((r.playerName || "").split(" ")[0])}</div>`).join("")}
+            </div>
+          `;
+        }).join("")}
+      </div>
+      <div style="display:flex; gap:16px; margin-top:10px; font-size:11px; color:var(--text-muted);">
+        <span><span class="leave-chip-approved" style="display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:4px;"></span>Approuvé</span>
+        <span><span class="leave-chip-pending" style="display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:4px;"></span>En attente</span>
+      </div>
+    </div>
+  `;
+}
+
 function renderHr() {
   const hr = appState.hr || {};
   const requests = hr.leaveRequests || [];
@@ -127,6 +178,7 @@ function renderHr() {
       `;
       }).join("") || `<div class="empty-cell">Aucun joueur pour l'instant.</div>`}
     </div>
+    ${leaveCalendarHtml(requests)}
     <div class="panel">
       <div class="panel-title">Demandes de congé (${requests.length})</div>
       <table class="data-table">

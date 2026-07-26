@@ -25,7 +25,9 @@ const appState = {
   quarterHistory: [],
   hallOfFame: [],
   paused: false,
-  difficulty: "standard"
+  difficulty: "standard",
+  markets: { instruments: [], positions: [], cash: 0, realizedPnL: 0, tradeLog: [] },
+  directive: null
 };
 
 const PAGE_RENDERERS = {};
@@ -141,6 +143,11 @@ function renderApp() {
         </div>
       </div>
       <div class="main-content">
+        ${appState.directive ? `
+          <div class="event-banner">
+            <div>📢 <b>Priorité de la direction : ${escapeHtml((typeof OVERVIEW_CLUSTER_LABELS !== "undefined" && OVERVIEW_CLUSTER_LABELS[appState.directive.cluster]) || appState.directive.cluster)}</b> — +50% de points pour ce département tant que la directive tient.</div>
+          </div>
+        ` : ""}
         ${appState.paused ? `
           <div class="event-banner">
             <div>⏸ <b>Partie en pause.</b> Toutes les mécaniques temporisées sont figées${player.hasFullAccess ? " — utilisez le panneau GM sur Comité de Direction pour reprendre." : "."}</div>

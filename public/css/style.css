@@ -428,3 +428,38 @@ body {
 .tutorial-modal p { font-size: 13px; color: var(--text-600); margin: 0 0 12px; }
 .tutorial-modal ul { margin: 0 0 18px; padding-left: 20px; font-size: 12.5px; color: var(--text-600); }
 .tutorial-modal li { margin-bottom: 8px; }
+
+.leave-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.leave-calendar-dow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  text-align: center;
+  padding-bottom: 4px;
+}
+.leave-calendar-cell {
+  min-height: 58px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+}
+.leave-calendar-empty { background: transparent; border: none; }
+.leave-calendar-today { border-color: var(--accent-2); }
+.leave-calendar-daynum { font-size: 10.5px; color: var(--text-muted); margin-bottom: 3px; }
+.leave-calendar-chip {
+  font-size: 9.5px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.leave-chip-approved { background: rgba(46,230,166,0.18); color: var(--series-green); }
+.leave-chip-pending { background: rgba(245,185,66,0.18); color: var(--warning); }

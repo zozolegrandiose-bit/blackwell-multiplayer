@@ -4,12 +4,12 @@ const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses", 
 
 const CLUSTER_PAGES = {
   A: [...UNIVERSAL_PAGES, "ma", "clients"],
-  B: [...UNIVERSAL_PAGES, "clients"],
+  B: [...UNIVERSAL_PAGES, "clients", "markets"],
   C: [...UNIVERSAL_PAGES, "clients"],
   D: [...UNIVERSAL_PAGES, "compliance"],
   E: [...UNIVERSAL_PAGES, "finance"],
   F: [...UNIVERSAL_PAGES, "hr"],
-  G: [...UNIVERSAL_PAGES, "ma", "clients", "compliance", "finance", "hr"]
+  G: [...UNIVERSAL_PAGES, "ma", "clients", "compliance", "finance", "hr", "markets"]
 };
 
 const DEPARTMENT_CLUSTER = {

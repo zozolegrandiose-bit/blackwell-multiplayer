@@ -39,7 +39,8 @@ function buildSnapshot(gameState, player) {
     quarterHistory: gameState.quarterHistory,
     hallOfFame: gameState.hallOfFame,
     paused: gameState.paused,
-    difficulty: gameState.difficulty
+    difficulty: gameState.difficulty,
+    directive: gameState.directive
   };
   if (player.access.includes("ma")) snapshot.maDeals = gameState.maDeals;
   if (player.access.includes("clients")) snapshot.clients = gameState.clients;
@@ -51,6 +52,7 @@ function buildSnapshot(gameState, player) {
   if (player.access.includes("agenda")) snapshot.agenda = gameState.agenda;
   if (player.access.includes("documents")) snapshot.documents = gameState.documents;
   if (player.access.includes("expenses")) snapshot.expenseReports = gameState.expenseReports;
+  if (player.access.includes("markets")) snapshot.markets = gameState.markets;
   return snapshot;
 }
 

@@ -185,6 +185,23 @@ socket.on("finance:update", kpis => {
   if (appState.currentPage === "finance") renderApp();
 });
 
+socket.on("markets:update", markets => {
+  if (!window.currentPlayer) return;
+  appState.markets = markets;
+  if (appState.currentPage === "markets") renderApp();
+});
+
+socket.on("markets:buy:rejected", data => {
+  const errorEl = document.getElementById("mk-buy-error");
+  if (errorEl) errorEl.textContent = data.reason;
+});
+
+socket.on("game:directiveChanged", directive => {
+  if (!window.currentPlayer) return;
+  appState.directive = directive;
+  renderApp();
+});
+
 socket.on("overview:kpis", kpis => {
   if (!window.currentPlayer) return;
   appState.financeKPIs = kpis;

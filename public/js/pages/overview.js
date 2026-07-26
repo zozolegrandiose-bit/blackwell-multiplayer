@@ -4,7 +4,7 @@ function bankHealthColor(health) {
   return "var(--series-red)";
 }
 
-const TASK_SUMMARY_LABELS = { ma: "M&A", clients: "Clients", compliance: "Conformité", hr: "RH", finance: "Finance" };
+const TASK_SUMMARY_LABELS = { ma: "M&A", clients: "Clients", compliance: "Conformité", hr: "RH", finance: "Finance", markets: "Marchés" };
 
 // The direct answer to "on ne sait pas quoi faire" — a live, always-accurate list
 // computed from real state (never scripted/fake), warning early (roughly half the

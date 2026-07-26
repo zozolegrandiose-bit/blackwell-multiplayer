@@ -9,7 +9,8 @@ const NAV = [
   { id: "clients", label: "Clients", icon: "◐" },
   { id: "compliance", label: "Conformité", icon: "🛡" },
   { id: "hr", label: "RH", icon: "❖" },
-  { id: "finance", label: "Finance", icon: "📊" }
+  { id: "finance", label: "Finance", icon: "📊" },
+  { id: "markets", label: "Marchés", icon: "📈" }
 ];
 
 function visibleNav(player) {

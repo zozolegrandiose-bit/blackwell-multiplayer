@@ -23,6 +23,30 @@ function seedFinanceHistory(now) {
   return history.sort((a, b) => b.ts - a.ts);
 }
 
+// Trading desk instruments — index-level prices (not per-share), so positions are
+// sized directly in M$ notional and P&L is a clean `notional * (price/entry - 1)`,
+// no unit conversion needed against the rest of financeKPIs (also in M$).
+const MARKET_INSTRUMENTS_SEED = [
+  { id: "eq-tech", name: "Actions Tech", category: "Actions", price: 142.5, volatility: 0.02 },
+  { id: "eq-industrial", name: "Actions Industrielles", category: "Actions", price: 88.3, volatility: 0.015 },
+  { id: "bond-sov", name: "Obligations Souveraines", category: "Obligations", price: 101.2, volatility: 0.005 },
+  { id: "cmd-oil", name: "Pétrole Brent", category: "Matières Premières", price: 76.4, volatility: 0.025 },
+  { id: "fx-eurusd", name: "EUR/USD (indice)", category: "Devises", price: 108.7, volatility: 0.008 },
+  { id: "crypto", name: "Actifs numériques", category: "Crypto", price: 124.6, volatility: 0.04 }
+];
+
+function seedInstrumentHistory(currentPrice, volatility) {
+  const points = 8;
+  const history = [];
+  let price = currentPrice / Math.pow(1 + volatility * 1.5, points - 1);
+  for (let i = 0; i < points - 1; i++) {
+    history.push(Math.round(price * 100) / 100);
+    price *= 1 + (Math.random() * 2 - 0.8) * volatility * 1.5;
+  }
+  history.push(currentPrice);
+  return history;
+}
+
 function createGameState() {
   const now = Date.now();
   return {
@@ -244,7 +268,15 @@ function createGameState() {
     paused: false,
     pausedAt: null,
     difficulty: "standard",
-    hallOfFame: []
+    hallOfFame: [],
+    markets: {
+      instruments: MARKET_INSTRUMENTS_SEED.map(i => ({ ...i, history: seedInstrumentHistory(i.price, i.volatility) })),
+      positions: [],
+      cash: 8000,
+      realizedPnL: 0,
+      tradeLog: []
+    },
+    directive: null
   };
 }
 

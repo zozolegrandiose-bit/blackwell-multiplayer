@@ -14,7 +14,7 @@ const TASK_SWEEP_MAX_MS = 12 * 1000;
 const TASK_EXPIRY_MS = 75 * 1000;
 const MAX_ACTIVE_TASKS_PER_PAGE = 3;
 
-const TASK_PAGES = ["ma", "clients", "compliance", "hr", "finance"];
+const TASK_PAGES = ["ma", "clients", "compliance", "hr", "finance", "markets"];
 
 const TASK_LABELS = {
   ma: [
@@ -41,6 +41,11 @@ const TASK_LABELS = {
     "Rapprochement bancaire rapide à faire.",
     "Un desk demande une vérification de chiffres.",
     "Validation express d'un reporting."
+  ],
+  markets: [
+    "Un client institutionnel demande un cours indicatif.",
+    "Vérification rapide d'une position ouverte.",
+    "Point rapide sur l'exposition du desk."
   ]
 };
 

@@ -21,7 +21,9 @@ const POINT_VALUES = {
   expenses_approve: 3,
   event_resolved: 25,
   task_completed: 5,
-  hr_distributeBonus: 0
+  hr_distributeBonus: 0,
+  markets_open: 4,
+  markets_trade: 10
 };
 
 // Achievement badges — pure function of the same actionCounts already tracked by
@@ -112,7 +114,14 @@ function awardPoints(io, gameState, player, actionType, extraHealthDelta) {
   if (gameState.bankrupt) return;
   if (!player || player.id === null) return;
 
-  const points = POINT_VALUES[actionType] || 0;
+  let points = POINT_VALUES[actionType] || 0;
+  // Direction Générale's standing directive (server/handlers/game.js): a department
+  // under an active priority directive earns 50% more points on every scored action —
+  // a real, mechanical lever for the CEO to redirect the whole company's effort,
+  // not just flavor text.
+  if (gameState.directive && player.cluster && gameState.directive.cluster === player.cluster) {
+    points = Math.round(points * 1.5);
+  }
   const key = playerKey(player);
   if (!gameState.playerScores[key]) {
     gameState.playerScores[key] = { fullName: player.fullName, score: 0, actionCounts: {} };

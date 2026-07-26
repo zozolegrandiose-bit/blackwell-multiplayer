@@ -1,5 +1,25 @@
 # Journal des mises à jour
 
+## Patch 9 — Vrai desk de trading, pouvoir exécutif de la direction, planning RH (2026-07-26)
+
+### Ajouts
+- **Nouvelle page Marchés** (cluster Marchés Financiers/Trading FICC/Dérivés/Bureau Actions, et Direction Générale) : un vrai desk de trading partagé, avec 6 instruments (Actions Tech, Actions Industrielles, Obligations Souveraines, Pétrole Brent, EUR/USD, Actifs numériques) dont le cours évolue en continu. Achat/vente en un clic, positions ouvertes avec P&amp;L latent en direct, capital de trading dédié (8 Md$), résultat réalisé qui alimente le résultat net de la banque à chaque clôture de position. Ce cluster n'avait aucune page dédiée jusqu'ici — c'est corrigé.
+- **Directive de la Direction Générale** : le CEO peut désormais désigner un département prioritaire pour toute la partie — ce département gagne +50 % de points sur toutes ses actions tant que la directive tient. Un vrai levier exécutif, pas juste un affichage : visible par tous via une bannière permanente, réglable depuis le panneau GM sur Comité de Direction.
+- **Planning visuel des congés** sur la page RH : calendrier du mois en cours avec chaque jour de congé approuvé ou en attente affiché nommément — fini la simple liste, on voit d'un coup d'œil qui est absent quand.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- `server/handlers/markets.js` (nouveau) suit exactement le même schéma que les autres boucles temporisées du jeu (auto-reprogrammation via `setTimeout`, garde `gameState.paused`, multiplicateur de difficulté) — les prix évoluent par marche aléatoire pondérée par la volatilité propre à chaque instrument.
+- Les positions sont dimensionnées directement en notionnel M$ contre un prix indiciel (pas de quantité de titres à convertir) — le P&amp;L reste dans les mêmes unités que le reste de `financeKPIs`, sans conversion.
+- La directive de la Direction Générale est appliquée au point de score unique (`awardPoints()`, `server/scoring.js`) via `player.cluster` — aucune logique dupliquée dans chaque handler métier.
+
+---
+
 ## Patch 8 — Reprise d'une banque avec un vrai historique, et un cap clair (2026-07-26)
 
 ### Ajouts

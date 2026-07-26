@@ -90,6 +90,13 @@ function gmPanelHtml() {
           ${Object.keys(DIFFICULTY_LABELS).map(d => `<option value="${d}" ${d === difficulty ? "selected" : ""}>${DIFFICULTY_LABELS[d]}</option>`).join("")}
         </select>
       </div>
+      <div class="form-row"><label>Directive prioritaire</label>
+        <select id="gm-directive">
+          <option value="">— Aucune —</option>
+          ${STRATEGY_OPERATIONAL_CLUSTERS.map(c => `<option value="${c}" ${appState.directive && appState.directive.cluster === c ? "selected" : ""}>${escapeHtml(STRATEGY_CLUSTER_LABELS[c])}</option>`).join("")}
+        </select>
+      </div>
+      <div style="font-size:11px; color:var(--text-muted);">Le département prioritaire gagne +50% de points sur toutes ses actions tant que la directive tient.</div>
     </div>
   `;
 }
@@ -203,6 +210,11 @@ function bindStrategy() {
   const difficultySelect = document.getElementById("gm-difficulty");
   if (difficultySelect) difficultySelect.addEventListener("change", () => {
     socket.emit("game:setDifficulty", { difficulty: difficultySelect.value });
+  });
+  const directiveSelect = document.getElementById("gm-directive");
+  if (directiveSelect) directiveSelect.addEventListener("change", () => {
+    if (directiveSelect.value) socket.emit("game:setDirective", { cluster: directiveSelect.value });
+    else socket.emit("game:clearDirective");
   });
 }
 

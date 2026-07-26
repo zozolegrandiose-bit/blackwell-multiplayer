@@ -1,6 +1,6 @@
 const { resetGame, pushActivity } = require("../gameState");
 const { buildSnapshot } = require("./join");
-const { QUARTER_LENGTH_MS } = require("../strategy");
+const { QUARTER_LENGTH_MS, CLUSTER_LABELS, OPERATIONAL_CLUSTERS } = require("../strategy");
 const { spawnRandomEvent } = require("../events");
 const { DIFFICULTY_LEVELS } = require("../difficulty");
 
@@ -84,6 +84,28 @@ function registerGameHandlers(io, socket, gameState) {
     spawnRandomEvent(io, gameState);
     pushActivity(gameState, { actorPlayerId: player.id, page: "overview", text: "🎛 " + player.fullName + " a déclenché un événement manuellement." });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
+  });
+
+  // Direction Générale's standing directive — a real executive lever, not just a
+  // display: server/scoring.js's awardPoints() gives +50% points on every scored
+  // action from the prioritized department for as long as this directive stands.
+  socket.on("game:setDirective", payload => {
+    const player = gameState.players.find(p => p.id === socket.data.playerId);
+    if (!player || !player.hasFullAccess) return;
+    if (!OPERATIONAL_CLUSTERS.includes(payload.cluster)) return;
+    gameState.directive = { cluster: payload.cluster, setAt: Date.now(), setByName: player.fullName };
+    pushActivity(gameState, { actorPlayerId: player.id, page: "overview", text: "📢 " + player.fullName + " a fait de " + CLUSTER_LABELS[payload.cluster] + " la priorité de la direction (+50% de points pour ce département)." });
+    io.to("game").emit("activity:update", gameState.activityLog[0]);
+    io.to("game").emit("game:directiveChanged", gameState.directive);
+  });
+
+  socket.on("game:clearDirective", () => {
+    const player = gameState.players.find(p => p.id === socket.data.playerId);
+    if (!player || !player.hasFullAccess || !gameState.directive) return;
+    gameState.directive = null;
+    pushActivity(gameState, { actorPlayerId: player.id, page: "overview", text: "📢 " + player.fullName + " a levé la directive prioritaire de la direction." });
+    io.to("game").emit("activity:update", gameState.activityLog[0]);
+    io.to("game").emit("game:directiveChanged", null);
   });
 }
 
