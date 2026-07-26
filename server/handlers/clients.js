@@ -1,5 +1,6 @@
 const { pushActivity } = require("../gameState");
 const { awardPoints, checkEventResolution } = require("../scoring");
+const { recomputeAum } = require("./finance");
 
 const CLIENT_STATUSES = ["Prospect", "Actif", "En revue", "Inactif"];
 const CLIENT_RISKS = ["Low", "Medium", "High"];
@@ -74,8 +75,14 @@ function registerClientsHandlers(io, socket, gameState) {
     const player = gameState.players.find(p => p.id === socket.data.playerId);
     const client = gameState.clients.find(c => c.id === payload.clientId);
     if (!client || !CLIENT_STATUSES.includes(payload.status)) return;
+    const wasActive = client.status === "Actif";
     client.status = payload.status;
     io.to("access:clients").emit("clients:update", gameState.clients);
+    if (wasActive !== (client.status === "Actif")) {
+      recomputeAum(gameState);
+      io.to("access:finance").emit("finance:update", gameState.financeKPIs);
+      io.to("game").emit("overview:kpis", gameState.financeKPIs);
+    }
     if (payload.status !== "En revue") checkEventResolution(io, gameState, client.id, player);
   });
 

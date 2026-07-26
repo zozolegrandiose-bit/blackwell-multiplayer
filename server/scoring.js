@@ -12,6 +12,9 @@ const POINT_VALUES = {
   compliance_resolve: 15,
   hr_approveLeave: 3,
   hr_onboardingDone: 3,
+  hr_hireCandidate: 12,
+  finance_allocateBudget: 3,
+  finance_capitalAction: 5,
   agenda_create: 3,
   documents_upload: 3,
   expenses_submit: 2,
@@ -107,4 +110,22 @@ function awardPoints(io, gameState, player, actionType, extraHealthDelta) {
   io.to("game").emit("scoring:update", { playerScores: gameState.playerScores, bankHealth: gameState.bankHealth });
 }
 
-module.exports = { awardPoints, applyHealthDelta, checkEventResolution, checkVictory, playerKey, getTier, TIERS, POINT_VALUES };
+// Variable-amount counterpart to awardPoints, for actions whose value isn't a fixed
+// lookup (e.g. a bonus distribution the player themself sizes, within a validated pool).
+// Tracks a separate bonusEarned running total alongside score, for display purposes.
+function awardCustomPoints(io, gameState, player, amount, bonusEarned) {
+  if (gameState.bankrupt) return;
+  if (!player || player.id === null || !amount) return;
+
+  const key = playerKey(player);
+  if (!gameState.playerScores[key]) {
+    gameState.playerScores[key] = { fullName: player.fullName, score: 0, bonusEarned: 0 };
+  }
+  gameState.playerScores[key].score += amount;
+  gameState.playerScores[key].fullName = player.fullName;
+  gameState.playerScores[key].bonusEarned = (gameState.playerScores[key].bonusEarned || 0) + (bonusEarned || 0);
+
+  io.to("game").emit("scoring:update", { playerScores: gameState.playerScores, bankHealth: gameState.bankHealth });
+}
+
+module.exports = { awardPoints, awardCustomPoints, applyHealthDelta, checkEventResolution, checkVictory, playerKey, getTier, TIERS, POINT_VALUES };

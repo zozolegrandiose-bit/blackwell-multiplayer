@@ -33,7 +33,7 @@ function createGameState() {
         description: "Étude d'un rapprochement stratégique entre Cobalt Ridge Capital et un fonds concurrent.",
         ddChecklist: [{ item: "Audit financier", done: true }, { item: "Audit juridique", done: false }],
         icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: false }, { item: "Validation Direction Générale", done: false }],
-        createdByPlayerId: null, updatedAt: Date.now()
+        createdByPlayerId: null, updatedAt: Date.now(), revenueBooked: false
       },
       {
         id: "deal-seed-2", name: "Projet Horizon — introduction en bourse Halcyon Digital Assets", stage: "Screening",
@@ -41,7 +41,7 @@ function createGameState() {
         description: "Étude préliminaire d'une introduction en bourse.",
         ddChecklist: [{ item: "Étude de faisabilité marché", done: true }, { item: "Revue de conformité préalable", done: false }],
         icVote: [{ item: "Validation Risques", done: false }, { item: "Validation Juridique", done: false }, { item: "Validation Direction Générale", done: false }],
-        createdByPlayerId: null, updatedAt: Date.now()
+        createdByPlayerId: null, updatedAt: Date.now(), revenueBooked: false
       }
     ],
     clients: [
@@ -52,7 +52,20 @@ function createGameState() {
     complianceItems: [
       { id: "cp-seed-1", type: "Surveillance marché", desk: "Bureau Actions", flag: "Volume inhabituel constaté avant une annonce de résultats.", status: "Ouvert", ts: now - 4 * 86400000, raisedByPlayerId: null, raisedByName: "Surveillance automatique", assignedToPlayerId: null, assignedToName: null }
     ],
-    hr: { leaveRequests: [] },
+    hr: {
+      leaveRequests: [],
+      morale: 80,
+      headcountNPC: 0,
+      openPositions: [
+        { id: "pos-seed-1", dept: "Fusions-Acquisitions (M&A)", level: "Analyst", monthlySalary: 9, status: "Ouvert" }
+      ],
+      candidates: {
+        "pos-seed-1": [
+          { id: "cand-seed-1", name: "Julien Fabre", level: "Analyst", monthlySalary: 8.5, fitScore: 78, interviewed: false },
+          { id: "cand-seed-2", name: "Camille Roussel", level: "Analyst", monthlySalary: 9.4, fitScore: 85, interviewed: false }
+        ]
+      }
+    },
     agenda: [
       { id: "ag-seed-1", title: "Comité de direction hebdomadaire", date: new Date(now + 2 * 86400000).toISOString().slice(0, 10), time: "09:00", participants: [], createdByPlayerId: null, createdByName: "Secrétariat Général" }
     ],
@@ -65,7 +78,14 @@ function createGameState() {
       revenue: 1420,
       netIncome: 108,
       aum: 284600,
+      aumLegacyBase: 283400,
       costIncomeRatio: 58.3,
+      equity: 18000,
+      riskWeightedAssets: 145000,
+      capitalRatio: Math.round((18000 / 145000) * 1000) / 10,
+      budgetPool: { total: Math.round(1420 * 0.4), allocated: 555 },
+      lastDividendQuarter: 0,
+      lastRetainQuarter: 0,
       history: seedFinanceHistory(now),
       budgetVsActual: [
         { dept: "Fusions-Acquisitions (M&A)", budget: 180, actual: 165 },

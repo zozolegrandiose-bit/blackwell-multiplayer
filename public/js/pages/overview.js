@@ -65,6 +65,8 @@ function renderOverview() {
       <div class="kpi-card"><div class="kpi-label">AUM</div><div class="kpi-value">${fmtMoney(kpis.aum)}</div></div>
       <div class="kpi-card"><div class="kpi-label">Revenus</div><div class="kpi-value">${fmtMoney(kpis.revenue)}</div></div>
       <div class="kpi-card"><div class="kpi-label">Résultat net</div><div class="kpi-value">${fmtMoney(kpis.netIncome)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ratio CET1</div><div class="kpi-value">${kpis.capitalRatio == null ? "—" : kpis.capitalRatio + "%"}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Moral RH</div><div class="kpi-value">${appState.hr && appState.hr.morale != null ? appState.hr.morale + "%" : "—"}</div></div>
     </div>
     <div class="panel-row" style="margin-bottom:16px;">
       <div class="panel">

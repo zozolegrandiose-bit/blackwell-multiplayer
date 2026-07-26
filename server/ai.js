@@ -2,7 +2,7 @@ const { advanceRandomDeal } = require("./handlers/ma");
 const { addRandomClientNote } = require("./handlers/clients");
 const { progressRandomComplianceItem } = require("./handlers/compliance");
 const { approveRandomLeaveRequest } = require("./handlers/hr");
-const { nudgeRandomKPI } = require("./handlers/finance");
+const { nudgeOperatingRatio } = require("./handlers/finance");
 
 const AI_ACTOR = { id: null, fullName: "IA — Surveillance automatique" };
 
@@ -11,7 +11,7 @@ const PAGE_ACTIONS = {
   clients: addRandomClientNote,
   compliance: progressRandomComplianceItem,
   hr: approveRandomLeaveRequest,
-  finance: nudgeRandomKPI
+  finance: nudgeOperatingRatio
 };
 
 const DWELL_MS = 2 * 60 * 1000; // page must be vacant this long before AI acts

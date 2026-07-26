@@ -159,6 +159,26 @@ socket.on("hr:requestLeave:rejected", data => {
   if (errorEl) errorEl.textContent = data.reason;
 });
 
+socket.on("hr:hire:rejected", data => {
+  const errorEl = document.getElementById("hr-hire-error");
+  if (errorEl) errorEl.textContent = data.reason;
+});
+
+socket.on("hr:distributeBonus:rejected", data => {
+  const errorEl = document.getElementById("hr-bonus-error");
+  if (errorEl) errorEl.textContent = data.reason;
+});
+
+socket.on("finance:allocateBudget:rejected", data => {
+  const errorEl = document.getElementById("fin-budget-error");
+  if (errorEl) errorEl.textContent = data.reason;
+});
+
+socket.on("finance:capitalAction:rejected", data => {
+  const errorEl = document.getElementById("fin-capital-error");
+  if (errorEl) errorEl.textContent = data.reason;
+});
+
 socket.on("finance:update", kpis => {
   if (!window.currentPlayer) return;
   appState.financeKPIs = kpis;

@@ -1,5 +1,7 @@
 const { pushActivity } = require("./gameState");
 const { applyHealthDelta, checkVictory } = require("./scoring");
+const { recomputeAum, recomputeCapitalRatio, recomputeBudgetPool, CAPITAL_RATIO_FLOOR } = require("./handlers/finance");
+const { openPosition } = require("./handlers/hr");
 
 const QUARTER_LENGTH_MS = 90 * 1000;
 
@@ -27,9 +29,9 @@ const CLUSTER_OPTIONS = {
     { id: "defensive", label: "Défensif", description: "Ralentir le pipeline, protéger la réputation.", aumPct: 0, netIncomePct: 0, health: 2 }
   ],
   B: [
-    { id: "risky", label: "Position risquée", description: "Prises de position agressives sur les marchés.", aumPct: 0.015, netIncomePct: 0.02, health: -4 },
-    { id: "neutral", label: "Neutre", description: "Exposition mesurée.", aumPct: 0.005, netIncomePct: 0.005, health: 0 },
-    { id: "hedge", label: "Couverture", description: "Se couvrir contre la volatilité.", aumPct: 0, netIncomePct: 0, health: 2 }
+    { id: "risky", label: "Position risquée", description: "Prises de position agressives sur les marchés.", aumPct: 0.015, netIncomePct: 0.02, health: -4, rwaPct: 0.03 },
+    { id: "neutral", label: "Neutre", description: "Exposition mesurée.", aumPct: 0.005, netIncomePct: 0.005, health: 0, rwaPct: 0 },
+    { id: "hedge", label: "Couverture", description: "Se couvrir contre la volatilité.", aumPct: 0, netIncomePct: 0, health: 2, rwaPct: -0.02 }
   ],
   C: [
     { id: "campaign", label: "Campagne d'acquisition", description: "Investir dans l'acquisition de nouveaux clients.", aumPct: 0.02, netIncomePct: -0.005, health: -1 },
@@ -112,6 +114,12 @@ function resolveQuarter(io, gameState) {
     aumPct += option.aumPct;
     netIncomePct += option.netIncomePct;
     healthDelta += option.health;
+    if (cluster === "B" && option.rwaPct) {
+      gameState.financeKPIs.riskWeightedAssets = Math.round(gameState.financeKPIs.riskWeightedAssets * (1 + option.rwaPct));
+    }
+    if (cluster === "F" && optionId === "recruit") {
+      openPosition(gameState);
+    }
   });
 
   const gOptionId = decisions.G || "stability";
@@ -121,11 +129,20 @@ function resolveQuarter(io, gameState) {
 
   const kpis = gameState.financeKPIs;
   const oldAum = kpis.aum;
-  kpis.aum = Math.round(kpis.aum * (1 + aumPct));
+  kpis.aumLegacyBase = Math.round(kpis.aumLegacyBase * (1 + aumPct));
+  recomputeAum(gameState);
   kpis.netIncome = Math.round(kpis.netIncome * (1 + netIncomePct) * 10) / 10;
   kpis.revenue = Math.round(kpis.revenue * (1 + aumPct / 2) * 10) / 10;
   kpis.history.unshift({ ts: Date.now(), field: "aum", oldValue: oldAum, newValue: kpis.aum, byPlayerId: null, byName: "Comité de Direction" });
   if (kpis.history.length > 100) kpis.history.length = 100;
+
+  recomputeBudgetPool(gameState);
+  recomputeCapitalRatio(gameState);
+  // Realistic financial/HR risk feeding back into the shared Bank Health gauge —
+  // an undercapitalized bank or a demoralized workforce both drag on health each
+  // quarter, on top of whatever the 6 cluster decisions produced.
+  if (kpis.capitalRatio < CAPITAL_RATIO_FLOOR) healthDelta -= 5;
+  if (gameState.hr.morale < 40) healthDelta -= 3;
 
   const resolvedQuarter = gameState.currentQuarter;
   const report = { quarter: resolvedQuarter, decisions: { ...decisions }, aumPct, netIncomePct, healthDelta, newAum: kpis.aum, newNetIncome: kpis.netIncome };
@@ -144,6 +161,7 @@ function resolveQuarter(io, gameState) {
   applyHealthDelta(io, gameState, healthDelta);
   io.to("game").emit("finance:update", kpis);
   io.to("game").emit("overview:kpis", kpis);
+  io.to("access:hr").emit("hr:update", gameState.hr);
   io.to("game").emit("activity:update", gameState.activityLog[0]);
   io.to("game").emit("strategy:quarterResolved", report);
   io.to("game").emit("strategy:update", { quarterDecisions: gameState.quarterDecisions, currentQuarter: gameState.currentQuarter, quarterDeadline: gameState.quarterDeadline });

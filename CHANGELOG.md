@@ -1,5 +1,29 @@
 # Journal des mises à jour
 
+## Patch 6 — Finance & RH réalistes et connectés au reste du jeu (2026-07-26)
+
+### Ajouts
+- **Finance : plus aucune saisie libre.** Les revenus et le résultat net ne se tapent plus à la main — ils proviennent désormais des vraies actions du jeu : chaque deal M&A clôturé génère des frais de conseil réels (2 % de la valorisation), et l'AUM total de la banque est recalculé en direct à partir de l'AUM des clients réellement passés « Actif » sur la page Clients.
+- **Ratio de fonds propres (CET1)**, nouvelle jauge réaliste sur Finance et Vue d'ensemble : fonds propres / actifs pondérés du risque. Sous 8 %, la banque encaisse une pénalité de santé à chaque trimestre. Le choix stratégique « Position risquée » / « Couverture » du Comité de Direction fait varier les actifs pondérés du risque.
+- **Pool budgétaire trimestriel contraint** (40 % des revenus) : allouer un budget à un département consomme réellement le pool commun — impossible d'allouer plus que ce qui reste disponible.
+- **Décisions de capital** sur la page Finance : verser un dividende (réduit les fonds propres, rassure les actionnaires) ou renforcer les fonds propres (améliore le ratio CET1) — une décision par trimestre chacune.
+- **RH : recrutement réaliste.** Le choix stratégique « Recruter » du Comité de Direction ouvre un vrai poste dans un département tiré au sort, avec deux candidats à interviewer avant de pouvoir embaucher — l'embauche coûte un salaire mensuel réel (déduit du résultat net) et augmente l'effectif recruté.
+- **Répartition réelle des primes** : le pool de primes (10 % du résultat net) se distribue joueur par joueur par un responsable RH, dans la limite du pool disponible — chaque joueur voit sa prime perçue s'ajouter à son score.
+- **Jauge de moral des équipes** : baisse quand des congés sont refusés, remonte avec les congés approuvés, l'intégration, les embauches réussies et les primes distribuées. Un moral trop bas (sous 40 %) pénalise légèrement la santé de la banque à chaque trimestre.
+
+### Retraits
+- Suppression du formulaire « Modifier un indicateur » sur Finance (édition libre de n'importe quelle valeur) — jugé peu réaliste, remplacé par les mécaniques ci-dessus.
+
+### Correctifs
+- Aucun bug connu des Patchs 1-5 corrigé dans ce patch — il s'agit uniquement d'ajouts et d'un retrait délibéré.
+
+### Notes techniques
+- `applyDealRevenue()` et `recomputeAum()` (`server/handlers/finance.js`) sont les nouveaux points de vérité pour revenus/AUM, appelés depuis `ma.js` (clôture de deal) et `clients.js` (changement de statut) — plus aucun champ financier n'est mutable arbitrairement.
+- La croissance trimestrielle de l'AUM (décisions du Comité de Direction) s'applique désormais à `aumLegacyBase` (l'AUM hors portefeuille clients suivi) plutôt qu'à `aum` directement, pour ne jamais entrer en conflit avec le recalcul basé sur les clients.
+- `awardCustomPoints()` (`server/scoring.js`) complète `awardPoints()` pour les montants variables (primes RH), avec un compteur `bonusEarned` séparé du score de jeu.
+
+---
+
 ## Patch 5 — Modernisation graphique & tâches rapides continues (2026-07-26)
 
 ### Ajouts
