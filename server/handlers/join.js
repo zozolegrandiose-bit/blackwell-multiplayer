@@ -11,7 +11,8 @@ function publicRoster(gameState) {
     fullName: p.fullName,
     grade: p.grade,
     dept: p.dept,
-    cluster: p.cluster
+    cluster: p.cluster,
+    satisfaction: p.satisfaction
   }));
 }
 
@@ -19,6 +20,7 @@ function publicRoster(gameState) {
 // a player's client expects, filtered to only the state slices their access allows.
 function buildSnapshot(gameState, player) {
   const ownMail = gameState.mail.filter(m => m.fromPlayerId === player.id || m.toPlayerId === player.id);
+  const ownDMs = gameState.terminalDMs.filter(m => m.fromPlayerId === player.id || m.toPlayerId === player.id);
   const snapshot = {
     players: publicRoster(gameState),
     activityLog: gameState.activityLog,
@@ -46,7 +48,11 @@ function buildSnapshot(gameState, player) {
     teamChat: gameState.teamChat,
     leagueTable: gameState.leagueTable,
     marketDay: { dayNumber: gameState.marketDay.dayNumber, deadline: gameState.marketDay.deadline },
-    warRoom: gameState.warRoom
+    warRoom: gameState.warRoom,
+    creditRatings: gameState.creditRatings,
+    ipo: gameState.ipo,
+    terminalDMs: ownDMs,
+    terminalDealsFeed: gameState.terminalDealsFeed
   };
   // Compliance (Risk Manager) and Markets (Desk Trading) both surface workflow
   // panels derived from maDeals even though neither has the M&A page itself —
@@ -54,6 +60,7 @@ function buildSnapshot(gameState, player) {
   if (player.access.includes("ma") || player.access.includes("compliance") || player.access.includes("markets")) {
     snapshot.maDeals = gameState.maDeals;
   }
+  if (player.access.includes("ma")) snapshot.cibBonusPool = gameState.cibBonusPool;
   if (player.access.includes("clients")) snapshot.clients = gameState.clients;
   if (player.access.includes("compliance")) snapshot.complianceItems = gameState.complianceItems;
   if (player.access.includes("hr")) {

@@ -5,7 +5,7 @@ const STRATEGY_CLUSTER_LABELS = {
   D: "Conformité, Risque & Juridique",
   E: "Finance & Trésorerie",
   F: "RH & Communication",
-  G: "Direction Générale"
+  G: "Board Of Directors"
 };
 const STRATEGY_OPERATIONAL_CLUSTERS = ["A", "B", "C", "D", "E", "F"];
 
@@ -56,7 +56,7 @@ function strategyOptionLabel(cluster, optionId) {
 
 // A decision value is either: undefined (pending), `true` (submitted, redacted —
 // what most players see for other clusters), or a real option id string (visible to
-// Direction Générale for every cluster, and to any player for their own cluster).
+// Board Of Directors for every cluster, and to any player for their own cluster).
 function renderDecisionStatus(cluster, value) {
   if (value === undefined) return `<span class="chip chip-warning">⏳ En attente</span>`;
   if (value === true) return `<span class="chip chip-good">✅ Soumis</span>`;
@@ -71,13 +71,64 @@ function esgColor(score) {
   return "var(--series-red)";
 }
 
+const RESIGNATION_THRESHOLD_CLIENT = 20;
+
+// Executive dashboard for the Board Of Directors -- aggregates every system that
+// doesn't otherwise have a natural home for company-wide oversight (Rating Agency,
+// CIB Bonus Pool, Dark Pool, IPO, employee satisfaction). Read-only: the actual
+// levers (distributing the CIB pool, pricing an IPO, placing Dark Pool orders) live
+// on the pages where the acting role actually works (ma.js, markets.js) -- this is
+// purely "here is the state of the bank," reachable only because this whole page
+// is already Board Of Directors-only (server/departmentAccess.js's hasStrategyAccess).
+function boardOfDirectorsPanelHtml() {
+  const rating = (appState.creditRatings || {})["Blackwell & Co Capital"];
+  const cibPool = appState.cibBonusPool || { available: 0, distributedLog: [] };
+  const darkPoolOrders = (appState.markets && appState.markets.darkPoolOrders) || [];
+  const matchedOrders = darkPoolOrders.filter(o => o.status === "matched");
+  const darkPoolGainTotal = matchedOrders.reduce((s, o) => s + (o.gain || 0), 0);
+  const ipo = appState.ipo;
+  const atRiskPlayers = (appState.players || []).filter(p => (p.satisfaction != null ? p.satisfaction : 70) < RESIGNATION_THRESHOLD_CLIENT);
+
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🏛 Tableau de bord exécutif — Board Of Directors</div>
+      <div class="kpi-grid" style="margin-bottom:12px;">
+        <div class="kpi-card">
+          <div class="kpi-label">Note de crédit (Rating Agency)</div>
+          <div class="kpi-value">${rating ? rating.rating : "—"}</div>
+          ${rating && rating.solvencyRatio != null ? `<div style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">Solvabilité ${rating.solvencyRatio}% · Liquidité ${rating.liquidityRatio}%</div>` : ""}
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Enveloppe CIB disponible</div>
+          <div class="kpi-value">${fmtMoney(cibPool.available)}</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Dark Pool — gains cumulés</div>
+          <div class="kpi-value">${fmtMoney(darkPoolGainTotal)}</div>
+          <div style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">${matchedOrders.length} exécuté(s) sur ${darkPoolOrders.length} ordre(s)</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">IPO en cours</div>
+          <div class="kpi-value" style="font-size:14px;">${ipo ? escapeHtml(ipo.companyName) : "Aucune"}</div>
+          ${ipo ? `<div style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">${ipo.phase === "bidding" ? "Appel d'offres en cours" : "Mandat remporté — bookbuilding"}</div>` : ""}
+        </div>
+      </div>
+      <div style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">
+        ${atRiskPlayers.length
+          ? `⚠️ ${atRiskPlayers.length} collaborateur(s) à risque de démission (satisfaction &lt; ${RESIGNATION_THRESHOLD_CLIENT}%) : ${atRiskPlayers.map(p => escapeHtml(p.fullName)).join(", ")}.`
+          : "✅ Aucun collaborateur en risque de démission actuellement."}
+      </div>
+    </div>
+  `;
+}
+
 function gmPanelHtml() {
   if (!appState.player.hasFullAccess) return "";
   const paused = appState.paused;
   const difficulty = appState.difficulty || "standard";
   return `
     <div class="panel" style="margin-bottom:16px;">
-      <div class="panel-title">🎛 Panneau GM — Direction Générale</div>
+      <div class="panel-title">🎛 Panneau GM — Board Of Directors</div>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
         ${paused
           ? `<button id="gm-resume" class="btn-sm">▶️ Reprendre la partie</button>`
@@ -139,6 +190,7 @@ function renderStrategy() {
   return `
     <div class="page-title">Comité de Direction</div>
     <div class="page-sub">Décisions stratégiques trimestrielles — chaque département verrouille un choix pour le trimestre en cours.</div>
+    ${boardOfDirectorsPanelHtml()}
     ${gmPanelHtml()}
     <div class="kpi-grid" style="margin-bottom:16px;">
       <div class="kpi-card"><div class="kpi-label">Trimestre en cours</div><div class="kpi-value">T${quarter}</div></div>

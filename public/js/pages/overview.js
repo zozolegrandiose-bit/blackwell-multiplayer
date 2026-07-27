@@ -73,8 +73,15 @@ function marketDayCountdownLabel() {
 // server/handlers/markets.js (trading P&L). The employee side reuses the same
 // bonusEarned/score fields already tracked by server/scoring.js — no new
 // per-player bookkeeping needed.
+const RATING_CHIP_CLASS = {
+  AAA: "chip-good", AA: "chip-good", A: "chip-good",
+  BBB: "chip-warning", BB: "chip-warning",
+  B: "chip-critical", CCC: "chip-critical", D: "chip-critical"
+};
+
 function leagueTablePanelHtml() {
   const league = appState.leagueTable || {};
+  const ratings = appState.creditRatings || {};
   const banks = Object.keys(league).map(name => ({ name, ...league[name] })).sort((a, b) => b.pnl - a.pnl);
   const employees = Object.values(appState.playerScores || {})
     .filter(e => (e.bonusEarned || 0) > 0)
@@ -91,16 +98,20 @@ function leagueTablePanelHtml() {
       <div class="panel">
         <div class="panel-title">🏦 Classement des banques</div>
         <table class="data-table">
-          <thead><tr><th>#</th><th>Banque</th><th>P&amp;L cumulé</th><th>Deals clos</th></tr></thead>
+          <thead><tr><th>#</th><th>Banque</th><th>P&amp;L cumulé</th><th>Deals clos</th><th>Note 📐</th></tr></thead>
           <tbody>
-            ${banks.map((b, i) => `
+            ${banks.map((b, i) => {
+              const rating = ratings[b.name];
+              return `
               <tr class="${b.isPlayer ? "strategy-my-row" : ""}">
                 <td class="tnum">${i + 1}</td>
                 <td>${escapeHtml(b.name)}${b.isPlayer ? " <b>(nous)</b>" : ""}</td>
                 <td class="tnum">${b.pnl >= 0 ? "+" : ""}${b.pnl} M$</td>
                 <td class="tnum">${b.dealsClosed}</td>
+                <td>${rating ? `<span class="chip ${RATING_CHIP_CLASS[rating.rating] || "chip-neutral"}" ${rating.solvencyRatio != null ? `title="Solvabilité ${rating.solvencyRatio}% · Liquidité ${rating.liquidityRatio}%"` : ""}>${rating.rating}</span>` : "—"}</td>
               </tr>
-            `).join("")}
+            `;
+            }).join("")}
           </tbody>
         </table>
       </div>
@@ -247,7 +258,7 @@ const OVERVIEW_CLUSTER_LABELS = {
   D: "Conformité, Risque & Juridique",
   E: "Finance & Trésorerie",
   F: "RH & Communication",
-  G: "Direction Générale"
+  G: "Board Of Directors"
 };
 
 function clusterLeaderboardHtml() {

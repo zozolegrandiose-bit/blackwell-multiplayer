@@ -2,6 +2,7 @@ const { GRADES, DEPARTMENTS } = require("./seedData");
 const { getAccessForPosition, hasFullAccess, getClusterForPosition } = require("./departmentAccess");
 const { ONBOARDING_ITEMS } = require("./handlers/hr");
 const { playerKey } = require("./scoring");
+const { isHeadOfCIB } = require("./cibBonus");
 
 function slotKey(grade, dept) {
   return grade + "|||" + dept;
@@ -59,8 +60,10 @@ function claimSlot(gameState, { socketId, firstName, lastName, grade, dept }) {
     hasFullAccess: hasFullAccess(dept, grade),
     cluster: getClusterForPosition(dept, grade),
     joinedAt: Date.now(),
+    satisfaction: 70,
     onboarding: ONBOARDING_ITEMS.map(item => ({ item, done: false }))
   };
+  player.isHeadOfCIB = isHeadOfCIB(player);
   gameState.players.push(player);
   return { ok: true, player };
 }

@@ -49,12 +49,110 @@ function workflowSectionHtml(d) {
   return "";
 }
 
+// Only a Head of CIB (Director+ within cluster A) sees this -- server/cibBonus.js
+// precomputes player.isHeadOfCIB at join time rather than duplicating the grade
+// index comparison client-side.
+// IPO (server/ipo.js) -- banks compete for the underwriting mandate of a client
+// company. Rendered whenever appState.ipo is truthy, regardless of who's currently
+// looking, since the pitch/price/intention actions are each individually gated by
+// the server on the right access room -- the panel itself just adapts to phase.
+function ipoPanelHtml() {
+  const ipo = appState.ipo;
+  if (!ipo) return "";
+
+  if (ipo.phase === "bidding") {
+    const secondsLeft = Math.max(0, Math.round((ipo.biddingDeadline - Date.now()) / 1000));
+    return `
+      <div class="panel" style="margin-bottom:16px; border-color:rgba(46,230,166,0.35);">
+        <div class="panel-title">🔔 Appel d'offres IPO — ${escapeHtml(ipo.companyName)} (${escapeHtml(ipo.industry)})</div>
+        <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Valorisation estimée ${fmtMoney(ipo.companyValuation)} · ⏱ ${secondsLeft}s avant attribution du mandat.</div>
+        ${ipo.blackwellPitchSubmitted
+          ? `<div style="font-size:12.5px; color:var(--series-green);">✅ Pitch soumis par ${escapeHtml(ipo.blackwellPitchByName)} — décision imminente.</div>`
+          : `<button id="ipo-pitch-submit" class="btn-sm">Soumettre notre pitch</button>`}
+      </div>
+    `;
+  }
+
+  if (ipo.phase === "bookbuilding") {
+    const secondsLeft = Math.max(0, Math.round((ipo.bookbuildingDeadline - Date.now()) / 1000));
+    const totalDemand = ipo.intentions.reduce((s, i) => s + i.amount, 0);
+    const demandPct = ipo.offeringSize > 0 ? Math.min(200, Math.round((totalDemand / ipo.offeringSize) * 100)) : 0;
+    return `
+      <div class="panel" style="margin-bottom:16px; border-color:rgba(46,230,166,0.35);">
+        <div class="panel-title">🏆 Mandat IPO remporté — ${escapeHtml(ipo.companyName)}</div>
+        <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Taille de l'offre ${fmtMoney(ipo.offeringSize)} · fourchette indicative ${ipo.priceRangeLow}–${ipo.priceRangeHigh} €/action · ⏱ ${secondsLeft}s</div>
+        ${ipo.finalPrice === null ? `
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input id="ipo-price-input" type="number" step="0.1" min="0.1" placeholder="Prix (€/action)" style="width:150px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
+            <button id="ipo-price-submit" class="btn-sm">Fixer le prix</button>
+          </div>
+        ` : `
+          <div style="font-size:12.5px; margin-bottom:8px;">Prix fixé par ${escapeHtml(ipo.pricedByName)} à <b>${ipo.finalPrice} €/action</b>.</div>
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <div style="flex:1; height:12px; background:var(--border); border-radius:6px; overflow:hidden;">
+              <div style="width:${demandPct}%; height:100%; background:${demandPct >= 100 ? "var(--series-green)" : "#f5b942"};"></div>
+            </div>
+            <div style="font-size:11px; color:var(--text-muted); white-space:nowrap;">${fmtMoney(totalDemand)} / ${fmtMoney(ipo.offeringSize)}</div>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+            <input id="ipo-intention-input" type="number" step="1" min="1" placeholder="Intention (M$)" style="width:150px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
+            <button id="ipo-intention-submit" class="btn-sm">Soumettre une intention</button>
+          </div>
+          ${ipo.intentions.length ? `
+            <div style="font-size:11px; color:var(--text-muted);">
+              ${ipo.intentions.slice(0, 5).map(i => `${i.isAI ? "🏦" : "👤"} ${escapeHtml(i.investorName)} — ${fmtMoney(i.amount)}`).join(" · ")}
+            </div>
+          ` : ""}
+        `}
+      </div>
+    `;
+  }
+
+  return "";
+}
+
+function cibBonusPanelHtml() {
+  if (!appState.player.isHeadOfCIB) return "";
+  const pool = appState.cibBonusPool || { available: 0, distributedLog: [] };
+  const cibTeam = (appState.players || []).filter(p => p.cluster === "A");
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">💼 Bonus Pool CIB — enveloppe disponible : ${fmtMoney(pool.available)}</div>
+      <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px;">Accumulée automatiquement à chaque clôture de journée de marché (6% du résultat net positif du jour) — à vous de la répartir dans votre équipe Dealmaking.</div>
+      <table class="data-table">
+        <thead><tr><th>Collaborateur</th><th>Montant (M$)</th></tr></thead>
+        <tbody>
+          ${cibTeam.map(p => `
+            <tr>
+              <td><div class="person-row">${avatarHtml(p.fullName, 20)}<span class="person-row-name">${escapeHtml(p.fullName)}</span></div></td>
+              <td><input data-cib-bonus-input="${p.id}" type="number" step="0.1" min="0" placeholder="0" style="width:90px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/></td>
+            </tr>
+          `).join("")}
+          <tr>
+            <td>🤖 Équipe IA — CIB <span style="font-size:11px; color:var(--text-muted);">(postes non pourvus)</span></td>
+            <td><input data-cib-bonus-input="ai-team" type="number" step="0.1" min="0" placeholder="0" style="width:90px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/></td>
+          </tr>
+        </tbody>
+      </table>
+      <button id="cib-bonus-submit" class="btn-sm" style="margin-top:10px;">Distribuer le bonus CIB</button>
+      <div id="cib-bonus-error" class="join-error"></div>
+      ${(pool.distributedLog || []).length ? `
+        <div style="margin-top:10px; font-size:11px; color:var(--text-muted);">
+          Dernière répartition : ${escapeHtml(pool.distributedLog[0].byName)} — ${fmtMoney(pool.distributedLog[0].total)} entre ${pool.distributedLog[0].recipients.join(", ")}.
+        </div>
+      ` : ""}
+    </div>
+  `;
+}
+
 function renderMa() {
   const deals = appState.maDeals || [];
   return `
     <div class="page-title">M&amp;A</div>
-    <div class="page-sub">Pipeline d'opérations — visible par Direction Générale et les métiers de dealmaking.</div>
+    <div class="page-sub">Pipeline d'opérations — visible par le Board Of Directors et les métiers de dealmaking.</div>
     ${taskPanelHtml("ma")}
+    ${ipoPanelHtml()}
+    ${cibBonusPanelHtml()}
     <div class="panel" style="margin-bottom:16px;">
       <div class="panel-title">Nouveau projet</div>
       <div class="form-row"><label>Nom du projet</label><input id="ma-name" type="text" placeholder="ex. Projet Atlas — acquisition XYZ"/></div>
@@ -169,6 +267,27 @@ function bindMa() {
       if (!rate) return;
       socket.emit("dealWorkflow:submitToRisk", { dealId, rate });
     });
+  });
+  const ipoPitchBtn = document.getElementById("ipo-pitch-submit");
+  if (ipoPitchBtn) ipoPitchBtn.addEventListener("click", () => socket.emit("ipo:submitPitch"));
+  const ipoPriceBtn = document.getElementById("ipo-price-submit");
+  if (ipoPriceBtn) ipoPriceBtn.addEventListener("click", () => {
+    const price = Number(document.getElementById("ipo-price-input").value);
+    if (price > 0) socket.emit("ipo:setPrice", { price });
+  });
+  const ipoIntentionBtn = document.getElementById("ipo-intention-submit");
+  if (ipoIntentionBtn) ipoIntentionBtn.addEventListener("click", () => {
+    const amount = Number(document.getElementById("ipo-intention-input").value);
+    if (amount > 0) socket.emit("ipo:submitIntention", { amount });
+  });
+  const cibBtn = document.getElementById("cib-bonus-submit");
+  if (cibBtn) cibBtn.addEventListener("click", () => {
+    const allocations = {};
+    document.querySelectorAll("[data-cib-bonus-input]").forEach(el => {
+      const amount = Number(el.value);
+      if (amount > 0) allocations[el.getAttribute("data-cib-bonus-input")] = amount;
+    });
+    socket.emit("cib:distributeBonus", { allocations });
   });
   bindMaValuationSim();
   bindTaskPanel();

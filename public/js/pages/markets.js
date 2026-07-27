@@ -85,6 +85,48 @@ function insiderTradingPanelHtml() {
   `;
 }
 
+const DARK_POOL_MIN_NOTIONAL_CLIENT = 300;
+const DARK_POOL_STATUS_LABEL = { pending: "⏳ en négociation OTC", matched: "✅ exécuté", expired: "❌ expiré" };
+
+// Anonymous large-volume orders (server/handlers/markets.js's markets:placeDarkPoolOrder)
+// -- a short response window during which a rival bank may anonymously take the
+// other side OTC. Rides the same appState.markets object as everything else on
+// this page (darkPoolOrders is just another field on it), no separate socket
+// listener needed for the data itself.
+function darkPoolPanelHtml() {
+  const markets = appState.markets || {};
+  const instruments = markets.instruments || [];
+  const orders = markets.darkPoolOrders || [];
+  return `
+    <div class="panel" style="margin-bottom:16px; border-color:rgba(181,140,255,0.35);">
+      <div class="panel-title">🌑 Dark Pool <span style="font-weight:400; font-size:11px; color:var(--text-muted);">(ordres anonymes, gros volumes ≥ ${DARK_POOL_MIN_NOTIONAL_CLIENT} M$)</span></div>
+      <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px;">Un ordre de gros volume placé ici n'affecte pas le prix affiché — une banque rivale peut anonymement en prendre l'autre côté (OTC) sous quelques secondes.</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+        <select id="dp-side"><option value="buy">Achat</option><option value="sell">Vente</option></select>
+        <select id="dp-instrument">${instruments.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join("")}</select>
+        <input id="dp-notional" type="number" step="10" min="${DARK_POOL_MIN_NOTIONAL_CLIENT}" placeholder="Notionnel (M$)" style="width:140px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
+        <button id="dp-submit" class="btn-sm">Soumettre l'ordre</button>
+      </div>
+      <div id="dp-error" class="join-error"></div>
+      ${orders.length ? `
+        <table class="data-table">
+          <thead><tr><th>Instrument</th><th>Sens</th><th>Notionnel</th><th>Statut</th></tr></thead>
+          <tbody>
+            ${orders.slice(0, 8).map(o => `
+              <tr>
+                <td>${escapeHtml(o.instrumentName)}</td>
+                <td>${o.side === "buy" ? "Achat" : "Vente"}</td>
+                <td class="tnum">${fmtMoney(o.notional)}</td>
+                <td>${DARK_POOL_STATUS_LABEL[o.status]}${o.status === "matched" ? ` — ${escapeHtml(o.matchedBank)} (+${o.gain} M$)` : ""}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      ` : ""}
+    </div>
+  `;
+}
+
 function renderMarkets() {
   const markets = appState.markets || { instruments: [], positions: [], cash: 0, realizedPnL: 0, tradeLog: [] };
   const instruments = markets.instruments || [];
@@ -97,6 +139,7 @@ function renderMarkets() {
     ${executionQueueHtml()}
     ${syndicatingDealsHtml()}
     ${insiderTradingPanelHtml()}
+    ${darkPoolPanelHtml()}
     <div class="kpi-grid">
       <div class="kpi-card"><div class="kpi-label">Capital disponible</div><div class="kpi-value">${fmtMoney(markets.cash)}</div></div>
       <div class="kpi-card"><div class="kpi-label">Résultat réalisé cumulé</div><div class="kpi-value">${fmtMoney(markets.realizedPnL)}</div></div>
@@ -200,6 +243,19 @@ function bindMarkets() {
       }
       socket.emit("markets:insiderTrade", { dealId, notional });
     });
+  });
+  const dpBtn = document.getElementById("dp-submit");
+  if (dpBtn) dpBtn.addEventListener("click", () => {
+    const side = document.getElementById("dp-side").value;
+    const instrumentId = document.getElementById("dp-instrument").value;
+    const notional = Number(document.getElementById("dp-notional").value);
+    const errEl = document.getElementById("dp-error");
+    if (errEl) errEl.textContent = "";
+    if (!notional) {
+      if (errEl) errEl.textContent = "Indiquez un notionnel.";
+      return;
+    }
+    socket.emit("markets:placeDarkPoolOrder", { side, instrumentId, notional });
   });
   bindTaskPanel();
 }

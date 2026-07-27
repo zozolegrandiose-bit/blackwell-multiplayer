@@ -34,14 +34,14 @@ function renderReglement() {
         <li><b>D — Conformité, Risque &amp; Juridique</b> : Conformité</li>
         <li><b>E — Finance &amp; Trésorerie</b> : Finance</li>
         <li><b>F — RH &amp; Communication</b> : RH</li>
-        <li><b>G — Direction Générale</b> : accès complet à toutes les pages</li>
+        <li><b>G — Board Of Directors</b> : accès complet à toutes les pages</li>
       </ul>
-      Les pages Vue d'ensemble, Mail, Agenda, Documents, Notes de frais et ce Règlement sont accessibles à tout le monde. <b>Le Comité de Direction (Stratégie) est réservé</b> : il faut être Director ou grade supérieur dans son département, ou appartenir à la Direction Générale.
+      Les pages Vue d'ensemble, Mail, Agenda, Documents, Notes de frais et ce Règlement sont accessibles à tout le monde. <b>Le Comité de Direction (Stratégie) est réservé</b> : il faut être Director ou grade supérieur dans son département, ou appartenir au Board Of Directors.
     `)}
 
     ${reglementSectionHtml("🏛 Comité de Direction (décisions trimestrielles)", `
       La partie avance par trimestres. Chaque département opérationnel (clusters A à F) verrouille <b>une décision à compromis</b> par trimestre (ex : pipeline agressif vs défensif). Sans personne d'assez senior connecté, l'option neutre s'applique par défaut — rien ne bloque.<br/>
-      La <b>Direction Générale</b> voit les choix déjà verrouillés des autres avant de fixer son propre multiplicateur trimestriel (Croissance, Stabilité, Réduction des coûts) — un vrai levier qui amplifie ou atténue l'effet cumulé du trimestre.
+      Le <b>Board Of Directors</b> voit les choix déjà verrouillés des autres avant de fixer son propre multiplicateur trimestriel (Croissance, Stabilité, Réduction des coûts) — un vrai levier qui amplifie ou atténue l'effet cumulé du trimestre.
     `)}
 
     ${reglementSectionHtml("🤝 Workflow d'exécution des deals M&amp;A", `
@@ -80,7 +80,7 @@ function renderReglement() {
     `)}
 
     ${reglementSectionHtml("⭐ Score, badges &amp; classement", `
-      Chaque action significative (pas chaque clic) rapporte des points, avec un multiplicateur de +50% si votre département est sous une <b>directive prioritaire</b> de la Direction Générale. Des badges (🏅 Clôtureur, 🛡️ Bouclier, 🎯 Recruteur…) se débloquent automatiquement selon vos actions. Le Hall of Fame conserve les meilleurs scores même après une réinitialisation de partie.
+      Chaque action significative (pas chaque clic) rapporte des points, avec un multiplicateur de +50% si votre département est sous une <b>directive prioritaire</b> du Board Of Directors. Des badges (🏅 Clôtureur, 🛡️ Bouclier, 🎯 Recruteur…) se débloquent automatiquement selon vos actions. Le Hall of Fame conserve les meilleurs scores même après une réinitialisation de partie.
     `)}
 
     <div class="panel">
@@ -94,7 +94,7 @@ function renderReglement() {
         <label style="flex:1;">Difficulté actuelle de la partie</label>
         <span class="chip">${escapeHtml(difficultyLabel)}</span>
       </div>
-      <div style="font-size:11px; color:var(--text-muted); margin:6px 0 14px;">Réglable par la Direction Générale depuis le Comité de Direction.</div>
+      <div style="font-size:11px; color:var(--text-muted); margin:6px 0 14px;">Réglable par le Board Of Directors depuis le Comité de Direction.</div>
       <button id="reglement-replay-tutorial" class="btn-sm">Revoir le message d'accueil</button>
     </div>
   `;

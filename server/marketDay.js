@@ -5,6 +5,9 @@
 const { pushActivity, postTeamChat } = require("./gameState");
 const { awardCustomPoints } = require("./scoring");
 const { getDifficultyPreset } = require("./difficulty");
+const { runRatingAgency } = require("./ratingAgency");
+const { accrueCibBonusPool } = require("./cibBonus");
+const { sweepResignations } = require("./satisfaction");
 
 const DAY_LENGTH_MS = 15 * 60 * 1000;
 const SWEEP_MIN_MS = 10 * 1000;
@@ -23,6 +26,14 @@ function snapshotScores(gameState) {
   const snapshot = {};
   Object.keys(gameState.playerScores).forEach(key => {
     snapshot[key] = gameState.playerScores[key].score;
+  });
+  return snapshot;
+}
+
+function snapshotLeagueTable(gameState) {
+  const snapshot = {};
+  Object.keys(gameState.leagueTable).forEach(name => {
+    snapshot[name] = gameState.leagueTable[name].pnl;
   });
   return snapshot;
 }
@@ -65,10 +76,18 @@ function settleMarketDay(io, gameState) {
   pushActivity(gameState, { actorPlayerId: null, page: "overview", text: "📊 Journée J" + closedDayNumber + " clôturée — résultat net " + (dayNetIncome >= 0 ? "+" : "") + dayNetIncome + " M$." });
   io.to("game").emit("activity:update", gameState.activityLog[0]);
 
+  // Rating Agency reads dayStartLeagueTable (rival P&L trend) before it gets reset
+  // below for the next day -- must run here, not after.
+  runRatingAgency(io, gameState);
+  accrueCibBonusPool(gameState, dayNetIncome);
+  io.to("access:ma").emit("cibBonus:update", gameState.cibBonusPool);
+  sweepResignations(io, gameState);
+
   day.dayNumber += 1;
   day.deadline = Date.now() + DAY_LENGTH_MS * getDifficultyPreset(gameState.difficulty).quarterLength;
   day.dayStartNetIncome = kpis.netIncome;
   day.dayStartScores = snapshotScores(gameState);
+  day.dayStartLeagueTable = snapshotLeagueTable(gameState);
 
   io.to("game").emit("marketDay:update", { dayNumber: day.dayNumber, deadline: day.deadline });
   io.to("game").emit("scoring:update", { playerScores: gameState.playerScores, bankHealth: gameState.bankHealth });
@@ -90,9 +109,11 @@ function startMarketDayLoop(io, gameState) {
   if (!gameState.marketDay.deadline) {
     gameState.marketDay.deadline = Date.now() + DAY_LENGTH_MS;
     gameState.marketDay.dayStartScores = snapshotScores(gameState);
+    gameState.marketDay.dayStartLeagueTable = snapshotLeagueTable(gameState);
   }
   scheduleMarketDayLoop(io, gameState);
   console.log("Journée de marché activée (15 minutes réelles par journée).");
 }
 
 module.exports = { startMarketDayLoop, settleMarketDay, DAY_LENGTH_MS };
+
