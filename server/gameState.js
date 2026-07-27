@@ -299,7 +299,35 @@ function createGameState() {
       deadline: null,
       dayStartNetIncome: 108,
       dayStartScores: {}
-    }
+    },
+    warRoom: null,
+    // Mercato Inter-Banques — a lightweight NPC talent pool per rival bank (same 5
+    // names as the league table / Patch 12's stalled-deal competitors), browsable
+    // by HR/Direction to make poaching offers against. Not simulated employees
+    // doing real work elsewhere — just enough to make the mercato mechanic real.
+    rivalTalent: {
+      "Ashford & Vane": [
+        { id: "rt1", name: "Julien Ferrand", role: "Head of Trading", skillRating: 82, currentSalary: 18 },
+        { id: "rt2", name: "Camille Roussel", role: "Senior M&A Banker", skillRating: 75, currentSalary: 14 }
+      ],
+      "Northfield Partners": [
+        { id: "rt3", name: "Léa Berthier", role: "Head of Risk", skillRating: 78, currentSalary: 16 },
+        { id: "rt4", name: "Nicolas Vasseur", role: "Wealth Relationship Manager", skillRating: 70, currentSalary: 12 }
+      ],
+      "Meridian Capital Group": [
+        { id: "rt5", name: "Sofia Marchetti", role: "Quant Trader", skillRating: 85, currentSalary: 19 },
+        { id: "rt6", name: "Antoine Lucchesi", role: "Compliance Officer", skillRating: 68, currentSalary: 11 }
+      ],
+      "Solenne & Rocher": [
+        { id: "rt7", name: "Manon Delcroix", role: "M&A Director", skillRating: 88, currentSalary: 22 },
+        { id: "rt8", name: "Hugo Fabre", role: "HR Business Partner", skillRating: 65, currentSalary: 10 }
+      ],
+      "Ironhall Securities": [
+        { id: "rt9", name: "Chloé Renard", role: "Structuring Specialist", skillRating: 80, currentSalary: 17 },
+        { id: "rt10", name: "Mathieu Blanchard", role: "Sales Trader", skillRating: 72, currentSalary: 13 }
+      ]
+    },
+    mercatoOffers: []
   };
 }
 

@@ -154,6 +154,7 @@ function renderStrategy() {
       </div>
     </div>
     ${quarterHistoryHtml()}
+    ${mercatoPanelHtml()}
     ${myCluster && myOptionsList ? `
       <div class="panel" style="margin-bottom:16px;">
         <div class="panel-title">Votre décision — ${escapeHtml(STRATEGY_CLUSTER_LABELS[myCluster])}</div>
@@ -216,6 +217,7 @@ function bindStrategy() {
     if (directiveSelect.value) socket.emit("game:setDirective", { cluster: directiveSelect.value });
     else socket.emit("game:clearDirective");
   });
+  bindMercatoPanel();
 }
 
 PAGE_RENDERERS.strategy = renderStrategy;

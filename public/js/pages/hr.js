@@ -178,6 +178,7 @@ function renderHr() {
       `;
       }).join("") || `<div class="empty-cell">Aucun joueur pour l'instant.</div>`}
     </div>
+    ${mercatoPanelHtml()}
     ${leaveCalendarHtml(requests)}
     <div class="panel">
       <div class="panel-title">Demandes de congé (${requests.length})</div>
@@ -203,6 +204,68 @@ function renderHr() {
       </table>
     </div>
   `;
+}
+
+// Shared between hr.js and strategy.js -- HR players and Director-and-above
+// players both get access to the mercato via server/mercato.js, but only HR
+// has the "hr" page in their nav, so Directors need it surfaced on Comité de
+// Direction instead. appState.rivalTalent/mercatoOffers are only ever present
+// in the snapshot for players with one of those two access grants.
+function mercatoPanelHtml() {
+  const rivalTalent = appState.rivalTalent;
+  if (!rivalTalent) return "";
+  const offers = appState.mercatoOffers || [];
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🔀 Mercato Inter-Banques</div>
+      <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px;">Débauchez un talent d'une banque rivale en lui proposant un meilleur salaire — plus l'écart est généreux, plus l'offre a de chances d'être acceptée.</div>
+      ${Object.keys(rivalTalent).map(bankName => `
+        <div style="margin-bottom:12px;">
+          <div style="font-weight:700; font-size:12.5px; margin-bottom:6px;">${escapeHtml(bankName)}</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            ${rivalTalent[bankName].map(npc => `
+              <div style="border:1px solid var(--border); border-radius:8px; padding:8px 10px; min-width:210px;">
+                <div style="font-weight:600; font-size:12.5px;">${escapeHtml(npc.name)}</div>
+                <div style="font-size:11px; color:var(--text-muted); margin:2px 0 6px;">${escapeHtml(npc.role)} · niveau ${npc.skillRating} · salaire actuel ${fmtMoney(npc.currentSalary)}</div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <input data-mercato-salary-input="${bankName}|${npc.id}" type="number" step="0.5" min="${npc.currentSalary * 1.05}" placeholder="Offre (M$)" style="width:110px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:11.5px;"/>
+                  <button data-mercato-offer="${bankName}|${npc.id}" class="btn-sm">Débaucher</button>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `).join("") || `<div class="empty-cell">Aucun talent disponible actuellement.</div>`}
+      <div id="mercato-error" class="join-error"></div>
+      ${offers.length ? `
+        <div style="margin-top:10px;">
+          <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">Dernières offres</div>
+          ${offers.slice(0, 6).map(o => `
+            <div style="font-size:11.5px; padding:4px 0; border-top:1px solid var(--border);">
+              ${o.success ? "✅" : "❌"} ${escapeHtml(o.byName)} → ${escapeHtml(o.npcName)} (${escapeHtml(o.bankName)}) — ${fmtMoney(o.offeredSalary)}
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+    </div>
+  `;
+}
+
+function bindMercatoPanel() {
+  document.querySelectorAll("[data-mercato-offer]").forEach(el => {
+    el.addEventListener("click", () => {
+      const [bankName, npcId] = el.getAttribute("data-mercato-offer").split("|");
+      const input = document.querySelector(`[data-mercato-salary-input="${bankName}|${npcId}"]`);
+      const offeredSalary = Number(input && input.value);
+      const errEl = document.getElementById("mercato-error");
+      if (errEl) errEl.textContent = "";
+      if (!offeredSalary) {
+        if (errEl) errEl.textContent = "Indiquez un montant d'offre.";
+        return;
+      }
+      socket.emit("mercato:makeOffer", { bankName, npcId, offeredSalary });
+    });
+  });
 }
 
 function bindHr() {
@@ -248,6 +311,7 @@ function bindHr() {
     socket.emit("hr:distributeBonus", { allocations });
   });
   bindTaskPanel();
+  bindMercatoPanel();
 }
 
 PAGE_RENDERERS.hr = renderHr;

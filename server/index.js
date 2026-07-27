@@ -22,6 +22,8 @@ const { registerMarketsHandlers, startMarketsLoop } = require("./handlers/market
 const { registerLiveEventsHandlers, startLiveEventsLoop } = require("./liveEvents");
 const { registerDealWorkflowHandlers, startDealWorkflowLoop } = require("./handlers/dealWorkflow");
 const { startMarketDayLoop } = require("./marketDay");
+const { registerWarRoomHandlers, startWarRoomLoop } = require("./warRoom");
+const { registerMercatoHandlers } = require("./mercato");
 
 const app = express();
 const httpServer = createServer(app);
@@ -47,6 +49,8 @@ io.on("connection", socket => {
   registerMarketsHandlers(io, socket, gameState);
   registerLiveEventsHandlers(io, socket, gameState);
   registerDealWorkflowHandlers(io, socket, gameState);
+  registerWarRoomHandlers(io, socket, gameState);
+  registerMercatoHandlers(io, socket, gameState);
 });
 
 startAiLoop(io, gameState);
@@ -59,6 +63,7 @@ startMarketsLoop(io, gameState);
 startLiveEventsLoop(io, gameState);
 startDealWorkflowLoop(io, gameState);
 startMarketDayLoop(io, gameState);
+startWarRoomLoop(io, gameState);
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {

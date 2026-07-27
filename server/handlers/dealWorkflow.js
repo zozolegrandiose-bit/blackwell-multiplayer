@@ -19,6 +19,17 @@ const FEE_PCT = 0.02;
 const BONUS_POOL_PCT = 0.15;
 const MAX_EXECUTED_LOG = 20;
 const BIG_DEAL_THRESHOLD = 300;
+// Syndication de Crédit inter-banques -- distinct from the pre-existing "syndication"
+// execution METHOD above (an internal fee-multiplier flavor choice with no rival
+// bank involvement). This is a real handoff: only the biggest deals qualify, and
+// slices of it are actually offered out to rival banks, who bid to take them on.
+const MASSIVE_DEAL_THRESHOLD = 500;
+const SYNDICATION_TRANCHE_BANKS = 2;
+const SYNDICATION_RIVAL_SHARE = 0.6; // portion of deal value offered out across rival tranches; Blackwell retains the rest as lead
+const TRANCHE_RESOLVE_MIN_MS = 5 * 1000;
+const TRANCHE_RESOLVE_MAX_MS = 12 * 1000;
+const RIVAL_FEE_PCT = 0.02;
+const RIVAL_MARGIN_PCT = 0.4;
 const RATINGS = ["AAA", "AA", "A", "BBB", "BB", "B"];
 const WEAK_RATINGS = ["BB", "B"];
 const STRONG_RATINGS = ["AAA", "AA"];
@@ -30,6 +41,15 @@ function requireAccess(socket, page) {
 
 function round1(n) {
   return Math.round(n * 10) / 10;
+}
+
+function pickRandomBanks(list, n) {
+  const pool = list.slice();
+  const picked = [];
+  while (picked.length < n && pool.length) {
+    picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  }
+  return picked;
 }
 
 function generateCreditFile() {
@@ -138,6 +158,150 @@ function registerDealWorkflowHandlers(io, socket, gameState) {
 
     executeDeal(io, gameState, deal, payload.method, player);
   });
+
+  socket.on("dealWorkflow:proposeSyndication", payload => {
+    if (!requireAccess(socket, "markets")) return;
+    const player = gameState.players.find(p => p.id === socket.data.playerId);
+    const deal = gameState.maDeals.find(d => d.id === payload.dealId);
+    if (!player || !deal || !deal.workflow || deal.workflow.phase !== "pending_execution") return;
+    if (deal.valuation < MASSIVE_DEAL_THRESHOLD) return;
+
+    const rivalBanks = Object.keys(gameState.leagueTable).filter(name => name !== PLAYER_BANK_NAME);
+    const chosen = pickRandomBanks(rivalBanks, SYNDICATION_TRANCHE_BANKS);
+    const trancheAmount = round1((deal.valuation * SYNDICATION_RIVAL_SHARE) / chosen.length);
+
+    deal.workflow.phase = "syndicating";
+    deal.workflow.tranches = chosen.map(bankName => ({
+      id: "tr" + Date.now() + Math.round(Math.random() * 1000),
+      bankName,
+      amount: trancheAmount,
+      status: "bidding",
+      resolveAt: Date.now() + randomDelay(TRANCHE_RESOLVE_MIN_MS, TRANCHE_RESOLVE_MAX_MS)
+    }));
+    deal.workflow.leadAmount = round1(deal.valuation - trancheAmount * chosen.length);
+    deal.workflow.proposedByPlayerId = player.id;
+    deal.workflow.proposedByName = player.fullName;
+
+    broadcastDeals(io, gameState);
+    pushActivity(gameState, {
+      actorPlayerId: player.id,
+      page: "markets",
+      text: player.fullName + " a proposé de syndiquer « " + deal.name + " » (" + deal.valuation + " M$) — tranches offertes à " + chosen.join(", ") + "."
+    });
+    io.to("game").emit("activity:update", gameState.activityLog[0]);
+  });
+}
+
+// Resolves each rival bank's bid on its tranche once its (randomized) response
+// delay elapses -- higher approved rate makes the tranche more attractive, so
+// more likely to be picked up. Once every tranche has an answer, the deal
+// executes automatically: no separate user action closes it out.
+function sweepSyndicationTranches(io, gameState) {
+  const now = Date.now();
+  gameState.maDeals.forEach(deal => {
+    if (!deal.workflow || deal.workflow.phase !== "syndicating") return;
+    let changed = false;
+    deal.workflow.tranches.forEach(tranche => {
+      if (tranche.status !== "bidding" || now < tranche.resolveAt) return;
+      const acceptChance = Math.max(0.2, Math.min(0.85, 0.3 + (deal.workflow.rate - 5) * 0.04));
+      tranche.status = Math.random() < acceptChance ? "accepted" : "rejected";
+      changed = true;
+      pushActivity(gameState, {
+        actorPlayerId: null,
+        page: "markets",
+        text: tranche.status === "accepted"
+          ? "🤝 " + tranche.bankName + " accepte sa tranche de « " + deal.name + " » (" + tranche.amount + " M$)."
+          : "🚫 " + tranche.bankName + " décline sa tranche de « " + deal.name + " » (" + tranche.amount + " M$) — elle revient à Blackwell & Co."
+      });
+      io.to("game").emit("activity:update", gameState.activityLog[0]);
+    });
+    if (changed) broadcastDeals(io, gameState);
+
+    const allResolved = deal.workflow.tranches.every(t => t.status !== "bidding");
+    if (allResolved) executeSyndicatedDeal(io, gameState, deal);
+  });
+}
+
+// Terminal step for the syndication path, parallel to executeDeal() above but fee
+// and bonus are computed only on the amount Blackwell actually retained -- rival
+// banks that accepted a tranche book their own (smaller) profit on it via the same
+// RIVAL_FEE_PCT/RIVAL_MARGIN_PCT margin already used for stalled-deal losses (ma.js).
+function executeSyndicatedDeal(io, gameState, deal) {
+  const accepted = deal.workflow.tranches.filter(t => t.status === "accepted");
+  const rejectedAmount = deal.workflow.tranches.filter(t => t.status === "rejected").reduce((sum, t) => sum + t.amount, 0);
+  const retainedAmount = round1(deal.workflow.leadAmount + rejectedAmount);
+
+  const grossFee = round1(retainedAmount * FEE_PCT);
+  const rateModifier = Math.max(0.5, 1 + (deal.workflow.rate - 5) * 0.02);
+  const netFee = round1(grossFee * rateModifier);
+
+  const kpis = gameState.financeKPIs;
+  const oldNetIncome = kpis.netIncome;
+  kpis.revenue = round1(kpis.revenue + grossFee);
+  kpis.netIncome = round1(kpis.netIncome + netFee);
+  kpis.history.unshift({ ts: Date.now(), field: "netIncome", oldValue: oldNetIncome, newValue: kpis.netIncome, byPlayerId: null, byName: "Syndication — " + deal.name });
+  if (kpis.history.length > 100) kpis.history.length = 100;
+
+  const bonusPool = round1(netFee * BONUS_POOL_PCT);
+  const participants = [
+    { id: deal.workflow.submittedByPlayerId, name: deal.workflow.submittedByName, role: "Analyste M&A" },
+    { id: deal.workflow.riskDecisionByPlayerId, name: deal.workflow.riskDecisionByName, role: "Risk Manager" },
+    { id: deal.workflow.proposedByPlayerId, name: deal.workflow.proposedByName, role: "Desk Trading" }
+  ];
+  const share = round1(bonusPool / participants.length);
+  participants.forEach(p => {
+    const participantPlayer = gameState.players.find(pl => pl.id === p.id);
+    if (participantPlayer) awardCustomPoints(io, gameState, participantPlayer, Math.round(share * 10), share);
+  });
+
+  accepted.forEach(tranche => {
+    const rivalProfit = round1(tranche.amount * RIVAL_FEE_PCT * RIVAL_MARGIN_PCT);
+    recordBankPnl(gameState, tranche.bankName, rivalProfit, 1);
+  });
+  if (accepted.length) io.to("game").emit("leagueTable:update", gameState.leagueTable);
+
+  const record = {
+    id: "wf" + Date.now(),
+    dealName: deal.name,
+    method: "syndication_interbanques",
+    grossFee,
+    netFee,
+    bonusPool,
+    participants: participants.map(p => ({ name: p.name, role: p.role })),
+    executedAt: Date.now()
+  };
+  gameState.executedWorkflows.unshift(record);
+  if (gameState.executedWorkflows.length > MAX_EXECUTED_LOG) gameState.executedWorkflows.length = MAX_EXECUTED_LOG;
+
+  deal.workflow.phase = "executed";
+  deal.workflow.method = "syndication_interbanques";
+  deal.workflow.netFee = netFee;
+  deal.stage = "Clôturé";
+  deal.revenueBooked = true;
+  recordBankPnl(gameState, PLAYER_BANK_NAME, netFee, 1);
+
+  broadcastDeals(io, gameState);
+  io.to("access:finance").emit("finance:update", kpis);
+  io.to("game").emit("overview:kpis", kpis);
+  io.to("game").emit("executedWorkflows:update", gameState.executedWorkflows);
+  io.to("game").emit("leagueTable:update", gameState.leagueTable);
+  const acceptedNames = accepted.map(t => t.bankName).join(", ") || "aucune";
+  pushActivity(gameState, {
+    actorPlayerId: null,
+    page: "markets",
+    text: "🌐 Syndication de « " + deal.name + " » finalisée — tranches placées auprès de : " + acceptedNames + ". Blackwell & Co retient " + retainedAmount + " M$ (+" + netFee + " M$ net)."
+  });
+  io.to("game").emit("activity:update", gameState.activityLog[0]);
+  io.to("game").emit("scoring:update", { playerScores: gameState.playerScores, bankHealth: gameState.bankHealth });
+
+  if (deal.valuation >= BIG_DEAL_THRESHOLD) {
+    postTeamChat(gameState, {
+      authorName: "IA — Salle des marchés",
+      text: "🎉 « " + deal.name + " » (" + deal.valuation + " M$) syndiqué avec succès entre plusieurs banques — belle gestion du risque collectif !",
+      tone: "congrats"
+    });
+    io.to("game").emit("teamChat:update", gameState.teamChat[0]);
+  }
 }
 
 function executeDeal(io, gameState, deal, method, trader) {
@@ -267,6 +431,7 @@ function scheduleSweepLoop(io, gameState) {
     if (!gameState.paused) {
       sweepExpiredExecutions(io, gameState);
       aiReviewPendingRisk(io, gameState);
+      sweepSyndicationTranches(io, gameState);
     }
     setTimeout(tick, randomDelay(SWEEP_MIN_MS, SWEEP_MAX_MS));
   }
@@ -286,7 +451,13 @@ module.exports = {
   aiReviewPendingRisk,
   generateCreditFile,
   generateAiRiskComment,
+  sweepSyndicationTranches,
+  executeSyndicatedDeal,
   EXECUTION_WINDOW_MS,
   AI_RISK_REVIEW_DELAY_MS,
-  BIG_DEAL_THRESHOLD
+  BIG_DEAL_THRESHOLD,
+  MASSIVE_DEAL_THRESHOLD,
+  SYNDICATION_TRANCHE_BANKS,
+  TRANCHE_RESOLVE_MIN_MS,
+  TRANCHE_RESOLVE_MAX_MS
 };

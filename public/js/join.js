@@ -144,6 +144,25 @@ socket.on("marketDay:update", data => {
   if (appState.currentPage === "overview") renderApp();
 });
 
+socket.on("warRoom:update", data => {
+  if (!window.currentPlayer) return;
+  appState.warRoom = data;
+  renderWarRoomOverlay();
+});
+
+socket.on("mercato:update", data => {
+  if (!window.currentPlayer) return;
+  appState.rivalTalent = data.rivalTalent;
+  appState.mercatoOffers = data.mercatoOffers;
+  appState.hr = data.hr;
+  if (appState.currentPage === "hr" || appState.currentPage === "strategy") renderApp();
+});
+
+socket.on("mercato:offerRejected", data => {
+  const errEl = document.getElementById("mercato-error");
+  if (errEl) errEl.textContent = data.reason;
+});
+
 socket.on("ma:create:rejected", data => {
   const errorEl = document.getElementById("ma-error");
   if (errorEl) errorEl.textContent = data.reason;
@@ -221,8 +240,18 @@ socket.on("markets:update", markets => {
 });
 
 socket.on("markets:buy:rejected", data => {
+  // Shared rejection event: markets:buy and the insider-trading panel both use it
+  // (both are capital-insufficiency checks) but render into different DOM nodes.
   const errorEl = document.getElementById("mk-buy-error");
   if (errorEl) errorEl.textContent = data.reason;
+  const insiderErrorEl = document.getElementById("insider-error");
+  if (insiderErrorEl) insiderErrorEl.textContent = data.reason;
+});
+
+socket.on("markets:insiderResult", data => {
+  notify(data.caught
+    ? "🚨 Compliance vous a pris en flagrant délit d'initié — amende de " + data.fine + " M$."
+    : "🤫 Information exploitée sans être repéré — gain de " + data.gain + " M$.");
 });
 
 socket.on("game:directiveChanged", directive => {

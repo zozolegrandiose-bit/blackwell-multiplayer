@@ -1,5 +1,29 @@
 # Journal des mises à jour
 
+## Patch 15 — Crise Majeure, Mercato, Syndication inter-banques, Information Privilégiée & Règlement (2026-07-27)
+
+### Ajouts
+- **🆘 Crise Majeure (War Room)** : toutes les 8 à 12 minutes, un événement choc frappe toute la banque (contrôle réglementaire surprise, cyberattaque, scandale médiatique, krach généralisé). Une fenêtre d'urgence s'ouvre pour **tous les joueurs connectés**, quelle que soit la page consultée, avec un chrono de 180 secondes : chaque département doit valider une action critique. À 4 départements opérationnels sur 6 validés, la crise est maîtrisée ; en dessous, dégâts réels sur la santé de la banque et le résultat net, proportionnels au nombre de départements restés silencieux.
+- **🔀 Mercato Inter-Banques** : la RH et les Directeurs (tous départements confondus) peuvent désormais consulter le vivier de talents des 5 banques rivales et leur soumettre une offre de débauchage avec un meilleur salaire — plus l'écart proposé est généreux, plus l'offre a de chances d'être acceptée. Un débauchage réussi grossit l'effectif et remonte le moral des équipes.
+- **🌐 Syndication de Crédit inter-banques** : pour les deals M&A les plus massifs (≥ 500 M$), le Desk Trading peut, une fois le Risque validé, proposer de découper le deal en tranches offertes à des banques rivales, qui négocient et répondent chacune sous quelques secondes. Blackwell & Co ne retient alors que sa tranche de tête (+ les tranches déclinées) contre un fee plus petit, mais un risque partagé — les banques qui acceptent empochent leur propre profit, visible au classement des banques.
+- **🕵️ Information Privilégiée & Compliance** : le Desk Marchés peut désormais négocier sur un deal M&A pas encore public, pour un gain immédiat généreux — mais chaque tentative expose à un contrôle de Compliance (environ 1 chance sur 3) qui inflige une amende, une perte de réputation et une alerte publique en cas de flagrant délit.
+- **📖 Nouvelle page Règlement**, accessible à tout le monde : un tutoriel complet couvrant chaque mécanique du jeu (rôles/clusters, Comité de Direction, workflow M&A, Marchés, tous les ajouts ci-dessus, tâches rapides, événements, IA ambiante, score), plus une section Paramètres (activer/désactiver les notifications toasts, difficulté actuelle affichée, bouton pour revoir le message d'accueil).
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- `server/warRoom.js` (nouveau) : suit la convention des boucles auto-reprogrammées existantes (spawn + balayage indépendants), résolution idempotente soit par soumission complète des 6 clusters opérationnels, soit par dépassement du délai de 180s.
+- `server/mercato.js` (nouveau) + `gameState.rivalTalent` (10 PNJ répartis sur les 5 banques rivales déjà connues du classement) : accès partagé via les rooms Socket.io `access:hr` et `access:strategy` (donc aussi les Directeurs des autres départements, pas seulement RH).
+- `server/handlers/dealWorkflow.js` : nouvelle phase de workflow `"syndicating"` distincte de la méthode d'exécution `"syndication"` déjà existante (un simple multiplicateur de fee interne, sans banque rivale) — pour éviter toute confusion, la nouvelle mécanique est nommée `syndication_interbanques` dans le code et « Syndication inter-banques » côté interface.
+- `server/handlers/markets.js` : `markets:insiderTrade`, distinct de `markets:buy`/`markets:sell` — aucune position n'est ouverte, le gain ou l'amende est réglé immédiatement. Compliance est notifiée via le même `createUrgentComplianceItem()` que les contrôles réglementaires automatiques.
+- `server/departmentAccess.js` : `"reglement"` ajouté à `UNIVERSAL_PAGES`.
+
+---
+
 ## Patch 14 — Comité de Direction réservé aux Directeurs (2026-07-27)
 
 ### Correctifs

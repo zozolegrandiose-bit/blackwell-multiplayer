@@ -45,7 +45,8 @@ function buildSnapshot(gameState, player) {
     executedWorkflows: gameState.executedWorkflows,
     teamChat: gameState.teamChat,
     leagueTable: gameState.leagueTable,
-    marketDay: { dayNumber: gameState.marketDay.dayNumber, deadline: gameState.marketDay.deadline }
+    marketDay: { dayNumber: gameState.marketDay.dayNumber, deadline: gameState.marketDay.deadline },
+    warRoom: gameState.warRoom
   };
   // Compliance (Risk Manager) and Markets (Desk Trading) both surface workflow
   // panels derived from maDeals even though neither has the M&A page itself —
@@ -58,6 +59,10 @@ function buildSnapshot(gameState, player) {
   if (player.access.includes("hr")) {
     snapshot.hr = gameState.hr;
     snapshot.hrRoster = hrRosterView(gameState);
+  }
+  if (player.access.includes("hr") || player.access.includes("strategy")) {
+    snapshot.rivalTalent = gameState.rivalTalent;
+    snapshot.mercatoOffers = gameState.mercatoOffers;
   }
   if (player.access.includes("agenda")) snapshot.agenda = gameState.agenda;
   if (player.access.includes("documents")) snapshot.documents = gameState.documents;

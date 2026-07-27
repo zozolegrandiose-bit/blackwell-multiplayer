@@ -10,7 +10,8 @@ const NAV = [
   { id: "compliance", label: "Conformité", icon: "🛡" },
   { id: "hr", label: "RH", icon: "❖" },
   { id: "finance", label: "Finance", icon: "📊" },
-  { id: "markets", label: "Marchés", icon: "📈" }
+  { id: "markets", label: "Marchés", icon: "📈" },
+  { id: "reglement", label: "Règlement", icon: "📖" }
 ];
 
 function visibleNav(player) {

@@ -1,6 +1,6 @@
 const { GRADES } = require("./seedData");
 
-const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses"];
+const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses", "reglement"];
 
 const CLUSTER_PAGES = {
   A: [...UNIVERSAL_PAGES, "ma", "clients"],

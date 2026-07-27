@@ -10,6 +10,8 @@ const MARKET_CATEGORY_COLOR = {
 // workflow — deals validated by Risk (server/handlers/dealWorkflow.js) show up
 // here with a live 2-minute countdown; missing it has a real health penalty
 // (server-side sweep), so the deadline shown here is not just cosmetic.
+const MASSIVE_DEAL_THRESHOLD_CLIENT = 500;
+
 function executionQueueHtml() {
   const pending = (appState.maDeals || []).filter(d => d.workflow && d.workflow.phase === "pending_execution");
   if (!pending.length) return "";
@@ -22,8 +24,63 @@ function executionQueueHtml() {
           <span class="task-row-timer">⏱ ${Math.max(0, Math.round((d.workflow.executionDeadline - Date.now()) / 1000))}s</span>
           <button class="btn-sm" data-wf-execute="${d.id}|syndication">Syndication</button>
           <button class="btn-sm" data-wf-execute="${d.id}|couverture">Couverture</button>
+          ${d.valuation >= MASSIVE_DEAL_THRESHOLD_CLIENT ? `<button class="btn-sm" data-wf-propose-syndication="${d.id}" style="border-color:var(--accent-2);">🌐 Syndication inter-banques</button>` : ""}
         </div>
       `).join("")}
+    </div>
+  `;
+}
+
+// Live status of deals currently being syndicated inter-banques (server/handlers/
+// dealWorkflow.js's "syndicating" phase) -- purely informational, resolution is
+// autonomous (each rival bank's bid resolves on its own timer), no action needed
+// here besides watching it play out.
+function syndicatingDealsHtml() {
+  const syndicating = (appState.maDeals || []).filter(d => d.workflow && d.workflow.phase === "syndicating");
+  if (!syndicating.length) return "";
+  const STATUS_LABEL = { bidding: "⏳ en négociation", accepted: "✅ acceptée", rejected: "❌ déclinée" };
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🌐 Syndication en cours</div>
+      ${syndicating.map(d => `
+        <div style="margin-bottom:10px;">
+          <div style="font-weight:700; font-size:12.5px; margin-bottom:4px;">${escapeHtml(d.name)} — lead Blackwell &amp; Co ${fmtMoney(d.workflow.leadAmount)}</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            ${d.workflow.tranches.map(t => `
+              <div class="warroom-cluster-chip ${t.status === "accepted" ? "done" : ""}" style="min-width:170px;">
+                ${escapeHtml(t.bankName)} · ${fmtMoney(t.amount)} — ${STATUS_LABEL[t.status]}
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+// Information Privilégiée -- deals not yet public (stage !== "Clôturé") are already
+// visible here via the shared maDeals snapshot (Patch 11). Trading on them ahead of
+// the announcement is a deliberate rule-break: framed with a warning border/copy,
+// distinct from the ordinary instrument cards above, since it always carries a real
+// risk of getting caught by Compliance (server/handlers/markets.js).
+function insiderTradingPanelHtml() {
+  const pendingDeals = (appState.maDeals || []).filter(d => d.stage !== "Clôturé");
+  if (!pendingDeals.length) return "";
+  return `
+    <div class="panel" style="margin-bottom:16px; border-color:rgba(255,92,122,0.35);">
+      <div class="panel-title">🕵️ Information Privilégiée <span style="font-weight:400; font-size:11px; color:var(--text-muted);">(risqué — contrôle Compliance possible)</span></div>
+      <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px;">Négocier sur un deal M&amp;A pas encore annoncé publiquement rapporte gros si ça passe inaperçu — mais expose à une amende et une sanction si Compliance vous attrape.</div>
+      ${pendingDeals.map(d => `
+        <div style="border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div style="flex:1; min-width:160px;">
+            <div style="font-weight:600; font-size:12.5px;">${escapeHtml(d.name)}</div>
+            <div style="font-size:11px; color:var(--text-muted);">${escapeHtml(d.stage)} · ${fmtMoney(d.valuation)}</div>
+          </div>
+          <input data-insider-notional="${d.id}" type="number" step="10" min="1" placeholder="Montant (M$)" style="width:120px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:11.5px;"/>
+          <button data-insider-trade="${d.id}" class="btn-sm" style="border-color:#ff5c7a; color:#ffb3c1;">Négocier sur l'information</button>
+        </div>
+      `).join("")}
+      <div id="insider-error" class="join-error"></div>
     </div>
   `;
 }
@@ -38,6 +95,8 @@ function renderMarkets() {
     <div class="page-sub">Desk de trading partagé — capital alloué, positions et résultat visibles par toute l'équipe Marchés.</div>
     ${taskPanelHtml("markets")}
     ${executionQueueHtml()}
+    ${syndicatingDealsHtml()}
+    ${insiderTradingPanelHtml()}
     <div class="kpi-grid">
       <div class="kpi-card"><div class="kpi-label">Capital disponible</div><div class="kpi-value">${fmtMoney(markets.cash)}</div></div>
       <div class="kpi-card"><div class="kpi-label">Résultat réalisé cumulé</div><div class="kpi-value">${fmtMoney(markets.realizedPnL)}</div></div>
@@ -121,6 +180,25 @@ function bindMarkets() {
     el.addEventListener("click", () => {
       const [dealId, method] = el.getAttribute("data-wf-execute").split("|");
       socket.emit("dealWorkflow:execute", { dealId, method });
+    });
+  });
+  document.querySelectorAll("[data-wf-propose-syndication]").forEach(el => {
+    el.addEventListener("click", () => {
+      socket.emit("dealWorkflow:proposeSyndication", { dealId: el.getAttribute("data-wf-propose-syndication") });
+    });
+  });
+  document.querySelectorAll("[data-insider-trade]").forEach(el => {
+    el.addEventListener("click", () => {
+      const dealId = el.getAttribute("data-insider-trade");
+      const input = document.querySelector(`[data-insider-notional="${dealId}"]`);
+      const notional = Number(input && input.value);
+      const errEl = document.getElementById("insider-error");
+      if (errEl) errEl.textContent = "";
+      if (!notional) {
+        if (errEl) errEl.textContent = "Indiquez un montant.";
+        return;
+      }
+      socket.emit("markets:insiderTrade", { dealId, notional });
     });
   });
   bindTaskPanel();

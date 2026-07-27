@@ -32,7 +32,10 @@ const appState = {
   executedWorkflows: [],
   teamChat: [],
   leagueTable: {},
-  marketDay: { dayNumber: 1, deadline: null }
+  marketDay: { dayNumber: 1, deadline: null },
+  warRoom: null,
+  rivalTalent: null,
+  mercatoOffers: []
 };
 
 const PAGE_RENDERERS = {};
@@ -49,7 +52,10 @@ const EVENT_TYPE_ICONS = {
 // Toasts + tab-title flash: lightweight awareness for activity happening on pages
 // the player isn't currently looking at — the toast container lives outside #app
 // so it survives renderApp()'s innerHTML replacement.
+const NOTIFICATIONS_DISABLED_KEY = "blackwell_notifications_disabled";
+
 function notify(message) {
+  if (localStorage.getItem(NOTIFICATIONS_DISABLED_KEY) === "1") return;
   const container = document.getElementById("toast-container");
   if (!container) return;
   const el = document.createElement("div");
@@ -113,6 +119,62 @@ function initApp(player, snapshot) {
   }
   renderApp();
   maybeShowTutorial();
+  renderWarRoomOverlay();
+}
+
+// War Room (Crise Majeure) is a global, all-hands overlay — kept in its own
+// persistent DOM node (like #tutorial-overlay) instead of inside renderApp()'s
+// innerHTML, so it survives page navigation and doesn't need rebinding on
+// every unrelated socket update.
+let warRoomTickInterval = null;
+
+function renderWarRoomOverlay() {
+  const overlay = document.getElementById("warroom-overlay");
+  if (!overlay) return;
+  const warRoom = appState.warRoom;
+  if (!warRoom) {
+    overlay.innerHTML = "";
+    if (warRoomTickInterval) { clearInterval(warRoomTickInterval); warRoomTickInterval = null; }
+    return;
+  }
+
+  const player = appState.player;
+  const labels = (typeof OVERVIEW_CLUSTER_LABELS !== "undefined") ? OVERVIEW_CLUSTER_LABELS : {};
+  const clusters = ["A", "B", "C", "D", "E", "F", "G"];
+  const alreadyValidated = player && player.cluster && warRoom.respondedClusters.includes(player.cluster);
+
+  overlay.innerHTML = `
+    <div class="warroom-modal">
+      <h2>🆘 Crise Majeure</h2>
+      <p>${escapeHtml(warRoom.label)} Chaque département doit valider une action critique avant la fin du chrono.</p>
+      <div class="warroom-countdown" id="warroom-countdown-text">--</div>
+      <div class="warroom-clusters">
+        ${clusters.map(c => `
+          <div class="warroom-cluster-chip ${warRoom.respondedClusters.includes(c) ? "done" : ""} ${player && player.cluster === c ? "mine" : ""}">
+            ${warRoom.respondedClusters.includes(c) ? "✅" : "⏳"} ${escapeHtml(labels[c] || c)}
+          </div>
+        `).join("")}
+      </div>
+      <div class="warroom-actions">
+        ${!player || !player.cluster ? "" : alreadyValidated
+          ? `<div class="warroom-validated-msg">✅ Votre département a validé son action — en attente des autres.</div>`
+          : `<button id="btn-warroom-validate" class="btn-sm">Valider l'action critique de mon département</button>`}
+      </div>
+    </div>
+  `;
+
+  const btn = document.getElementById("btn-warroom-validate");
+  if (btn) btn.addEventListener("click", () => socket.emit("warRoom:validate"));
+
+  function tick() {
+    const el = document.getElementById("warroom-countdown-text");
+    if (!el || !appState.warRoom) return;
+    const remaining = Math.max(0, Math.round((appState.warRoom.deadline - Date.now()) / 1000));
+    el.textContent = "⏱ " + remaining + "s";
+  }
+  tick();
+  if (warRoomTickInterval) clearInterval(warRoomTickInterval);
+  warRoomTickInterval = setInterval(tick, 1000);
 }
 
 function switchPage(pageId) {

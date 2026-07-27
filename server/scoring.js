@@ -30,7 +30,11 @@ const POINT_VALUES = {
   live_event_claimed: 20,
   workflow_submitRisk: 8,
   workflow_riskDecision: 12,
-  workflow_execute: 20
+  workflow_execute: 20,
+  warroom_validate: 10,
+  mercato_offerAccepted: 15,
+  syndication_trancheResolved: 15,
+  markets_insiderCaught: -30
 };
 
 // Achievement badges — pure function of the same actionCounts already tracked by
