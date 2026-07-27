@@ -23,7 +23,8 @@ const POINT_VALUES = {
   task_completed: 5,
   hr_distributeBonus: 0,
   markets_open: 4,
-  markets_trade: 10
+  markets_trade: 10,
+  live_event_claimed: 20
 };
 
 // Achievement badges — pure function of the same actionCounts already tracked by

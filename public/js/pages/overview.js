@@ -4,6 +4,30 @@ function bankHealthColor(health) {
   return "var(--series-red)";
 }
 
+// "Moteur d'Événements Vivants" — a global claimable feed (server/liveEvents.js),
+// distinct from the page-scoped crisis banners: any connected player, regardless
+// of department, can claim a card here first-come-first-served.
+function liveEventsPanelHtml() {
+  const events = appState.liveEvents || [];
+  return `
+    <div class="panel task-panel" style="margin-bottom:16px;">
+      <div class="panel-title">📰 Fil d'actualité — événements en direct (${events.length})</div>
+      ${events.length ? events.map(ev => `
+        <div class="live-event-card">
+          <div class="live-event-card-main">
+            <div class="live-event-card-label">${ev.icon} ${escapeHtml(ev.label)}</div>
+            <div class="live-event-card-text">${escapeHtml(ev.text)}</div>
+          </div>
+          <div class="live-event-card-side">
+            <div class="task-row-timer">⏱ ${Math.max(0, Math.round((ev.expiresAt - Date.now()) / 1000))}s</div>
+            <button class="btn-sm" data-live-claim="${ev.id}">S'en saisir</button>
+          </div>
+        </div>
+      `).join("") : `<div style="font-size:12.5px; color:var(--text-muted);">Calme plat pour l'instant — une nouvelle alerte apparaîtra sous peu.</div>`}
+    </div>
+  `;
+}
+
 const TASK_SUMMARY_LABELS = { ma: "M&A", clients: "Clients", compliance: "Conformité", hr: "RH", finance: "Finance", markets: "Marchés" };
 
 // The direct answer to "on ne sait pas quoi faire" — a live, always-accurate list
@@ -150,6 +174,7 @@ function renderOverview() {
   return `
     <div class="page-title">Vue d'ensemble</div>
     <div class="page-sub">Tableau de bord partagé — visible par tous les joueurs. Vous reprenez une banque avec des années d'historique : consultez les priorités ci-dessous pour savoir où intervenir en premier.</div>
+    ${liveEventsPanelHtml()}
     ${prioritiesPanelHtml()}
     ${taskSummaryPanelHtml()}
     ${hallOfFameHtml()}
@@ -229,4 +254,13 @@ function renderOverview() {
   `;
 }
 
+function bindOverview() {
+  document.querySelectorAll("[data-live-claim]").forEach(el => {
+    el.addEventListener("click", () => {
+      socket.emit("liveEvents:claim", { cardId: el.getAttribute("data-live-claim") });
+    });
+  });
+}
+
 PAGE_RENDERERS.overview = renderOverview;
+PAGE_BINDERS.overview = bindOverview;

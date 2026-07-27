@@ -202,6 +202,12 @@ socket.on("game:directiveChanged", directive => {
   renderApp();
 });
 
+socket.on("liveEvents:update", liveEvents => {
+  if (!window.currentPlayer) return;
+  appState.liveEvents = liveEvents;
+  if (appState.currentPage === "overview") renderApp();
+});
+
 socket.on("overview:kpis", kpis => {
   if (!window.currentPlayer) return;
   appState.financeKPIs = kpis;

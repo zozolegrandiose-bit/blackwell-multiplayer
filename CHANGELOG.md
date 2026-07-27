@@ -1,5 +1,28 @@
 # Journal des mises à jour
 
+## Patch 10 — Moteur d'Événements Vivants (2026-07-26)
+
+### Ajouts
+- **Nouveau fil d'actualité 📰 sur Vue d'ensemble** : un canal général, visible par tous les joueurs quel que soit leur département, où apparaît une alerte toutes les 1 à 3 minutes sous forme de carte d'action.
+- Trois types d'alertes, chacune avec un vrai effet de jeu :
+  - **Alerte Marché** — un client du secteur Énergie veut lever 500 M$ en urgence : s'en saisir crée immédiatement un vrai mandat M&A bonus.
+  - **Alerte RH** — le Head of Trading d'une banque concurrente est débauchable : s'en saisir l'embauche (effectif +1, prime de signature de 15 M$, moral en hausse).
+  - **Alerte Risque** — une position du desk Trading dépasse la VaR autorisée : s'en saisir réduit à temps la plus grosse position ouverte (santé de la banque +3) ; ignorée, la VaR est réellement dépassée (santé -8).
+- **N'importe quel joueur connecté peut s'en saisir en un clic**, premier arrivé premier servi — et si personne ne réagit, l'IA de veille finit par s'en charger pour les alertes Marché et RH (jamais pour l'alerte Risque, qui doit être traitée par un humain).
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- `server/liveEvents.js` (nouveau) : boucle auto-reprogrammée indépendante (apparition 1-3 min, balayage 10-15s), même convention que toutes les autres boucles temporisées du jeu (garde pause, multiplicateur de difficulté).
+- Le verrouillage d'une carte au moment du clic (`card.claimedByName`) est vérifié puis posé de façon synchrone, sans `await` entre les deux — deux joueurs qui cliquent presque simultanément ne peuvent jamais résoudre la même carte deux fois (vérifié par un test de course dédié).
+- Distinct de `server/events.js` (crises/opportunités déjà existantes, propres à une page) : ce nouveau canal est volontairement global et page-agnostique, conforme à la demande d'un « canal général ».
+
+---
+
 ## Patch 9 — Vrai desk de trading, pouvoir exécutif de la direction, planning RH (2026-07-26)
 
 ### Ajouts

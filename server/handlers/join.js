@@ -40,7 +40,8 @@ function buildSnapshot(gameState, player) {
     hallOfFame: gameState.hallOfFame,
     paused: gameState.paused,
     difficulty: gameState.difficulty,
-    directive: gameState.directive
+    directive: gameState.directive,
+    liveEvents: gameState.liveEvents
   };
   if (player.access.includes("ma")) snapshot.maDeals = gameState.maDeals;
   if (player.access.includes("clients")) snapshot.clients = gameState.clients;

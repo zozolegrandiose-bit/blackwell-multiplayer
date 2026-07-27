@@ -276,7 +276,8 @@ function createGameState() {
       realizedPnL: 0,
       tradeLog: []
     },
-    directive: null
+    directive: null,
+    liveEvents: []
   };
 }
 
