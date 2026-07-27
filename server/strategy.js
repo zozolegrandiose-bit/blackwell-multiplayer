@@ -9,6 +9,10 @@ const QUARTER_HISTORY_MAX = 12;
 const COMPLIANCE_FINE_PER_STALE_ITEM = 4; // M$ off netIncome, per audit-flagged open item
 const ESG_SCORE_MIN = 0, ESG_SCORE_MAX = 100;
 
+function requireAccess(socket, page) {
+  return socket.rooms.has("access:" + page);
+}
+
 const QUARTER_LENGTH_MS = 90 * 1000;
 
 const CLUSTER_LABELS = {
@@ -194,6 +198,7 @@ function resolveQuarter(io, gameState) {
 
 function registerStrategyHandlers(io, socket, gameState) {
   socket.on("strategy:submitDecision", payload => {
+    if (!requireAccess(socket, "strategy")) return;
     const player = gameState.players.find(p => p.id === socket.data.playerId);
     if (!player || !player.cluster) return;
     if (gameState.quarterPhase !== "deciding") return;

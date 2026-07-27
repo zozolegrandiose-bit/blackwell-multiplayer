@@ -1,6 +1,6 @@
 const { GRADES } = require("./seedData");
 
-const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses", "strategy"];
+const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses"];
 
 const CLUSTER_PAGES = {
   A: [...UNIVERSAL_PAGES, "ma", "clients"],
@@ -9,7 +9,7 @@ const CLUSTER_PAGES = {
   D: [...UNIVERSAL_PAGES, "compliance"],
   E: [...UNIVERSAL_PAGES, "finance"],
   F: [...UNIVERSAL_PAGES, "hr"],
-  G: [...UNIVERSAL_PAGES, "ma", "clients", "compliance", "finance", "hr", "markets"]
+  G: [...UNIVERSAL_PAGES, "strategy", "ma", "clients", "compliance", "finance", "hr", "markets"]
 };
 
 const DEPARTMENT_CLUSTER = {
@@ -62,6 +62,13 @@ const DEPARTMENT_CLUSTER = {
 };
 
 const MD_INDEX = GRADES.indexOf("Managing Director");
+// "Comité de Direction" (the Strategy page) is a real management committee, not an
+// open forum — only Director and above sit on it. Direction Générale always has it
+// via hasFullAccess below, regardless of grade, since that department IS the
+// direction. Below Director, a cluster's quarterly decision just defaults to the
+// neutral option (already the existing fallback in server/strategy.js) if nobody
+// senior enough is connected — no change needed there.
+const DIRECTOR_INDEX = GRADES.indexOf("Director");
 
 function hasFullAccess(dept, grade) {
   if (dept === "Direction Générale") return true;
@@ -69,11 +76,17 @@ function hasFullAccess(dept, grade) {
   return gradeIndex >= MD_INDEX;
 }
 
+function hasStrategyAccess(dept, grade) {
+  if (hasFullAccess(dept, grade)) return true;
+  return GRADES.indexOf(grade) >= DIRECTOR_INDEX;
+}
+
 function getAccessForPosition(dept, grade) {
   if (hasFullAccess(dept, grade)) return [...CLUSTER_PAGES.G];
   const cluster = DEPARTMENT_CLUSTER[dept];
-  if (!cluster) return ["overview", "mail"];
-  return [...CLUSTER_PAGES[cluster]];
+  const basePages = cluster ? [...CLUSTER_PAGES[cluster]] : ["overview", "mail"];
+  if (hasStrategyAccess(dept, grade) && !basePages.includes("strategy")) basePages.push("strategy");
+  return basePages;
 }
 
 // Which cluster letter (A-G) a position represents on the Strategy page — distinct
@@ -83,4 +96,4 @@ function getClusterForPosition(dept, grade) {
   return DEPARTMENT_CLUSTER[dept] || null;
 }
 
-module.exports = { DEPARTMENT_CLUSTER, CLUSTER_PAGES, UNIVERSAL_PAGES, hasFullAccess, getAccessForPosition, getClusterForPosition };
+module.exports = { DEPARTMENT_CLUSTER, CLUSTER_PAGES, UNIVERSAL_PAGES, hasFullAccess, hasStrategyAccess, getAccessForPosition, getClusterForPosition };

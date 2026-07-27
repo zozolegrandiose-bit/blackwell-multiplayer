@@ -1,5 +1,23 @@
 # Journal des mises à jour
 
+## Patch 14 — Comité de Direction réservé aux Directeurs (2026-07-27)
+
+### Correctifs
+- **Le Comité de Direction (page Stratégie) n'est plus accessible à tout le monde.** Il faut désormais être Director ou grade supérieur (Executive Director, Managing Director, Partner, C-suite…) dans son département pour y accéder et verrouiller une décision trimestrielle — un Analyste ou un Associate ne le voit plus du tout dans son menu. La Direction Générale y a toujours accès quel que soit son grade, puisque ce département est déjà la direction.
+- Un département sans personne d'assez senior connecté continue de se voir appliquer l'option neutre par défaut à la résolution du trimestre (comportement déjà existant, inchangé) — aucune décision ne reste bloquée.
+- Corrigé au passage une vraie faille : le handler serveur `strategy:submitDecision` ne vérifiait jamais l'accès à la page — une décision aurait pu être soumise en contournant l'interface. Il vérifie maintenant explicitement l'accès, comme tous les autres handlers du jeu.
+
+### Ajouts
+- Aucun.
+
+### Retraits
+- Aucun.
+
+### Notes techniques
+- `server/departmentAccess.js` : « strategy » retiré de `UNIVERSAL_PAGES`, ajouté conditionnellement via un nouveau `hasStrategyAccess(dept, grade)` comparé à l'index de « Director » dans `GRADES`.
+
+---
+
 ## Patch 13 — League Table & P&L Tracker (2026-07-27)
 
 ### Ajouts
