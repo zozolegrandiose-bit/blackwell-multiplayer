@@ -6,6 +6,28 @@ const MARKET_CATEGORY_COLOR = {
   "Crypto": "#b58cff"
 };
 
+// Desk Structuration/Trading's step of the Analyste → Risk Manager → Desk Trading
+// workflow — deals validated by Risk (server/handlers/dealWorkflow.js) show up
+// here with a live 2-minute countdown; missing it has a real health penalty
+// (server-side sweep), so the deadline shown here is not just cosmetic.
+function executionQueueHtml() {
+  const pending = (appState.maDeals || []).filter(d => d.workflow && d.workflow.phase === "pending_execution");
+  if (!pending.length) return "";
+  return `
+    <div class="panel task-panel" style="margin-bottom:16px;">
+      <div class="panel-title">⏱ Desk Structuration — exécutions en attente (${pending.length})</div>
+      ${pending.map(d => `
+        <div class="task-row" style="align-items:center;">
+          <span class="task-row-text">${escapeHtml(d.name)} — ${fmtMoney(d.valuation)} · taux ${d.workflow.rate} % · validé par ${escapeHtml(d.workflow.riskDecisionByName)}</span>
+          <span class="task-row-timer">⏱ ${Math.max(0, Math.round((d.workflow.executionDeadline - Date.now()) / 1000))}s</span>
+          <button class="btn-sm" data-wf-execute="${d.id}|syndication">Syndication</button>
+          <button class="btn-sm" data-wf-execute="${d.id}|couverture">Couverture</button>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderMarkets() {
   const markets = appState.markets || { instruments: [], positions: [], cash: 0, realizedPnL: 0, tradeLog: [] };
   const instruments = markets.instruments || [];
@@ -15,6 +37,7 @@ function renderMarkets() {
     <div class="page-title">Marchés</div>
     <div class="page-sub">Desk de trading partagé — capital alloué, positions et résultat visibles par toute l'équipe Marchés.</div>
     ${taskPanelHtml("markets")}
+    ${executionQueueHtml()}
     <div class="kpi-grid">
       <div class="kpi-card"><div class="kpi-label">Capital disponible</div><div class="kpi-value">${fmtMoney(markets.cash)}</div></div>
       <div class="kpi-card"><div class="kpi-label">Résultat réalisé cumulé</div><div class="kpi-value">${fmtMoney(markets.realizedPnL)}</div></div>
@@ -92,6 +115,12 @@ function bindMarkets() {
   document.querySelectorAll("[data-mk-sell]").forEach(el => {
     el.addEventListener("click", () => {
       socket.emit("markets:sell", { positionId: el.getAttribute("data-mk-sell") });
+    });
+  });
+  document.querySelectorAll("[data-wf-execute]").forEach(el => {
+    el.addEventListener("click", () => {
+      const [dealId, method] = el.getAttribute("data-wf-execute").split("|");
+      socket.emit("dealWorkflow:execute", { dealId, method });
     });
   });
   bindTaskPanel();

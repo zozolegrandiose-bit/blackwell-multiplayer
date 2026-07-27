@@ -24,7 +24,10 @@ const POINT_VALUES = {
   hr_distributeBonus: 0,
   markets_open: 4,
   markets_trade: 10,
-  live_event_claimed: 20
+  live_event_claimed: 20,
+  workflow_submitRisk: 8,
+  workflow_riskDecision: 12,
+  workflow_execute: 20
 };
 
 // Achievement badges — pure function of the same actionCounts already tracked by

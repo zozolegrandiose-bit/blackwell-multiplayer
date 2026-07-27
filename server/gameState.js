@@ -60,7 +60,7 @@ function createGameState() {
         description: "Étude d'un rapprochement stratégique entre Cobalt Ridge Capital et un fonds concurrent.",
         ddChecklist: [{ item: "Audit financier", done: true }, { item: "Audit juridique", done: false }],
         icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: false }, { item: "Validation Direction Générale", done: false }],
-        createdByPlayerId: null, updatedAt: now, revenueBooked: false
+        createdByPlayerId: null, updatedAt: now, revenueBooked: false, workflow: null
       },
       {
         id: "deal-seed-2", name: "Projet Horizon — introduction en bourse Halcyon Digital Assets", stage: "Screening",
@@ -68,7 +68,7 @@ function createGameState() {
         description: "Étude préliminaire d'une introduction en bourse.",
         ddChecklist: [{ item: "Étude de faisabilité marché", done: true }, { item: "Revue de conformité préalable", done: false }],
         icVote: [{ item: "Validation Risques", done: false }, { item: "Validation Juridique", done: false }, { item: "Validation Direction Générale", done: false }],
-        createdByPlayerId: null, updatedAt: now, revenueBooked: false
+        createdByPlayerId: null, updatedAt: now, revenueBooked: false, workflow: null
       },
       {
         id: "deal-seed-3", name: "Projet Meridian Bridge — refinancement Vantage Industrial", stage: "Négociation",
@@ -76,7 +76,7 @@ function createGameState() {
         description: "Refinancement de la dette senior de Vantage Industrial Holdings.",
         ddChecklist: [{ item: "Audit financier", done: true }, { item: "Audit juridique", done: true }],
         icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: true }, { item: "Validation Direction Générale", done: false }],
-        createdByPlayerId: null, updatedAt: now - 2 * 86400000, revenueBooked: false
+        createdByPlayerId: null, updatedAt: now - 2 * 86400000, revenueBooked: false, workflow: null
       },
       {
         id: "deal-seed-4", name: "Projet Zenith — cession d'activité Cascade Energy", stage: "Signing",
@@ -84,7 +84,7 @@ function createGameState() {
         description: "Cession de la branche midstream de Cascade Energy Partners.",
         ddChecklist: [{ item: "Audit financier", done: true }, { item: "Audit juridique", done: true }],
         icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: true }, { item: "Validation Direction Générale", done: true }],
-        createdByPlayerId: null, updatedAt: now - 1 * 86400000, revenueBooked: false
+        createdByPlayerId: null, updatedAt: now - 1 * 86400000, revenueBooked: false, workflow: null
       },
       {
         id: "deal-seed-5", name: "Projet Atlas Legacy — acquisition Solstice Pension add-on", stage: "Clôturé",
@@ -92,7 +92,7 @@ function createGameState() {
         description: "Opération clôturée sous la direction précédente — fait partie du palmarès repris.",
         ddChecklist: [{ item: "Audit financier", done: true }, { item: "Audit juridique", done: true }],
         icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: true }, { item: "Validation Direction Générale", done: true }],
-        createdByPlayerId: null, updatedAt: now - 60 * 86400000, revenueBooked: true
+        createdByPlayerId: null, updatedAt: now - 60 * 86400000, revenueBooked: true, workflow: null
       },
       {
         id: "deal-seed-6", name: "Projet Compass — introduction en bourse Northbridge Retail", stage: "Clôturé",
@@ -100,7 +100,7 @@ function createGameState() {
         description: "Opération clôturée sous la direction précédente — fait partie du palmarès repris.",
         ddChecklist: [{ item: "Audit financier", done: true }, { item: "Audit juridique", done: true }],
         icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: true }, { item: "Validation Direction Générale", done: true }],
-        createdByPlayerId: null, updatedAt: now - 35 * 86400000, revenueBooked: true
+        createdByPlayerId: null, updatedAt: now - 35 * 86400000, revenueBooked: true, workflow: null
       },
       {
         id: "deal-seed-7", name: "Projet Nimbus — levée de fonds Aurora Biotech", stage: "Screening",
@@ -108,7 +108,7 @@ function createGameState() {
         description: "Étude préliminaire d'une levée de série C pour Aurora Biotech Ventures.",
         ddChecklist: [{ item: "Étude de faisabilité marché", done: false }, { item: "Revue de conformité préalable", done: false }],
         icVote: [{ item: "Validation Risques", done: false }, { item: "Validation Juridique", done: false }, { item: "Validation Direction Générale", done: false }],
-        createdByPlayerId: null, updatedAt: now, revenueBooked: false
+        createdByPlayerId: null, updatedAt: now, revenueBooked: false, workflow: null
       }
     ],
     clients: [
@@ -277,7 +277,8 @@ function createGameState() {
       tradeLog: []
     },
     directive: null,
-    liveEvents: []
+    liveEvents: [],
+    executedWorkflows: []
   };
 }
 

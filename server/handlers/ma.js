@@ -50,7 +50,8 @@ function createBonusDeal(io, gameState, { name, valuation }) {
     icVote: [],
     createdByPlayerId: null,
     updatedAt: Date.now(),
-    revenueBooked: false
+    revenueBooked: false,
+    workflow: null
   };
   gameState.maDeals.push(deal);
   io.to("access:ma").emit("ma:update", gameState.maDeals);

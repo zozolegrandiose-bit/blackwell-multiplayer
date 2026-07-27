@@ -30,6 +30,34 @@ function liveEventsPanelHtml() {
 
 const TASK_SUMMARY_LABELS = { ma: "M&A", clients: "Clients", compliance: "Conformité", hr: "RH", finance: "Finance", markets: "Marchés" };
 
+// The last step of the Analyste → Risk Manager → Desk Trading workflow: RH/MD
+// sees the direct P&L impact of each executed deal and the prime automatically
+// split between the three participating roles (already awarded server-side by
+// server/handlers/dealWorkflow.js's executeDeal(), not just displayed here).
+function executedWorkflowsHtml() {
+  const records = appState.executedWorkflows || [];
+  if (!records.length) return "";
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">💼 Dernières exécutions — impact P&amp;L &amp; primes</div>
+      <table class="data-table">
+        <thead><tr><th>Deal</th><th>Méthode</th><th>Résultat net</th><th>Prime répartie</th><th>Participants</th></tr></thead>
+        <tbody>
+          ${records.map(r => `
+            <tr>
+              <td>${escapeHtml(r.dealName)}</td>
+              <td>${r.method === "syndication" ? "Syndication" : "Couverture"}</td>
+              <td class="tnum">${r.netFee >= 0 ? "+" : ""}${r.netFee} M$</td>
+              <td class="tnum">${r.bonusPool} M$</td>
+              <td style="font-size:11px; color:var(--text-muted);">${r.participants.map(p => escapeHtml(p.name) + " (" + escapeHtml(p.role) + ")").join(", ")}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 // The direct answer to "on ne sait pas quoi faire" — a live, always-accurate list
 // computed from real state (never scripted/fake), warning early (roughly half the
 // real penalty threshold) so players see a priority before the actual consequence
@@ -42,10 +70,16 @@ function computePriorities() {
   if (access.includes("compliance")) {
     const stale = (appState.complianceItems || []).filter(i => (i.status === "Ouvert" || i.status === "Escaladé") && now - i.ts >= 2 * 60 * 1000);
     if (stale.length) items.push({ icon: "🚨", page: "compliance", text: stale.length + " alerte(s) de conformité en attente depuis plus de 2 minutes — risque d'amende à l'audit trimestriel." });
+    const pendingRisk = (appState.maDeals || []).filter(d => d.workflow && d.workflow.phase === "pending_risk");
+    if (pendingRisk.length) items.push({ icon: "🎯", page: "compliance", text: pendingRisk.length + " dossier(s) M&A en attente de validation Risque." });
   }
   if (access.includes("ma")) {
     const stalling = (appState.maDeals || []).filter(d => d.stage !== "Clôturé" && now - d.updatedAt >= 90 * 1000);
     if (stalling.length) items.push({ icon: "💤", page: "ma", text: stalling.length + " deal(s) M&A sans avancée récente — risque qu'ils tombent à l'eau." });
+  }
+  if (access.includes("markets")) {
+    const pendingExec = (appState.maDeals || []).filter(d => d.workflow && d.workflow.phase === "pending_execution");
+    if (pendingExec.length) items.push({ icon: "⏱️", page: "markets", text: pendingExec.length + " exécution(s) de deal en attente — chrono de 2 minutes en cours." });
   }
   if (access.includes("clients")) {
     const atRisk = (appState.clients || []).filter(c => c.status === "Actif" && now - (c.lastTouchedAt || 0) >= 2 * 60 * 1000);
@@ -176,6 +210,7 @@ function renderOverview() {
     <div class="page-sub">Tableau de bord partagé — visible par tous les joueurs. Vous reprenez une banque avec des années d'historique : consultez les priorités ci-dessous pour savoir où intervenir en premier.</div>
     ${liveEventsPanelHtml()}
     ${prioritiesPanelHtml()}
+    ${executedWorkflowsHtml()}
     ${taskSummaryPanelHtml()}
     ${hallOfFameHtml()}
     <div class="panel-row" style="margin-bottom:16px;">

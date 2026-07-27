@@ -41,9 +41,15 @@ function buildSnapshot(gameState, player) {
     paused: gameState.paused,
     difficulty: gameState.difficulty,
     directive: gameState.directive,
-    liveEvents: gameState.liveEvents
+    liveEvents: gameState.liveEvents,
+    executedWorkflows: gameState.executedWorkflows
   };
-  if (player.access.includes("ma")) snapshot.maDeals = gameState.maDeals;
+  // Compliance (Risk Manager) and Markets (Desk Trading) both surface workflow
+  // panels derived from maDeals even though neither has the M&A page itself —
+  // simpler to share the same read-only array than maintain three filtered views.
+  if (player.access.includes("ma") || player.access.includes("compliance") || player.access.includes("markets")) {
+    snapshot.maDeals = gameState.maDeals;
+  }
   if (player.access.includes("clients")) snapshot.clients = gameState.clients;
   if (player.access.includes("compliance")) snapshot.complianceItems = gameState.complianceItems;
   if (player.access.includes("hr")) {

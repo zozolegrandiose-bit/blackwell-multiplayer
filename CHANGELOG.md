@@ -1,5 +1,28 @@
 # Journal des mises à jour
 
+## Patch 11 — Workflow d'exécution des deals, étape par étape (2026-07-27)
+
+### Ajouts
+- **Nouveau workflow multijoueur en 3 rôles pour l'exécution d'un deal M&A**, avec notification en temps réel envoyée au rôle suivant à chaque étape :
+  1. **Analyste M&A** (page M&A) : choisit un taux et clique « Soumettre au Risque ».
+  2. **Risk Manager** (page Conformité, joueur ou IA si personne n'est connecté après 90 secondes) : voit le dossier de crédit simulé (notation, levier, liquidité), ajuste le taux, puis Approuve ou Refuse. Un refus renvoie le dossier à l'analyste, qui peut le resoumettre.
+  3. **Desk Structuration/Trading** (page Marchés) : dispose de 2 minutes chrono pour exécuter en Syndication ou en Couverture — au-delà, l'occasion est perdue et la santé de la banque encaisse une pénalité réelle.
+  4. **RH / Direction Générale** (Vue d'ensemble) : voit l'impact direct sur le résultat net et la prime automatiquement répartie entre les 3 rôles ayant participé.
+- Nouveau panneau « 💼 Dernières exécutions » sur Vue d'ensemble, et nouvelles priorités (dossiers en attente de validation Risque / exécutions en attente) dans le panneau Priorités déjà existant.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- `server/handlers/dealWorkflow.js` (nouveau) porte l'intégralité de la machine à états (`deal.workflow.phase`), sur le même modèle de boucle auto-reprogrammée que le reste du jeu.
+- Les pages Conformité et Marchés n'ont pas l'accès à la page M&A — `server/handlers/join.js` leur partage désormais `maDeals` en lecture seule spécifiquement pour ces panneaux de workflow, sans leur donner accès à la page M&A elle-même.
+- Couverture vs Syndication : la Syndication cède plus d'économie du deal (40 % du fee net) contre un risque nul ; la Couverture en garde davantage (75 %) contre un coût de couverture implicite — un vrai arbitrage pour le Desk.
+
+---
+
 ## Patch 10 — Moteur d'Événements Vivants (2026-07-26)
 
 ### Ajouts

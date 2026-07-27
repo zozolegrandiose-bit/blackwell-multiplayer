@@ -7,6 +7,39 @@ function slaBadge(ts) {
   return `<span class="chip ${cls}">${days} j</span>`;
 }
 
+// The Risk Manager's step of the Analyste → Risk Manager → Desk Trading workflow:
+// deals awaiting review show up here even though this player has no M&A page
+// access — server/handlers/join.js shares maDeals with any compliance-access
+// player specifically so this panel has something to render.
+function riskQueueHtml() {
+  const pending = (appState.maDeals || []).filter(d => d.workflow && d.workflow.phase === "pending_risk");
+  if (!pending.length) return "";
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🎯 Risk Manager — dossiers en attente (${pending.length})</div>
+      ${pending.map(d => {
+        const cf = d.workflow.creditFile;
+        return `
+        <div class="activity-row" style="display:block; padding:10px 0;">
+          <div style="font-weight:700; font-size:13px; margin-bottom:6px;">${escapeHtml(d.name)} — ${fmtMoney(d.valuation)}</div>
+          <div class="credit-file-grid">
+            <div class="credit-file-item"><div class="credit-file-value">${escapeHtml(cf.rating)}</div><div class="credit-file-label">Notation</div></div>
+            <div class="credit-file-item"><div class="credit-file-value">${cf.leverage}x</div><div class="credit-file-label">Levier</div></div>
+            <div class="credit-file-item"><div class="credit-file-value">${cf.liquidityDays} j</div><div class="credit-file-label">Liquidité</div></div>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <label style="font-size:11.5px;">Taux</label>
+            <input data-risk-rate="${d.id}" type="number" step="0.1" min="0.1" value="${d.workflow.rate}" style="width:80px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
+            <button data-risk-approve="${d.id}" class="btn-sm">Approuver</button>
+            <button data-risk-reject="${d.id}" class="btn-sm">Refuser</button>
+          </div>
+        </div>
+      `;
+      }).join("")}
+    </div>
+  `;
+}
+
 function renderCompliance() {
   const items = [...(appState.complianceItems || [])].sort((a, b) => b.ts - a.ts);
   const assignableplayers = appState.players || [];
@@ -14,6 +47,7 @@ function renderCompliance() {
     <div class="page-title">Conformité</div>
     <div class="page-sub">Alertes et suivi réglementaire.</div>
     ${taskPanelHtml("compliance")}
+    ${riskQueueHtml()}
     <div class="panel" style="margin-bottom:16px;">
       <div class="panel-title">Nouvelle alerte</div>
       <div class="form-row"><label>Type</label>
@@ -67,6 +101,18 @@ function bindCompliance() {
   document.querySelectorAll("[data-cp-assign]").forEach(el => {
     el.addEventListener("change", () => {
       socket.emit("compliance:assign", { itemId: el.getAttribute("data-cp-assign"), playerId: el.value || null });
+    });
+  });
+  document.querySelectorAll("[data-risk-approve]").forEach(el => {
+    el.addEventListener("click", () => {
+      const dealId = el.getAttribute("data-risk-approve");
+      const rateInput = document.querySelector(`[data-risk-rate="${dealId}"]`);
+      socket.emit("dealWorkflow:riskDecision", { dealId, decision: "approve", rate: rateInput ? rateInput.value : null });
+    });
+  });
+  document.querySelectorAll("[data-risk-reject]").forEach(el => {
+    el.addEventListener("click", () => {
+      socket.emit("dealWorkflow:riskDecision", { dealId: el.getAttribute("data-risk-reject"), decision: "reject" });
     });
   });
   bindTaskPanel();

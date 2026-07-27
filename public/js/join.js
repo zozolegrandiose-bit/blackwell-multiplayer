@@ -112,7 +112,18 @@ socket.on("mail:send:rejected", data => {
 socket.on("ma:update", deals => {
   if (!window.currentPlayer) return;
   appState.maDeals = deals;
-  if (appState.currentPage === "ma") renderApp();
+  if (["ma", "compliance", "markets"].includes(appState.currentPage)) renderApp();
+});
+
+socket.on("dealWorkflow:notify", data => {
+  if (!window.currentPlayer) return;
+  notify(data.text);
+});
+
+socket.on("executedWorkflows:update", data => {
+  if (!window.currentPlayer) return;
+  appState.executedWorkflows = data;
+  if (appState.currentPage === "overview") renderApp();
 });
 
 socket.on("ma:create:rejected", data => {

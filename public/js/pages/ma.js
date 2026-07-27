@@ -15,6 +15,40 @@ function computeValuation(p) {
   return pvFcf + pvTv;
 }
 
+const WORKFLOW_METHOD_LABEL = { syndication: "syndication", couverture: "couverture" };
+
+// Renders the current step of the Analyste → Risk Manager → Desk Trading workflow
+// for a given deal, from the M&A page's point of view (read-only past the
+// submission step — the next two steps happen on Conformité/Marchés).
+function workflowSectionHtml(d) {
+  const wf = d.workflow;
+  if (!wf) {
+    if (d.stage === "Clôturé") return "";
+    return `
+      <div class="workflow-box">
+        <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:6px;">Workflow d'exécution</div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input data-wf-rate="${d.id}" type="number" step="0.1" min="0.1" placeholder="Taux %" style="width:80px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
+          <button data-wf-submit="${d.id}" class="btn-sm">Soumettre au Risque</button>
+        </div>
+      </div>
+    `;
+  }
+  if (wf.phase === "pending_risk") {
+    return `<div class="workflow-box"><span class="chip chip-warning">⏳ En attente de validation Risque</span> <span style="font-size:11px; color:var(--text-muted);">taux proposé ${wf.rate} %</span></div>`;
+  }
+  if (wf.phase === "pending_execution") {
+    return `<div class="workflow-box"><span class="chip chip-good">✅ Validé par ${escapeHtml(wf.riskDecisionByName)}</span> <span style="font-size:11px; color:var(--text-muted);">taux ${wf.rate} % — exécution attendue sur Marchés</span></div>`;
+  }
+  if (wf.phase === "executed") {
+    return `<div class="workflow-box"><span class="chip chip-good">💼 Exécuté en ${WORKFLOW_METHOD_LABEL[wf.method] || ""} — +${wf.netFee} M$</span></div>`;
+  }
+  if (wf.phase === "expired") {
+    return `<div class="workflow-box"><span class="chip chip-critical">⌛ Exécution expirée — occasion manquée</span></div>`;
+  }
+  return "";
+}
+
 function renderMa() {
   const deals = appState.maDeals || [];
   return `
@@ -70,6 +104,7 @@ function renderMa() {
               `).join("")}
             </div>
           </div>
+          ${workflowSectionHtml(d)}
         </div>
       `).join("") || `<div class="empty-cell">Aucun projet en cours.</div>`}
     </div>
@@ -124,6 +159,15 @@ function bindMa() {
     el.addEventListener("change", () => {
       const [dealId, index] = el.getAttribute("data-ma-icvote").split("|");
       socket.emit("ma:toggleIcVote", { dealId, index: Number(index) });
+    });
+  });
+  document.querySelectorAll("[data-wf-submit]").forEach(el => {
+    el.addEventListener("click", () => {
+      const dealId = el.getAttribute("data-wf-submit");
+      const rateInput = document.querySelector(`[data-wf-rate="${dealId}"]`);
+      const rate = rateInput ? rateInput.value : "";
+      if (!rate) return;
+      socket.emit("dealWorkflow:submitToRisk", { dealId, rate });
     });
   });
   bindMaValuationSim();

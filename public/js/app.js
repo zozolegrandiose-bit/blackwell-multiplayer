@@ -28,7 +28,8 @@ const appState = {
   difficulty: "standard",
   markets: { instruments: [], positions: [], cash: 0, realizedPnL: 0, tradeLog: [] },
   directive: null,
-  liveEvents: []
+  liveEvents: [],
+  executedWorkflows: []
 };
 
 const PAGE_RENDERERS = {};
