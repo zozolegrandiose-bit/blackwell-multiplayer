@@ -280,7 +280,26 @@ function createGameState() {
     liveEvents: [],
     executedWorkflows: [],
     teamChat: [],
-    healthAlertSent: false
+    healthAlertSent: false,
+    // League table seeded with the two deals already closed under the prior
+    // direction (server/gameState.js's deal-seed-5/6) — Blackwell & Co isn't
+    // starting the league table from zero any more than it starts the bank itself
+    // from zero. Rival banks (same names Patch 12's stalled-deal AI competes as)
+    // start blank and only grow when they actually win a deal away from the player.
+    leagueTable: {
+      "Blackwell & Co Capital": { isPlayer: true, pnl: 7.1, dealsClosed: 2 },
+      "Ashford & Vane": { isPlayer: false, pnl: 0, dealsClosed: 0 },
+      "Northfield Partners": { isPlayer: false, pnl: 0, dealsClosed: 0 },
+      "Meridian Capital Group": { isPlayer: false, pnl: 0, dealsClosed: 0 },
+      "Solenne & Rocher": { isPlayer: false, pnl: 0, dealsClosed: 0 },
+      "Ironhall Securities": { isPlayer: false, pnl: 0, dealsClosed: 0 }
+    },
+    marketDay: {
+      dayNumber: 1,
+      deadline: null,
+      dayStartNetIncome: 108,
+      dayStartScores: {}
+    }
   };
 }
 
@@ -305,6 +324,17 @@ function postTeamChat(gameState, entry) {
   }
 }
 
+// League table update — same "pure state mutation, caller broadcasts" convention
+// as pushActivity/postTeamChat. Used both for Blackwell & Co's own real activity
+// (M&A closings, executed workflow deals, markets P&L) and for a rival bank when
+// server/handlers/ma.js's stalled-deal sweep has one of them win a deal away.
+function recordBankPnl(gameState, bankName, pnlDelta, dealsClosedDelta) {
+  const entry = gameState.leagueTable[bankName];
+  if (!entry) return;
+  entry.pnl = Math.round((entry.pnl + pnlDelta) * 10) / 10;
+  if (dealsClosedDelta) entry.dealsClosed += dealsClosedDelta;
+}
+
 // Rebuilds all business state in place (same object reference, so every module
 // that captured `gameState` by reference stays valid) while preserving the
 // array of currently-connected players — resetting must not drop live
@@ -323,4 +353,4 @@ function resetGame(gameState) {
 
 const gameState = createGameState();
 
-module.exports = { gameState, createGameState, pushActivity, postTeamChat, resetGame };
+module.exports = { gameState, createGameState, pushActivity, postTeamChat, recordBankPnl, resetGame };

@@ -1,9 +1,10 @@
-const { pushActivity, postTeamChat } = require("../gameState");
+const { pushActivity, postTeamChat, recordBankPnl } = require("../gameState");
 const { awardPoints, checkEventResolution, applyHealthDelta } = require("../scoring");
 const { applyDealRevenue } = require("./finance");
 const { getDifficultyPreset } = require("../difficulty");
 
 const MA_STAGES = ["Screening", "Due Diligence", "Négociation", "Signing", "Clôturé"];
+const PLAYER_BANK_NAME = "Blackwell & Co Capital";
 const IC_VOTE_ITEMS = ["Validation Risques", "Validation Juridique", "Validation Direction Générale"];
 let nextDealId = 1;
 
@@ -29,7 +30,9 @@ function advanceRandomDeal(io, gameState, actor) {
   io.to("game").emit("activity:update", gameState.activityLog[0]);
   if (deal.stage === "Clôturé" && !deal.revenueBooked) {
     deal.revenueBooked = true;
-    applyDealRevenue(io, gameState, deal);
+    const profit = applyDealRevenue(io, gameState, deal);
+    recordBankPnl(gameState, PLAYER_BANK_NAME, profit, 1);
+    io.to("game").emit("leagueTable:update", gameState.leagueTable);
     maybePostBigDealCongrats(io, gameState, deal, actor.fullName);
   }
   return true;
@@ -74,6 +77,8 @@ const STALL_THRESHOLD_MS = 2 * 60 * 1000;
 const STALL_COLLAPSE_PROBABILITY = 0.35;
 const RIVAL_BANKS = ["Ashford & Vane", "Northfield Partners", "Meridian Capital Group", "Solenne & Rocher", "Ironhall Securities"];
 const BIG_DEAL_THRESHOLD = 300;
+const RIVAL_FEE_PCT = 0.02;
+const RIVAL_MARGIN_PCT = 0.4;
 
 function randomDelay(min, max) {
   return min + Math.random() * (max - min);
@@ -100,8 +105,11 @@ function sweepStalledDeals(io, gameState) {
   stale.forEach(deal => {
     if (Math.random() >= STALL_COLLAPSE_PROBABILITY) return;
     const rival = RIVAL_BANKS[Math.floor(Math.random() * RIVAL_BANKS.length)];
+    const rivalProfit = Math.round(deal.valuation * RIVAL_FEE_PCT * RIVAL_MARGIN_PCT * 10) / 10;
     removeDeal(io, gameState, deal.id);
     applyHealthDelta(io, gameState, -3);
+    recordBankPnl(gameState, rival, rivalProfit, 1);
+    io.to("game").emit("leagueTable:update", gameState.leagueTable);
     pushActivity(gameState, { actorPlayerId: null, page: "ma", text: "💤 « " + deal.name + " » a été raflé par " + rival + ", plus réactif — faute d'avancement depuis plus de 2 minutes." });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
     io.to("game").emit("scoring:update", { playerScores: gameState.playerScores, bankHealth: gameState.bankHealth });
@@ -180,7 +188,9 @@ function registerMaHandlers(io, socket, gameState) {
     checkEventResolution(io, gameState, deal.id, player);
     if (payload.stage === "Clôturé" && !deal.revenueBooked) {
       deal.revenueBooked = true;
-      applyDealRevenue(io, gameState, deal);
+      const profit = applyDealRevenue(io, gameState, deal);
+      recordBankPnl(gameState, PLAYER_BANK_NAME, profit, 1);
+      io.to("game").emit("leagueTable:update", gameState.leagueTable);
       maybePostBigDealCongrats(io, gameState, deal, player.fullName);
     }
   });

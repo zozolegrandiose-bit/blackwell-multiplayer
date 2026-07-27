@@ -43,7 +43,9 @@ function buildSnapshot(gameState, player) {
     directive: gameState.directive,
     liveEvents: gameState.liveEvents,
     executedWorkflows: gameState.executedWorkflows,
-    teamChat: gameState.teamChat
+    teamChat: gameState.teamChat,
+    leagueTable: gameState.leagueTable,
+    marketDay: { dayNumber: gameState.marketDay.dayNumber, deadline: gameState.marketDay.deadline }
   };
   // Compliance (Risk Manager) and Markets (Desk Trading) both surface workflow
   // panels derived from maDeals even though neither has the M&A page itself —

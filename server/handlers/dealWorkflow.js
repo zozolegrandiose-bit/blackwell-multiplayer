@@ -3,7 +3,9 @@
 // Analyste M&A (soumet) -> Risk Manager (approuve/refuse, ajuste le taux) ->
 // Desk Structuration/Trading (exécute sous 2 minutes) -> impact visible de tous
 // (Vue d'ensemble) avec prime automatiquement répartie entre les 3 rôles.
-const { pushActivity, postTeamChat } = require("../gameState");
+const { pushActivity, postTeamChat, recordBankPnl } = require("../gameState");
+
+const PLAYER_BANK_NAME = "Blackwell & Co Capital";
 const { awardPoints, awardCustomPoints, applyHealthDelta } = require("../scoring");
 
 const EXECUTION_WINDOW_MS = 2 * 60 * 1000;
@@ -181,11 +183,13 @@ function executeDeal(io, gameState, deal, method, trader) {
   deal.workflow.netFee = netFee;
   deal.stage = "Clôturé";
   deal.revenueBooked = true;
+  recordBankPnl(gameState, PLAYER_BANK_NAME, netFee, 1);
 
   broadcastDeals(io, gameState);
   io.to("access:finance").emit("finance:update", kpis);
   io.to("game").emit("overview:kpis", kpis);
   io.to("game").emit("executedWorkflows:update", gameState.executedWorkflows);
+  io.to("game").emit("leagueTable:update", gameState.leagueTable);
   pushActivity(gameState, {
     actorPlayerId: trader.id,
     page: "markets",

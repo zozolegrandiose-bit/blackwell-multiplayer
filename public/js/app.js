@@ -30,7 +30,9 @@ const appState = {
   directive: null,
   liveEvents: [],
   executedWorkflows: [],
-  teamChat: []
+  teamChat: [],
+  leagueTable: {},
+  marketDay: { dayNumber: 1, deadline: null }
 };
 
 const PAGE_RENDERERS = {};

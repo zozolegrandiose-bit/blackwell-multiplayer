@@ -1,5 +1,26 @@
 # Journal des mises à jour
 
+## Patch 13 — League Table & P&L Tracker (2026-07-27)
+
+### Ajouts
+- **Nouveau panneau sur Vue d'ensemble, visible par tous** : « League Table & P&L Tracker ».
+- **Classement des banques** : Blackwell & Co Capital face aux 5 banques rivales déjà introduites au Patch 12 — P&L cumulé réel (pas des points gamifiés) et volume de deals clos. Les rivales ne progressent que lorsqu'elles remportent effectivement un deal laissé à l'abandon ; Blackwell progresse à chaque deal M&A clôturé, chaque exécution du workflow de deal (Patch 11) et chaque position de trading (Patch 9) débouclée.
+- **Classement des meilleurs employés** : trié par prime réellement perçue, avec la réputation (palier de progression) de chacun.
+- **Chronomètre de la Journée de marché** : une journée dure 15 minutes réelles. À la clôture, le résultat net du jour est arrêté et une prime (10 % du résultat positif du jour) est automatiquement répartie entre les joueurs ayant progressé pendant cette journée — annoncé dans le Chat d'équipe (Patch 12). Une journée négative ne distribue aucune prime.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- `recordBankPnl()` (`server/gameState.js`) suit la même convention que `pushActivity`/`postTeamChat` — mutation d'état pure, les appelants diffusent eux-mêmes l'événement.
+- `server/marketDay.js` (nouveau) : `settleMarketDay()` est une fonction quasi pure testable isolément (même approche que `resolveQuarter()` de `server/strategy.js`), appelée par sa propre boucle auto-reprogrammée indépendante.
+- La league table est seedée avec les 2 deals déjà clôturés sous la direction précédente (Patch 8) — cohérent avec le reste du jeu, aucune partie ne démarre à zéro.
+
+---
+
 ## Patch 12 — Des IA proactives (2026-07-27)
 
 ### Ajouts

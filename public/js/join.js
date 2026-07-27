@@ -132,6 +132,18 @@ socket.on("teamChat:update", message => {
   if (appState.currentPage === "overview") renderApp();
 });
 
+socket.on("leagueTable:update", data => {
+  if (!window.currentPlayer) return;
+  appState.leagueTable = data;
+  if (appState.currentPage === "overview") renderApp();
+});
+
+socket.on("marketDay:update", data => {
+  if (!window.currentPlayer) return;
+  appState.marketDay = data;
+  if (appState.currentPage === "overview") renderApp();
+});
+
 socket.on("ma:create:rejected", data => {
   const errorEl = document.getElementById("ma-error");
   if (errorEl) errorEl.textContent = data.reason;

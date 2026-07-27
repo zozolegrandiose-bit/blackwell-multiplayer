@@ -1,6 +1,8 @@
-const { pushActivity } = require("../gameState");
+const { pushActivity, recordBankPnl } = require("../gameState");
 const { awardPoints } = require("../scoring");
 const { getDifficultyPreset } = require("../difficulty");
+
+const PLAYER_BANK_NAME = "Blackwell & Co Capital";
 
 const TICK_MIN_MS = 20 * 1000;
 const TICK_MAX_MS = 35 * 1000;
@@ -109,6 +111,9 @@ function registerMarketsHandlers(io, socket, gameState) {
     kpis.revenue = round2(kpis.revenue + Math.max(0, pnl));
     kpis.history.unshift({ ts: Date.now(), field: "netIncome", oldValue: round2(kpis.netIncome - pnl), newValue: kpis.netIncome, byPlayerId: null, byName: "Clôture position — " + instrument.name });
     if (kpis.history.length > 100) kpis.history.length = 100;
+
+    recordBankPnl(gameState, PLAYER_BANK_NAME, pnl, 0);
+    io.to("game").emit("leagueTable:update", gameState.leagueTable);
 
     pushActivity(gameState, {
       actorPlayerId: player.id,

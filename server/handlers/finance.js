@@ -61,6 +61,7 @@ function applyDealRevenue(io, gameState, deal) {
   io.to("access:finance").emit("finance:update", kpis);
   io.to("game").emit("overview:kpis", kpis);
   checkVictory(io, gameState);
+  return profit;
 }
 
 // Reusable ambient action for server/ai.js when nobody has access to "finance":

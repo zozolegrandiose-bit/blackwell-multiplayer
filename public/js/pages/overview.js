@@ -58,6 +58,75 @@ function executedWorkflowsHtml() {
   `;
 }
 
+function marketDayCountdownLabel() {
+  const day = appState.marketDay || {};
+  if (!day.deadline) return "--:--";
+  const secondsLeft = Math.max(0, Math.round((day.deadline - Date.now()) / 1000));
+  const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
+  const ss = String(secondsLeft % 60).padStart(2, "0");
+  return mm + ":" + ss;
+}
+
+// "League Table & P&L Tracker" — real P&L (not gamified points) per bank, fed by
+// server/handlers/ma.js (M&A closings + rival banks winning stalled deals),
+// server/handlers/dealWorkflow.js (executed workflow deals) and
+// server/handlers/markets.js (trading P&L). The employee side reuses the same
+// bonusEarned/score fields already tracked by server/scoring.js — no new
+// per-player bookkeeping needed.
+function leagueTablePanelHtml() {
+  const league = appState.leagueTable || {};
+  const banks = Object.keys(league).map(name => ({ name, ...league[name] })).sort((a, b) => b.pnl - a.pnl);
+  const employees = Object.values(appState.playerScores || {})
+    .filter(e => (e.bonusEarned || 0) > 0)
+    .sort((a, b) => (b.bonusEarned || 0) - (a.bonusEarned || 0))
+    .slice(0, 5);
+  const day = appState.marketDay || {};
+
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">📊 League Table &amp; P&amp;L Tracker — Journée J${day.dayNumber || 1} · ⏱ ${marketDayCountdownLabel()} avant clôture</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">Une journée de marché dure 15 minutes réelles — à la clôture, le P&amp;L du jour est arrêté et les primes sont versées à ceux qui y ont contribué.</div>
+    </div>
+    <div class="panel-row" style="margin-bottom:16px;">
+      <div class="panel">
+        <div class="panel-title">🏦 Classement des banques</div>
+        <table class="data-table">
+          <thead><tr><th>#</th><th>Banque</th><th>P&amp;L cumulé</th><th>Deals clos</th></tr></thead>
+          <tbody>
+            ${banks.map((b, i) => `
+              <tr class="${b.isPlayer ? "strategy-my-row" : ""}">
+                <td class="tnum">${i + 1}</td>
+                <td>${escapeHtml(b.name)}${b.isPlayer ? " <b>(nous)</b>" : ""}</td>
+                <td class="tnum">${b.pnl >= 0 ? "+" : ""}${b.pnl} M$</td>
+                <td class="tnum">${b.dealsClosed}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <div class="panel-title">🥇 Meilleurs employés — prime &amp; réputation</div>
+        <table class="data-table">
+          <thead><tr><th>#</th><th>Joueur</th><th>Prime perçue</th><th>Réputation</th></tr></thead>
+          <tbody>
+            ${employees.map((e, i) => {
+              const tier = getProgressionTier(e.score || 0);
+              return `
+              <tr>
+                <td class="tnum">${i + 1}</td>
+                <td>${escapeHtml(e.fullName)}</td>
+                <td class="tnum">${e.bonusEarned} M$</td>
+                <td>${tier.icon} ${escapeHtml(tier.label)}</td>
+              </tr>
+            `;
+            }).join("") || `<tr><td colspan="4" class="empty-cell">Aucune prime distribuée pour l'instant.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
 // Proactive AI reactions (server/gameState.js's postTeamChat, triggered from
 // ma.js/dealWorkflow.js on a big deal closing and from scoring.js on a bank-health
 // crossing) — a lightweight team chat, distinct from the factual activity feed.
@@ -230,6 +299,7 @@ function renderOverview() {
     <div class="page-title">Vue d'ensemble</div>
     <div class="page-sub">Tableau de bord partagé — visible par tous les joueurs. Vous reprenez une banque avec des années d'historique : consultez les priorités ci-dessous pour savoir où intervenir en premier.</div>
     ${liveEventsPanelHtml()}
+    ${leagueTablePanelHtml()}
     ${teamChatHtml()}
     ${prioritiesPanelHtml()}
     ${executedWorkflowsHtml()}

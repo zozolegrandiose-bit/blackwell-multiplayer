@@ -21,6 +21,7 @@ const { registerTaskHandlers, startTaskLoop } = require("./tasks");
 const { registerMarketsHandlers, startMarketsLoop } = require("./handlers/markets");
 const { registerLiveEventsHandlers, startLiveEventsLoop } = require("./liveEvents");
 const { registerDealWorkflowHandlers, startDealWorkflowLoop } = require("./handlers/dealWorkflow");
+const { startMarketDayLoop } = require("./marketDay");
 
 const app = express();
 const httpServer = createServer(app);
@@ -57,6 +58,7 @@ scheduleChurnRiskLoop(io, gameState);
 startMarketsLoop(io, gameState);
 startLiveEventsLoop(io, gameState);
 startDealWorkflowLoop(io, gameState);
+startMarketDayLoop(io, gameState);
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
