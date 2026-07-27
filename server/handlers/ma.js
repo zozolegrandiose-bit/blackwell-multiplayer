@@ -1,4 +1,4 @@
-const { pushActivity } = require("../gameState");
+const { pushActivity, postTeamChat } = require("../gameState");
 const { awardPoints, checkEventResolution, applyHealthDelta } = require("../scoring");
 const { applyDealRevenue } = require("./finance");
 const { getDifficultyPreset } = require("../difficulty");
@@ -30,6 +30,7 @@ function advanceRandomDeal(io, gameState, actor) {
   if (deal.stage === "Clôturé" && !deal.revenueBooked) {
     deal.revenueBooked = true;
     applyDealRevenue(io, gameState, deal);
+    maybePostBigDealCongrats(io, gameState, deal, actor.fullName);
   }
   return true;
 }
@@ -63,16 +64,34 @@ function removeDeal(io, gameState, dealId) {
   io.to("access:ma").emit("ma:update", gameState.maDeals);
 }
 
-// Stalled-deal risk: a deal nobody has touched in a while can fall through on its
-// own, independent of the "Enchère concurrente" crisis event — real urgency to keep
-// the pipeline moving, not just react to crises.
-const STALL_SWEEP_MIN_MS = 60 * 1000;
-const STALL_SWEEP_MAX_MS = 90 * 1000;
-const STALL_THRESHOLD_MS = 3 * 60 * 1000;
-const STALL_COLLAPSE_PROBABILITY = 0.25;
+// Proactive competing AI: a deal nobody has touched for more than 2 minutes gets
+// actively contested by a rival bank, not just abandoned — a real, systematic
+// consequence of human inactivity, checked against every deal on each sweep
+// (independent of the much rarer random "Enchère concurrente" crisis event).
+const STALL_SWEEP_MIN_MS = 30 * 1000;
+const STALL_SWEEP_MAX_MS = 45 * 1000;
+const STALL_THRESHOLD_MS = 2 * 60 * 1000;
+const STALL_COLLAPSE_PROBABILITY = 0.35;
+const RIVAL_BANKS = ["Ashford & Vane", "Northfield Partners", "Meridian Capital Group", "Solenne & Rocher", "Ironhall Securities"];
+const BIG_DEAL_THRESHOLD = 300;
 
 function randomDelay(min, max) {
   return min + Math.random() * (max - min);
+}
+
+// Team chat congrats when a sizeable deal actually closes — called from every path
+// that can close a deal (manual stage change, ambient AI progression, the Patch 11
+// risk/execution workflow), not just one of them.
+function maybePostBigDealCongrats(io, gameState, deal, closerName) {
+  if (deal.valuation < BIG_DEAL_THRESHOLD) return;
+  const templates = [
+    "🎉 Bravo à l'équipe pour la clôture de « " + deal.name + " » (" + deal.valuation + " M$) !",
+    "🥂 Beau closing sur « " + deal.name + " » — " + deal.valuation + " M$ sécurisés, merci " + closerName + " !",
+    "👏 « " + deal.name + " » clôturé avec succès, l'équipe assure."
+  ];
+  const text = templates[Math.floor(Math.random() * templates.length)];
+  postTeamChat(gameState, { authorName: "IA — Salle des marchés", text, tone: "congrats" });
+  io.to("game").emit("teamChat:update", gameState.teamChat[0]);
 }
 
 function sweepStalledDeals(io, gameState) {
@@ -80,9 +99,10 @@ function sweepStalledDeals(io, gameState) {
   const stale = gameState.maDeals.filter(d => d.stage !== "Clôturé" && now - d.updatedAt >= STALL_THRESHOLD_MS);
   stale.forEach(deal => {
     if (Math.random() >= STALL_COLLAPSE_PROBABILITY) return;
+    const rival = RIVAL_BANKS[Math.floor(Math.random() * RIVAL_BANKS.length)];
     removeDeal(io, gameState, deal.id);
     applyHealthDelta(io, gameState, -3);
-    pushActivity(gameState, { actorPlayerId: null, page: "ma", text: "💤 « " + deal.name + " » est tombé à l'eau, faute d'avancement depuis trop longtemps." });
+    pushActivity(gameState, { actorPlayerId: null, page: "ma", text: "💤 « " + deal.name + " » a été raflé par " + rival + ", plus réactif — faute d'avancement depuis plus de 2 minutes." });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
     io.to("game").emit("scoring:update", { playerScores: gameState.playerScores, bankHealth: gameState.bankHealth });
   });
@@ -125,7 +145,8 @@ function registerMaHandlers(io, socket, gameState) {
       icVote: IC_VOTE_ITEMS.map(item => ({ item, done: false })),
       createdByPlayerId: player.id,
       updatedAt: Date.now(),
-      revenueBooked: false
+      revenueBooked: false,
+      workflow: null
     };
     gameState.maDeals.push(deal);
 
@@ -160,6 +181,7 @@ function registerMaHandlers(io, socket, gameState) {
     if (payload.stage === "Clôturé" && !deal.revenueBooked) {
       deal.revenueBooked = true;
       applyDealRevenue(io, gameState, deal);
+      maybePostBigDealCongrats(io, gameState, deal, player.fullName);
     }
   });
 

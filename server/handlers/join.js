@@ -42,7 +42,8 @@ function buildSnapshot(gameState, player) {
     difficulty: gameState.difficulty,
     directive: gameState.directive,
     liveEvents: gameState.liveEvents,
-    executedWorkflows: gameState.executedWorkflows
+    executedWorkflows: gameState.executedWorkflows,
+    teamChat: gameState.teamChat
   };
   // Compliance (Risk Manager) and Markets (Desk Trading) both surface workflow
   // panels derived from maDeals even though neither has the M&A page itself —

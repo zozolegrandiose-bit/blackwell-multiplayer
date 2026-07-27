@@ -1,4 +1,7 @@
-const { pushActivity } = require("./gameState");
+const { pushActivity, postTeamChat } = require("./gameState");
+
+const HEALTH_ALERT_THRESHOLD = 30;
+const HEALTH_ALERT_RECOVERY = 40; // hysteresis gap so the alert doesn't spam right at the edge
 
 const POINT_VALUES = {
   ma_create: 10,
@@ -76,6 +79,21 @@ function applyHealthDelta(io, gameState, delta) {
   if (gameState.bankHealth === 0) {
     gameState.bankrupt = true;
     io.to("game").emit("game:bankrupt", { playerScores: gameState.playerScores });
+  }
+
+  // Team chat alert with hysteresis: fires once when health drops below the
+  // threshold, stays quiet while it lingers there, and re-arms only once health
+  // has genuinely recovered — avoids spamming a message every single tick.
+  if (gameState.bankHealth < HEALTH_ALERT_THRESHOLD && !gameState.healthAlertSent) {
+    gameState.healthAlertSent = true;
+    postTeamChat(gameState, {
+      authorName: "IA — Contrôle des risques",
+      text: "⚠️ La santé de la banque est repassée sous les " + HEALTH_ALERT_THRESHOLD + " % — restons vigilants.",
+      tone: "alert"
+    });
+    io.to("game").emit("teamChat:update", gameState.teamChat[0]);
+  } else if (gameState.bankHealth >= HEALTH_ALERT_RECOVERY && gameState.healthAlertSent) {
+    gameState.healthAlertSent = false;
   }
 }
 

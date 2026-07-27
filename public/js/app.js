@@ -29,7 +29,8 @@ const appState = {
   markets: { instruments: [], positions: [], cash: 0, realizedPnL: 0, tradeLog: [] },
   directive: null,
   liveEvents: [],
-  executedWorkflows: []
+  executedWorkflows: [],
+  teamChat: []
 };
 
 const PAGE_RENDERERS = {};

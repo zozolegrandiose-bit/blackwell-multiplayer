@@ -278,7 +278,9 @@ function createGameState() {
     },
     directive: null,
     liveEvents: [],
-    executedWorkflows: []
+    executedWorkflows: [],
+    teamChat: [],
+    healthAlertSent: false
   };
 }
 
@@ -288,6 +290,18 @@ function pushActivity(gameState, entry) {
   gameState.activityLog.unshift({ ts: Date.now(), ...entry });
   if (gameState.activityLog.length > MAX_ACTIVITY_LOG) {
     gameState.activityLog.length = MAX_ACTIVITY_LOG;
+  }
+}
+
+const MAX_TEAM_CHAT = 30;
+
+// Distinct from pushActivity's factual log — proactive AI reactions (congrats on a
+// big deal, alerts on bank health) meant to read as a team chat, not a system log.
+// Same convention as pushActivity: callers broadcast "teamChat:update" themselves.
+function postTeamChat(gameState, entry) {
+  gameState.teamChat.unshift({ ts: Date.now(), ...entry });
+  if (gameState.teamChat.length > MAX_TEAM_CHAT) {
+    gameState.teamChat.length = MAX_TEAM_CHAT;
   }
 }
 
@@ -309,4 +323,4 @@ function resetGame(gameState) {
 
 const gameState = createGameState();
 
-module.exports = { gameState, createGameState, pushActivity, resetGame };
+module.exports = { gameState, createGameState, pushActivity, postTeamChat, resetGame };

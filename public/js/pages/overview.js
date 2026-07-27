@@ -58,6 +58,27 @@ function executedWorkflowsHtml() {
   `;
 }
 
+// Proactive AI reactions (server/gameState.js's postTeamChat, triggered from
+// ma.js/dealWorkflow.js on a big deal closing and from scoring.js on a bank-health
+// crossing) — a lightweight team chat, distinct from the factual activity feed.
+function teamChatHtml() {
+  const messages = appState.teamChat || [];
+  if (!messages.length) return "";
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">💬 Chat d'équipe</div>
+      <div class="activity-feed">
+        ${messages.map(m => `
+          <div class="activity-row team-chat-${m.tone === "alert" ? "alert" : "congrats"}">
+            <span class="activity-time">${fmtTime(m.ts)}</span>
+            <span class="activity-text"><b>${escapeHtml(m.authorName)}</b> — ${escapeHtml(m.text)}</span>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
 // The direct answer to "on ne sait pas quoi faire" — a live, always-accurate list
 // computed from real state (never scripted/fake), warning early (roughly half the
 // real penalty threshold) so players see a priority before the actual consequence
@@ -209,6 +230,7 @@ function renderOverview() {
     <div class="page-title">Vue d'ensemble</div>
     <div class="page-sub">Tableau de bord partagé — visible par tous les joueurs. Vous reprenez une banque avec des années d'historique : consultez les priorités ci-dessous pour savoir où intervenir en premier.</div>
     ${liveEventsPanelHtml()}
+    ${teamChatHtml()}
     ${prioritiesPanelHtml()}
     ${executedWorkflowsHtml()}
     ${taskSummaryPanelHtml()}

@@ -38,7 +38,7 @@ function workflowSectionHtml(d) {
     return `<div class="workflow-box"><span class="chip chip-warning">⏳ En attente de validation Risque</span> <span style="font-size:11px; color:var(--text-muted);">taux proposé ${wf.rate} %</span></div>`;
   }
   if (wf.phase === "pending_execution") {
-    return `<div class="workflow-box"><span class="chip chip-good">✅ Validé par ${escapeHtml(wf.riskDecisionByName)}</span> <span style="font-size:11px; color:var(--text-muted);">taux ${wf.rate} % — exécution attendue sur Marchés</span></div>`;
+    return `<div class="workflow-box"><span class="chip chip-good">✅ Validé par ${escapeHtml(wf.riskDecisionByName)}</span> <span style="font-size:11px; color:var(--text-muted);">taux ${wf.rate} % — exécution attendue sur Marchés</span>${wf.aiComment ? `<div style="font-size:11px; color:var(--text-muted); margin-top:4px; font-style:italic;">💬 « ${escapeHtml(wf.aiComment)} »</div>` : ""}</div>`;
   }
   if (wf.phase === "executed") {
     return `<div class="workflow-box"><span class="chip chip-good">💼 Exécuté en ${WORKFLOW_METHOD_LABEL[wf.method] || ""} — +${wf.netFee} M$</span></div>`;

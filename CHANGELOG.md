@@ -1,5 +1,24 @@
 # Journal des mises à jour
 
+## Patch 12 — Des IA proactives (2026-07-27)
+
+### Ajouts
+- **IA concurrentes plus agressives** : un deal M&A laissé sans avancée plus de 2 minutes (au lieu de 3) risque désormais d'être raflé par une banque rivale nommée explicitement (Ashford & Vane, Northfield Partners, Meridian Capital Group…), avec une probabilité renforcée à chaque balayage.
+- **IA Risk Manager quasi instantanée** : si aucun Risk Manager humain n'est connecté, l'IA répond désormais en quelques secondes (bien sous les 10 secondes demandées, contre 90 secondes auparavant) — avec un petit commentaire généré à partir du dossier de crédit (ex. « Dossier risqué (BB) mais accepté à 6,5 % »), visible sur la page M&A.
+- **Chat d'équipe 💬** (nouveau panneau sur Vue d'ensemble) : les IA postent désormais des messages de félicitations quand un deal de plus de 300 M$ est clôturé (à la main ou via le workflow) et des messages d'alerte quand la santé de la banque repasse sous 30 %.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Corrigé : un deal créé via le formulaire standard de la page M&A n'avait pas le champ `workflow` initialisé (`undefined` au lieu de `null`) — sans conséquence fonctionnelle jusqu'ici, mais incohérent avec tous les autres points de création de deal.
+
+### Notes techniques
+- `postTeamChat()` (`server/gameState.js`) suit exactement la même convention que `pushActivity()` — les appelants diffusent eux-mêmes l'événement après l'appel.
+- L'alerte de santé utilise une hystérésis (`gameState.healthAlertSent`) : elle se déclenche une fois en dessous de 30 %, reste silencieuse tant que la santé y reste, et ne se réarme qu'après un vrai retour au-dessus de 40 % — pas de spam à chaque tick.
+
+---
+
 ## Patch 11 — Workflow d'exécution des deals, étape par étape (2026-07-27)
 
 ### Ajouts

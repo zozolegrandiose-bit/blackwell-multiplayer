@@ -3,17 +3,23 @@
 // Analyste M&A (soumet) -> Risk Manager (approuve/refuse, ajuste le taux) ->
 // Desk Structuration/Trading (exécute sous 2 minutes) -> impact visible de tous
 // (Vue d'ensemble) avec prime automatiquement répartie entre les 3 rôles.
-const { pushActivity } = require("../gameState");
+const { pushActivity, postTeamChat } = require("../gameState");
 const { awardPoints, awardCustomPoints, applyHealthDelta } = require("../scoring");
 
 const EXECUTION_WINDOW_MS = 2 * 60 * 1000;
-const AI_RISK_REVIEW_DELAY_MS = 90 * 1000;
-const SWEEP_MIN_MS = 5 * 1000;
-const SWEEP_MAX_MS = 8 * 1000;
+// The AI Risk Manager covers an unattended desk fast (well under the requested
+// 10s in practice) — the sweep cadence below is the real binding constraint, this
+// delay just avoids resolving on the very same tick a deal was submitted.
+const AI_RISK_REVIEW_DELAY_MS = 2 * 1000;
+const SWEEP_MIN_MS = 3 * 1000;
+const SWEEP_MAX_MS = 5 * 1000;
 const FEE_PCT = 0.02;
 const BONUS_POOL_PCT = 0.15;
 const MAX_EXECUTED_LOG = 20;
+const BIG_DEAL_THRESHOLD = 300;
 const RATINGS = ["AAA", "AA", "A", "BBB", "BB", "B"];
+const WEAK_RATINGS = ["BB", "B"];
+const STRONG_RATINGS = ["AAA", "AA"];
 const AI_RISK_ACTOR_NAME = "IA — Gestion des Risques";
 
 function requireAccess(socket, page) {
@@ -30,6 +36,18 @@ function generateCreditFile() {
     leverage: round1(2 + Math.random() * 4),
     liquidityDays: Math.floor(30 + Math.random() * 60)
   };
+}
+
+// Small generated flavor line for the AI Risk Manager's decision — references the
+// credit file so it reads as a real (if quick) judgment call, not a rubber stamp.
+function generateAiRiskComment(creditFile, rate) {
+  if (WEAK_RATINGS.includes(creditFile.rating)) {
+    return "Dossier risqué (" + creditFile.rating + ") mais accepté à " + rate + " %.";
+  }
+  if (STRONG_RATINGS.includes(creditFile.rating)) {
+    return "Dossier solide (" + creditFile.rating + "), approuvé à " + rate + " % sans réserve.";
+  }
+  return "Dossier correct (" + creditFile.rating + "), approuvé à " + rate + " % avec vigilance.";
 }
 
 // Broadcast the full deal list to all three rooms whose pages now surface
@@ -176,6 +194,16 @@ function executeDeal(io, gameState, deal, method, trader) {
   io.to("game").emit("activity:update", gameState.activityLog[0]);
   io.to("game").emit("scoring:update", { playerScores: gameState.playerScores, bankHealth: gameState.bankHealth });
   awardPoints(io, gameState, trader, "workflow_execute");
+
+  if (deal.valuation >= BIG_DEAL_THRESHOLD) {
+    const names = participants.map(p => p.name).join(", ");
+    postTeamChat(gameState, {
+      authorName: "IA — Salle des marchés",
+      text: "🎉 Belle exécution en équipe sur « " + deal.name + " » (" + deal.valuation + " M$) — bravo " + names + " !",
+      tone: "congrats"
+    });
+    io.to("game").emit("teamChat:update", gameState.teamChat[0]);
+  }
 }
 
 // Two ambient behaviors, both deliberately scoped: the Risk Manager step can be
@@ -191,19 +219,21 @@ function aiReviewPendingRisk(io, gameState) {
     if (!deal.workflow || deal.workflow.phase !== "pending_risk") return;
     if (now - deal.workflow.submittedAt < AI_RISK_REVIEW_DELAY_MS) return;
 
+    const aiComment = generateAiRiskComment(deal.workflow.creditFile, deal.workflow.rate);
     deal.workflow.phase = "pending_execution";
     deal.workflow.riskDecisionByPlayerId = null;
     deal.workflow.riskDecisionByName = AI_RISK_ACTOR_NAME;
     deal.workflow.riskDecisionAt = now;
     deal.workflow.executionDeadline = now + EXECUTION_WINDOW_MS;
+    deal.workflow.aiComment = aiComment;
 
     broadcastDeals(io, gameState);
     io.to("access:markets").emit("dealWorkflow:notify", {
       type: "execution_pending",
       dealId: deal.id,
-      text: AI_RISK_ACTOR_NAME + " a validé « " + deal.name + " » (taux " + deal.workflow.rate + " %) — exécution requise sous 2 minutes."
+      text: AI_RISK_ACTOR_NAME + " a validé « " + deal.name + " » — " + aiComment
     });
-    pushActivity(gameState, { actorPlayerId: null, page: "compliance", text: AI_RISK_ACTOR_NAME + " a validé le financement de « " + deal.name + " » en l'absence d'un Risk Manager connecté." });
+    pushActivity(gameState, { actorPlayerId: null, page: "compliance", text: AI_RISK_ACTOR_NAME + " (en l'absence d'un Risk Manager connecté) : " + aiComment });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
   });
 }
@@ -251,6 +281,8 @@ module.exports = {
   sweepExpiredExecutions,
   aiReviewPendingRisk,
   generateCreditFile,
+  generateAiRiskComment,
   EXECUTION_WINDOW_MS,
-  AI_RISK_REVIEW_DELAY_MS
+  AI_RISK_REVIEW_DELAY_MS,
+  BIG_DEAL_THRESHOLD
 };

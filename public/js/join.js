@@ -126,6 +126,12 @@ socket.on("executedWorkflows:update", data => {
   if (appState.currentPage === "overview") renderApp();
 });
 
+socket.on("teamChat:update", message => {
+  if (!window.currentPlayer) return;
+  appState.teamChat = [message, ...(appState.teamChat || [])].slice(0, 30);
+  if (appState.currentPage === "overview") renderApp();
+});
+
 socket.on("ma:create:rejected", data => {
   const errorEl = document.getElementById("ma-error");
   if (errorEl) errorEl.textContent = data.reason;
