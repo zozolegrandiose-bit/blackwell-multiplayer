@@ -85,19 +85,6 @@ body {
   border-color: var(--accent);
 }
 
-/* Same focus/hover treatment for the many inline-styled inputs added across later
-   patches (Dark Pool, IPO, CIB Bonus, Terminal Chat, Mercato…) that don't sit
-   inside a .form-row wrapper -- keeps every input on the site feeling consistent
-   without having to touch each page's markup individually. */
-input, select, textarea {
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-input:focus, select:focus, textarea:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(46,230,166,0.15);
-}
-
 .join-error {
   color: var(--series-red);
   font-size: 12px;
@@ -497,30 +484,6 @@ input:focus, select:focus, textarea:focus {
 .warroom-actions { display: flex; align-items: center; justify-content: center; gap: 12px; }
 .warroom-actions .btn-sm { font-size: 13px; padding: 10px 20px; }
 .warroom-validated-msg { font-size: 13px; color: #a6f5da; text-align: center; }
-
-/* ---------- Terminal Chat (Bloomberg/Slack style) ---------- */
-.terminal-panel { flex: 1; }
-.terminal-screen {
-  background: #05070c;
-  border: 1px solid rgba(46,230,166,0.25);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  font-family: "SF Mono", "Consolas", "Menlo", monospace;
-  font-size: 11.5px;
-  line-height: 1.7;
-  max-height: 260px;
-  overflow-y: auto;
-  color: #a6f5da;
-}
-.terminal-line { white-space: pre-wrap; word-break: break-word; border-bottom: 1px solid rgba(46,230,166,0.08); padding: 3px 0; }
-.terminal-line:last-child { border-bottom: none; }
-.terminal-ts { color: #5ee0e0; margin-right: 6px; }
-.terminal-tag { color: #f5b942; font-weight: 700; margin-right: 4px; }
-.terminal-empty { color: #4a5568; font-style: italic; }
-.terminal-screen::-webkit-scrollbar { width: 8px; }
-.terminal-screen::-webkit-scrollbar-track { background: transparent; }
-.terminal-screen::-webkit-scrollbar-thumb { background: rgba(46,230,166,0.25); border-radius: 4px; }
-.terminal-screen::-webkit-scrollbar-thumb:hover { background: rgba(46,230,166,0.45); }
 
 .leave-calendar-grid {
   display: grid;

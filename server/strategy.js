@@ -22,7 +22,7 @@ const CLUSTER_LABELS = {
   D: "Conformité, Risque & Juridique",
   E: "Finance & Trésorerie",
   F: "RH & Communication",
-  G: "Board Of Directors"
+  G: "Direction Générale"
 };
 
 const OPERATIONAL_CLUSTERS = ["A", "B", "C", "D", "E", "F"];
@@ -75,7 +75,7 @@ function getDefaultOption(cluster) {
   return CLUSTER_OPTIONS[cluster][1].id;
 }
 
-// Board Of Directors (cluster G) is the one point of real cross-cluster
+// Direction Générale (cluster G) is the one point of real cross-cluster
 // interdependency: they see the other clusters' actual locked-in choices before
 // picking their own multiplier. Everyone else only sees submitted/pending status —
 // this redacts option ids down to booleans for that broadcast.
@@ -101,7 +101,7 @@ function buildDecisionsView(gameState, viewerCluster) {
 // Pure-ish core (its only side effects are on gameState/io, no timers/sockets involved) —
 // unit-testable directly with synthetic gameState objects. Combines the 6 operational
 // clusters' decisions (or their neutral default if a cluster submitted nothing) with
-// Board Of Directors's multiplier, updates financeKPIs/bankHealth, advances the quarter,
+// Direction Générale's multiplier, updates financeKPIs/bankHealth, advances the quarter,
 // and re-opens a fresh deciding phase. Callers (the resolution loop, or an
 // all-6-submitted shortcut, both added in a later milestone) are responsible for not
 // calling this twice for the same quarter.
@@ -231,9 +231,8 @@ function registerStrategyHandlers(io, socket, gameState) {
   });
 
   socket.on("strategy:extendQuarter", () => {
-    if (!requireAccess(socket, "strategy")) return;
     const player = gameState.players.find(p => p.id === socket.data.playerId);
-    if (!player) return;
+    if (!player || !player.hasFullAccess) return;
     if (gameState.quarterPhase !== "deciding") return;
     gameState.quarterDeadline = (gameState.quarterDeadline || Date.now()) + 60 * 1000;
     io.to("game").emit("strategy:update", { quarterDeadline: gameState.quarterDeadline });

@@ -34,10 +34,7 @@ const POINT_VALUES = {
   warroom_validate: 10,
   mercato_offerAccepted: 15,
   syndication_trancheResolved: 15,
-  markets_insiderCaught: -30,
-  ipo_pitchSubmitted: 10,
-  ipo_priced: 30,
-  ipo_intentionSubmitted: 3
+  markets_insiderCaught: -30
 };
 
 // Achievement badges — pure function of the same actionCounts already tracked by
@@ -144,7 +141,7 @@ function awardPoints(io, gameState, player, actionType, extraHealthDelta) {
   if (!player || player.id === null) return;
 
   let points = POINT_VALUES[actionType] || 0;
-  // Board Of Directors's standing directive (server/handlers/game.js): a department
+  // Direction Générale's standing directive (server/handlers/game.js): a department
   // under an active priority directive earns 50% more points on every scored action —
   // a real, mechanical lever for the CEO to redirect the whole company's effort,
   // not just flavor text.

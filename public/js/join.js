@@ -98,15 +98,6 @@ socket.on("join:success", data => {
   initApp(data.player, data.snapshot);
 });
 
-// Resigning (server/satisfaction.js's sweepResignations) frees the slot but keeps
-// the socket connected -- send the player back to the join screen instead of a
-// hard disconnect, same "resync without disconnect" spirit as game:reset.
-socket.on("game:youResigned", data => {
-  window.currentPlayer = null;
-  socket.emit("join:request");
-  notify("🚪 " + data.reason);
-});
-
 socket.on("mail:new", message => {
   if (!window.currentPlayer) return;
   appState.mail.push(message);
@@ -157,47 +148,6 @@ socket.on("warRoom:update", data => {
   if (!window.currentPlayer) return;
   appState.warRoom = data;
   renderWarRoomOverlay();
-});
-
-socket.on("terminal:dm", message => {
-  if (!window.currentPlayer) return;
-  appState.terminalDMs = [...(appState.terminalDMs || []), message];
-  if (appState.currentPage === "terminal") renderApp();
-  else if (message.fromPlayerId !== appState.player.id) notify("💬 " + message.fromName + " : " + message.body);
-});
-
-socket.on("terminal:sendDM:rejected", data => {
-  const errEl = document.getElementById("terminal-dm-error");
-  if (errEl) errEl.textContent = data.reason;
-});
-
-socket.on("terminal:dealsFeedUpdate", entry => {
-  if (!window.currentPlayer) return;
-  appState.terminalDealsFeed = [entry, ...(appState.terminalDealsFeed || [])].slice(0, 30);
-  if (appState.currentPage === "terminal") renderApp();
-});
-
-socket.on("ipo:update", data => {
-  if (!window.currentPlayer) return;
-  appState.ipo = data;
-  if (appState.currentPage === "ma") renderApp();
-});
-
-socket.on("cibBonus:update", data => {
-  if (!window.currentPlayer) return;
-  appState.cibBonusPool = data;
-  if (appState.currentPage === "ma") renderApp();
-});
-
-socket.on("cib:distributeBonus:rejected", data => {
-  const errEl = document.getElementById("cib-bonus-error");
-  if (errEl) errEl.textContent = data.reason;
-});
-
-socket.on("creditRatings:update", data => {
-  if (!window.currentPlayer) return;
-  appState.creditRatings = data;
-  if (appState.currentPage === "overview") renderApp();
 });
 
 socket.on("mercato:update", data => {
@@ -296,11 +246,6 @@ socket.on("markets:buy:rejected", data => {
   if (errorEl) errorEl.textContent = data.reason;
   const insiderErrorEl = document.getElementById("insider-error");
   if (insiderErrorEl) insiderErrorEl.textContent = data.reason;
-});
-
-socket.on("markets:darkPoolOrder:rejected", data => {
-  const errEl = document.getElementById("dp-error");
-  if (errEl) errEl.textContent = data.reason;
 });
 
 socket.on("markets:insiderResult", data => {

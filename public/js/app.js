@@ -35,12 +35,7 @@ const appState = {
   marketDay: { dayNumber: 1, deadline: null },
   warRoom: null,
   rivalTalent: null,
-  mercatoOffers: [],
-  creditRatings: {},
-  cibBonusPool: { available: 0, periodNumber: 1, distributedLog: [] },
-  ipo: null,
-  terminalDMs: [],
-  terminalDealsFeed: []
+  mercatoOffers: []
 };
 
 const PAGE_RENDERERS = {};
@@ -228,12 +223,12 @@ function renderApp() {
         ${appState.victory ? `
           <div class="victory-banner">
             <div>🎉 <b>Victoire !</b> L'objectif de ${fmtMoney(appState.campaignGoal.targetAUM)} d'AUM est atteint.</div>
-            ${player.hasFullAccess ? `<button id="btn-game-reset" class="btn-sm">Nouvelle partie</button>` : `<span style="font-size:11.5px; color:var(--text-muted);">Seul le Board Of Directors peut relancer une partie.</span>`}
+            ${player.hasFullAccess ? `<button id="btn-game-reset" class="btn-sm">Nouvelle partie</button>` : `<span style="font-size:11.5px; color:var(--text-muted);">Seule la Direction Générale peut relancer une partie.</span>`}
           </div>
         ` : appState.bankrupt ? `
           <div class="bankruptcy-banner">
             <div>💥 <b>Faillite de la banque.</b> La santé de la banque est tombée à zéro — la partie est terminée.</div>
-            ${player.hasFullAccess ? `<button id="btn-game-reset" class="btn-sm">Nouvelle partie</button>` : `<span style="font-size:11.5px; color:var(--text-muted);">Seul le Board Of Directors peut relancer une partie.</span>`}
+            ${player.hasFullAccess ? `<button id="btn-game-reset" class="btn-sm">Nouvelle partie</button>` : `<span style="font-size:11.5px; color:var(--text-muted);">Seule la Direction Générale peut relancer une partie.</span>`}
           </div>
         ` : ""}
         ${(appState.activeEvents || []).map(ev => `

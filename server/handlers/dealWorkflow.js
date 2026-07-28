@@ -7,7 +7,6 @@ const { pushActivity, postTeamChat, recordBankPnl } = require("../gameState");
 
 const PLAYER_BANK_NAME = "Blackwell & Co Capital";
 const { awardPoints, awardCustomPoints, applyHealthDelta } = require("../scoring");
-const { getBorrowingCostMultiplier } = require("../ratingAgency");
 
 const EXECUTION_WINDOW_MS = 2 * 60 * 1000;
 // The AI Risk Manager covers an unattended desk fast (well under the requested
@@ -234,7 +233,7 @@ function executeSyndicatedDeal(io, gameState, deal) {
 
   const grossFee = round1(retainedAmount * FEE_PCT);
   const rateModifier = Math.max(0.5, 1 + (deal.workflow.rate - 5) * 0.02);
-  const netFee = round1(grossFee * rateModifier * getBorrowingCostMultiplier(gameState));
+  const netFee = round1(grossFee * rateModifier);
 
   const kpis = gameState.financeKPIs;
   const oldNetIncome = kpis.netIncome;
@@ -309,7 +308,7 @@ function executeDeal(io, gameState, deal, method, trader) {
   const grossFee = round1(deal.valuation * FEE_PCT);
   const methodMultiplier = method === "syndication" ? 0.40 : 0.75;
   const rateModifier = Math.max(0.5, 1 + (deal.workflow.rate - 5) * 0.02);
-  const netFee = round1(grossFee * methodMultiplier * rateModifier * getBorrowingCostMultiplier(gameState));
+  const netFee = round1(grossFee * methodMultiplier * rateModifier);
 
   const kpis = gameState.financeKPIs;
   const oldNetIncome = kpis.netIncome;

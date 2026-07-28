@@ -24,9 +24,6 @@ const { registerDealWorkflowHandlers, startDealWorkflowLoop } = require("./handl
 const { startMarketDayLoop } = require("./marketDay");
 const { registerWarRoomHandlers, startWarRoomLoop } = require("./warRoom");
 const { registerMercatoHandlers } = require("./mercato");
-const { registerCibBonusHandlers } = require("./cibBonus");
-const { registerIpoHandlers, startIpoLoop } = require("./ipo");
-const { registerTerminalHandlers, startTerminalLoop } = require("./terminal");
 
 const app = express();
 const httpServer = createServer(app);
@@ -54,9 +51,6 @@ io.on("connection", socket => {
   registerDealWorkflowHandlers(io, socket, gameState);
   registerWarRoomHandlers(io, socket, gameState);
   registerMercatoHandlers(io, socket, gameState);
-  registerCibBonusHandlers(io, socket, gameState);
-  registerIpoHandlers(io, socket, gameState);
-  registerTerminalHandlers(io, socket, gameState);
 });
 
 startAiLoop(io, gameState);
@@ -70,8 +64,6 @@ startLiveEventsLoop(io, gameState);
 startDealWorkflowLoop(io, gameState);
 startMarketDayLoop(io, gameState);
 startWarRoomLoop(io, gameState);
-startIpoLoop(io, gameState);
-startTerminalLoop(io, gameState);
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {

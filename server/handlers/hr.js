@@ -1,7 +1,6 @@
 const { pushActivity } = require("../gameState");
 const { awardPoints, awardCustomPoints } = require("../scoring");
 const { DEPARTMENT_CLUSTER } = require("../departmentAccess");
-const { adjustSatisfaction } = require("../satisfaction");
 
 const LEAVE_TYPES = ["Congés payés", "RTT", "Arrêt maladie", "Congé sans solde"];
 const ONBOARDING_ITEMS = ["Contrat signé", "Poste de travail", "Compte IT", "Badge d'accès", "Formation d'intégration"];
@@ -47,7 +46,7 @@ function randomCandidateName() {
 // bank, with two candidates ready to interview. This is what makes the strategic
 // "Recruter" choice tangible on the RH page rather than a pure numbers effect.
 function openPosition(gameState) {
-  const depts = Object.keys(DEPARTMENT_CLUSTER).filter(d => d !== "Board Of Directors");
+  const depts = Object.keys(DEPARTMENT_CLUSTER).filter(d => d !== "Direction Générale");
   const dept = depts[Math.floor(Math.random() * depts.length)];
   const tier = RECRUIT_LEVELS[Math.floor(Math.random() * RECRUIT_LEVELS.length)];
   const posId = "pos" + (nextPositionId++);
@@ -120,10 +119,6 @@ function registerHrHandlers(io, socket, gameState) {
     adjustMorale(gameState, payload.status === "Approuvé" ? 2 : -4);
     io.to("access:hr").emit("hr:update", gameState.hr);
     if (payload.status === "Approuvé") awardPoints(io, gameState, actor, "hr_approveLeave");
-    if (request.playerId) {
-      const requester = gameState.players.find(p => p.id === request.playerId);
-      if (requester) adjustSatisfaction(io, gameState, requester, payload.status === "Approuvé" ? 5 : -10);
-    }
   });
 
   socket.on("hr:toggleOnboarding", payload => {

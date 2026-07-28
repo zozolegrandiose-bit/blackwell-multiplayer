@@ -5,7 +5,7 @@ const { getDifficultyPreset } = require("../difficulty");
 
 const MA_STAGES = ["Screening", "Due Diligence", "Négociation", "Signing", "Clôturé"];
 const PLAYER_BANK_NAME = "Blackwell & Co Capital";
-const IC_VOTE_ITEMS = ["Validation Risques", "Validation Juridique", "Validation Board Of Directors"];
+const IC_VOTE_ITEMS = ["Validation Risques", "Validation Juridique", "Validation Direction Générale"];
 let nextDealId = 1;
 
 function requireAccess(socket, page) {

@@ -49,7 +49,7 @@ function avatarHtml(name, size) {
 const CLUSTER_BADGE_COLOR = { A: "#e8b64a", B: "#6c8dff", C: "#b58cff", D: "#ff8fa3", E: "#2ee6a6", F: "#5ee0e0", G: "#f5f7fb" };
 
 const CLIENT_DEPARTMENT_CLUSTER = {
-  "Board Of Directors": "G",
+  "Direction Générale": "G",
   "Banque d'Investissement": "A", "Fusions-Acquisitions (M&A)": "A", "Marché des Capitaux Actions (ECM)": "A",
   "Marché des Capitaux Dette (DCM)": "A", "Financement à Effet de Levier": "A", "Titrisation & Financements Structurés": "A",
   "Financement de Projets & Infrastructures": "A", "Marchés Émergents": "A", "Couverture Sectorielle": "A",

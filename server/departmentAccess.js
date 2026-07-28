@@ -1,6 +1,6 @@
 const { GRADES } = require("./seedData");
 
-const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses", "reglement", "terminal"];
+const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses", "reglement"];
 
 const CLUSTER_PAGES = {
   A: [...UNIVERSAL_PAGES, "ma", "clients"],
@@ -13,7 +13,7 @@ const CLUSTER_PAGES = {
 };
 
 const DEPARTMENT_CLUSTER = {
-  "Board Of Directors": "G",
+  "Direction Générale": "G",
 
   "Banque d'Investissement": "A",
   "Fusions-Acquisitions (M&A)": "A",
@@ -62,39 +62,30 @@ const DEPARTMENT_CLUSTER = {
 };
 
 const MD_INDEX = GRADES.indexOf("Managing Director");
+// "Comité de Direction" (the Strategy page) is a real management committee, not an
+// open forum — only Director and above sit on it. Direction Générale always has it
+// via hasFullAccess below, regardless of grade, since that department IS the
+// direction. Below Director, a cluster's quarterly decision just defaults to the
+// neutral option (already the existing fallback in server/strategy.js) if nobody
+// senior enough is connected — no change needed there.
+const DIRECTOR_INDEX = GRADES.indexOf("Director");
 
 function hasFullAccess(dept, grade) {
-  if (dept === "Board Of Directors") return true;
+  if (dept === "Direction Générale") return true;
   const gradeIndex = GRADES.indexOf(grade);
   return gradeIndex >= MD_INDEX;
 }
 
-// "Comité de Direction" (the Strategy page) is now a strict department gate, not a
-// seniority gate: only members of Board Of Directors sit on it, at any grade within
-// that department — a Managing Director elsewhere in the bank no longer gets in
-// through hasFullAccess. A cluster's quarterly decision still defaults to the
-// neutral option if nobody from that department is connected (unchanged, existing
-// fallback in server/strategy.js).
-function hasStrategyAccess(dept) {
-  return dept === "Board Of Directors";
+function hasStrategyAccess(dept, grade) {
+  if (hasFullAccess(dept, grade)) return true;
+  return GRADES.indexOf(grade) >= DIRECTOR_INDEX;
 }
 
 function getAccessForPosition(dept, grade) {
-  if (hasFullAccess(dept, grade)) {
-    const pages = [...CLUSTER_PAGES.G];
-    // hasFullAccess also fires for an MD+ grade in ANY department (not just Board Of
-    // Directors) -- but the strategy page itself is now a strict department gate
-    // (hasStrategyAccess), so that broader grade-based privilege must not smuggle
-    // "strategy" back in for someone outside Board Of Directors.
-    if (!hasStrategyAccess(dept)) {
-      const idx = pages.indexOf("strategy");
-      if (idx !== -1) pages.splice(idx, 1);
-    }
-    return pages;
-  }
+  if (hasFullAccess(dept, grade)) return [...CLUSTER_PAGES.G];
   const cluster = DEPARTMENT_CLUSTER[dept];
   const basePages = cluster ? [...CLUSTER_PAGES[cluster]] : ["overview", "mail"];
-  if (hasStrategyAccess(dept) && !basePages.includes("strategy")) basePages.push("strategy");
+  if (hasStrategyAccess(dept, grade) && !basePages.includes("strategy")) basePages.push("strategy");
   return basePages;
 }
 

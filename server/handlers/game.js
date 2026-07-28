@@ -40,7 +40,7 @@ function registerGameHandlers(io, socket, gameState) {
     io.to("game").emit("activity:update", gameState.activityLog[0]);
   });
 
-  // GM control panel (Board Of Directors only) — pause/resume freezes every
+  // GM control panel (Direction Générale only) — pause/resume freezes every
   // self-rescheduling loop's guarded action (tasks, events, quarter resolution,
   // deal/client risk sweeps all check gameState.paused each tick) without tearing
   // down any timers, and shifts the visible quarter countdown by the paused duration
@@ -86,7 +86,7 @@ function registerGameHandlers(io, socket, gameState) {
     io.to("game").emit("activity:update", gameState.activityLog[0]);
   });
 
-  // Board Of Directors's standing directive — a real executive lever, not just a
+  // Direction Générale's standing directive — a real executive lever, not just a
   // display: server/scoring.js's awardPoints() gives +50% points on every scored
   // action from the prioritized department for as long as this directive stands.
   socket.on("game:setDirective", payload => {
