@@ -1,10 +1,62 @@
-const { pushActivity } = require("../gameState");
+const { pushActivity, buildPublicRoster } = require("../gameState");
 const { awardPoints, awardCustomPoints } = require("../scoring");
-const { DEPARTMENT_CLUSTER } = require("../departmentAccess");
+const { DEPARTMENT_CLUSTER, getAccessForPosition, hasFullAccess, getClusterForPosition } = require("../departmentAccess");
+const { adjustSatisfaction } = require("../satisfaction");
+const { GRADES, DEPARTMENTS } = require("../seedData");
+const { isHeadOfCIB } = require("../cibBonus");
 
 const LEAVE_TYPES = ["Congés payés", "RTT", "Arrêt maladie", "Congé sans solde"];
 const ONBOARDING_ITEMS = ["Contrat signé", "Poste de travail", "Compte IT", "Badge d'accès", "Formation d'intégration"];
 const BONUS_POOL_RATE = 0.10;
+
+// Base salary formula shared by the org chart (promotions) and payroll (HR-3):
+// a simple grade-index-driven scale, consistent with RECRUIT_LEVELS' rough
+// Analyst/Associate/VP figures below without needing a 46-entry lookup table.
+const SALARY_BASE = 6;
+const SALARY_PER_GRADE_STEP = 1.2;
+
+function computeBaseSalary(grade) {
+  const idx = GRADES.indexOf(grade);
+  return round1(SALARY_BASE + Math.max(0, idx) * SALARY_PER_GRADE_STEP);
+}
+
+// HR-3 payroll -- baseSalary is an annual figure, so the monthly mass is /12.
+// Only currently-connected players draw a salary (an unfilled desk costs
+// nothing, consistent with how AI never books real payroll anywhere else).
+function computeMonthlyPayroll(gameState) {
+  const total = gameState.players.reduce((sum, p) => sum + (p.baseSalary || 0), 0);
+  return round1(total / 12);
+}
+
+// Called from settleMarketDay() (server/marketDay.js) -- each "journée de marché"
+// stands in for a payroll period at this game's compressed time scale, same
+// convention already used for the Rating Agency and CIB bonus pool accrual.
+function runPayrollDeduction(io, gameState) {
+  const payroll = computeMonthlyPayroll(gameState);
+  if (payroll <= 0) return payroll;
+  const kpis = gameState.financeKPIs;
+  const oldNetIncome = kpis.netIncome;
+  kpis.netIncome = round1(kpis.netIncome - payroll);
+  kpis.history.unshift({ ts: Date.now(), field: "netIncome", oldValue: oldNetIncome, newValue: kpis.netIncome, byPlayerId: null, byName: "Masse salariale mensuelle" });
+  if (kpis.history.length > 100) kpis.history.length = 100;
+  gameState.hr.lastPayrollAmount = payroll;
+  io.to("access:finance").emit("finance:update", kpis);
+  io.to("game").emit("overview:kpis", kpis);
+  pushActivity(gameState, { actorPlayerId: null, page: "finance", text: "💸 Masse salariale du mois prélevée : -" + payroll + " M$ (résultat net)." });
+  io.to("game").emit("activity:update", gameState.activityLog[0]);
+  return payroll;
+}
+
+// A promotion or desk reassignment can change a player's access array (cluster,
+// hasFullAccess, hasStrategyAccess-derived "strategy" page) -- their live socket's
+// Socket.io room memberships must be kept in sync, or they'd keep seeing pages
+// they no longer have access to (or miss new ones) until their next reconnect.
+function resyncPlayerAccessRooms(io, player, oldAccess) {
+  const targetSocket = io.sockets.sockets.get(player.socketId);
+  if (!targetSocket) return;
+  oldAccess.forEach(page => { if (!player.access.includes(page)) targetSocket.leave("access:" + page); });
+  player.access.forEach(page => { if (!oldAccess.includes(page)) targetSocket.join("access:" + page); });
+}
 
 const RECRUIT_LEVELS = [
   { level: "Analyst", salary: 9 },
@@ -46,7 +98,7 @@ function randomCandidateName() {
 // bank, with two candidates ready to interview. This is what makes the strategic
 // "Recruter" choice tangible on the RH page rather than a pure numbers effect.
 function openPosition(gameState) {
-  const depts = Object.keys(DEPARTMENT_CLUSTER).filter(d => d !== "Direction Générale");
+  const depts = Object.keys(DEPARTMENT_CLUSTER).filter(d => d !== "Board Of Directors");
   const dept = depts[Math.floor(Math.random() * depts.length)];
   const tier = RECRUIT_LEVELS[Math.floor(Math.random() * RECRUIT_LEVELS.length)];
   const posId = "pos" + (nextPositionId++);
@@ -119,6 +171,10 @@ function registerHrHandlers(io, socket, gameState) {
     adjustMorale(gameState, payload.status === "Approuvé" ? 2 : -4);
     io.to("access:hr").emit("hr:update", gameState.hr);
     if (payload.status === "Approuvé") awardPoints(io, gameState, actor, "hr_approveLeave");
+    if (request.playerId) {
+      const requester = gameState.players.find(p => p.id === request.playerId);
+      if (requester) adjustSatisfaction(io, gameState, requester, payload.status === "Approuvé" ? 5 : -10);
+    }
   });
 
   socket.on("hr:toggleOnboarding", payload => {
@@ -220,6 +276,120 @@ function registerHrHandlers(io, socket, gameState) {
     });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
   });
+
+  // HR-3 Compensation & Bonus Pool -- same live pool as the manual distribution
+  // above, but split automatically: proportional to each connected player's
+  // current score (a simple, defensible "who's actually contributing" proxy,
+  // same idea as the day-bonus payout in server/marketDay.js), no per-player
+  // input required from the DRH.
+  socket.on("hr:autoDistributeBonus", () => {
+    if (!requireAccess(socket, "hr")) return;
+    const actor = gameState.players.find(p => p.id === socket.data.playerId);
+    if (!actor) return;
+    const pool = round1(gameState.financeKPIs.netIncome * BONUS_POOL_RATE);
+    if (pool <= 0) {
+      socket.emit("hr:distributeBonus:rejected", { reason: "Aucune enveloppe disponible (résultat net non positif)." });
+      return;
+    }
+
+    const totalScore = gameState.players.reduce((sum, p) => {
+      const key = (p.firstName + "|" + p.lastName).trim().toLowerCase();
+      const entry = gameState.playerScores[key];
+      return sum + Math.max(0, entry ? entry.score : 0);
+    }, 0);
+    if (totalScore <= 0) {
+      socket.emit("hr:distributeBonus:rejected", { reason: "Aucun score positif à répartir pour l'instant." });
+      return;
+    }
+
+    let distributed = 0;
+    gameState.players.forEach(p => {
+      const key = (p.firstName + "|" + p.lastName).trim().toLowerCase();
+      const entry = gameState.playerScores[key];
+      const score = Math.max(0, entry ? entry.score : 0);
+      if (score <= 0) return;
+      const share = round1(pool * (score / totalScore));
+      if (share <= 0) return;
+      awardCustomPoints(io, gameState, p, Math.round(share * 10), share);
+      distributed += share;
+    });
+
+    awardPoints(io, gameState, actor, "hr_distributeBonus");
+    adjustMorale(gameState, 5);
+    io.to("access:hr").emit("hr:update", gameState.hr);
+    pushActivity(gameState, {
+      actorPlayerId: actor.id,
+      page: "hr",
+      text: actor.fullName + " a lancé une répartition automatique du bonus pool (" + round1(distributed) + " M$, au prorata du score)."
+    });
+    io.to("game").emit("activity:update", gameState.activityLog[0]);
+  });
+
+  // HR-1 Organigramme & RH Core -- promotion: bumps grade one step up GRADES,
+  // which raises baseSalary by the formula above (the real "hausse de salaire de
+  // base" cost) and boosts satisfaction. Access/cluster/isHeadOfCIB are all
+  // recomputed since crossing the Managing Director threshold (hasFullAccess) or
+  // becoming a CIB Director changes what pages/rooms the player should have.
+  socket.on("hr:promotePlayer", payload => {
+    if (!requireAccess(socket, "hr")) return;
+    const actor = gameState.players.find(p => p.id === socket.data.playerId);
+    const target = gameState.players.find(p => p.id === payload.playerId);
+    if (!actor || !target) return;
+    const currentIdx = GRADES.indexOf(target.grade);
+    if (currentIdx === -1 || currentIdx >= GRADES.length - 1) return;
+
+    const oldAccess = target.access.slice();
+    const oldGrade = target.grade;
+    const oldSalary = target.baseSalary;
+    target.grade = GRADES[currentIdx + 1];
+    target.baseSalary = computeBaseSalary(target.grade);
+    target.access = getAccessForPosition(target.dept, target.grade);
+    target.hasFullAccess = hasFullAccess(target.dept, target.grade);
+    target.cluster = getClusterForPosition(target.dept, target.grade);
+    target.isHeadOfCIB = isHeadOfCIB(target);
+    resyncPlayerAccessRooms(io, target, oldAccess);
+    adjustSatisfaction(io, gameState, target, 15);
+
+    pushActivity(gameState, {
+      actorPlayerId: actor.id,
+      page: "hr",
+      text: actor.fullName + " a promu " + target.fullName + " : " + oldGrade + " → " + target.grade + " (salaire " + oldSalary + " → " + target.baseSalary + " M$/an)."
+    });
+    io.to("game").emit("activity:update", gameState.activityLog[0]);
+    io.to("game").emit("roster:update", { players: buildPublicRoster(gameState) });
+    const targetSocket = io.sockets.sockets.get(target.socketId);
+    if (targetSocket) targetSocket.emit("hr:youWerePromoted", { player: target });
+  });
+
+  // Desk reassignment -- moves a connected player to a different department
+  // (and therefore cluster/desk: M&A, Trading, Risk, etc.), same access resync
+  // as promotion.
+  socket.on("hr:reassignDesk", payload => {
+    if (!requireAccess(socket, "hr")) return;
+    const actor = gameState.players.find(p => p.id === socket.data.playerId);
+    const target = gameState.players.find(p => p.id === payload.playerId);
+    if (!actor || !target || !DEPARTMENTS.includes(payload.newDept)) return;
+    if (target.dept === payload.newDept) return;
+
+    const oldAccess = target.access.slice();
+    const oldDept = target.dept;
+    target.dept = payload.newDept;
+    target.access = getAccessForPosition(target.dept, target.grade);
+    target.hasFullAccess = hasFullAccess(target.dept, target.grade);
+    target.cluster = getClusterForPosition(target.dept, target.grade);
+    target.isHeadOfCIB = isHeadOfCIB(target);
+    resyncPlayerAccessRooms(io, target, oldAccess);
+
+    pushActivity(gameState, {
+      actorPlayerId: actor.id,
+      page: "hr",
+      text: actor.fullName + " a réaffecté " + target.fullName + " : " + oldDept + " → " + target.dept + "."
+    });
+    io.to("game").emit("activity:update", gameState.activityLog[0]);
+    io.to("game").emit("roster:update", { players: buildPublicRoster(gameState) });
+    const targetSocket = io.sockets.sockets.get(target.socketId);
+    if (targetSocket) targetSocket.emit("hr:youWereReassigned", { player: target });
+  });
 }
 
 module.exports = {
@@ -230,5 +400,10 @@ module.exports = {
   hrRosterView,
   approveRandomLeaveRequest,
   openPosition,
-  adjustMorale
+  adjustMorale,
+  computeBaseSalary,
+  computeMonthlyPayroll,
+  runPayrollDeduction,
+  SALARY_BASE,
+  SALARY_PER_GRADE_STEP
 };

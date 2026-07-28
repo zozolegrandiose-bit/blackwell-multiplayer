@@ -1,5 +1,66 @@
 # Journal des mises à jour
 
+## Patch 17 — Refonte RH complète, Pitchbook, Produits Structurés, Illiquidité interbancaire & Workspace modulable (2026-07-28)
+
+### Ajouts
+- **👥 Refonte RH complète**, en 6 volets :
+  - **Organigramme & RH Core** : promotions (grade supérieur, salaire de base recalculé selon un barème par grade, satisfaction en hausse) et réaffectation d'un collaborateur à un autre desk (M&A, Trading, Gestion de Fortune, Risk, Finance, RH) — l'accès aux pages et les rooms Socket.io se resynchronisent instantanément.
+  - **Mercato & Recrutement** : chaque talent rival a désormais une loyauté ; sous 40%, une offre est provisoirement acceptée et ouvre une fenêtre de 60 secondes pendant laquelle la banque d'origine peut contre-offrir pour le retenir.
+  - **Compensation & Bonus Pool** : répartition automatique du bonus pool au prorata du score (en plus de la répartition manuelle existante), et masse salariale mensuelle (salaires de base des joueurs connectés) désormais prélevée sur le résultat net à chaque clôture de journée de marché.
+  - **Performance & Formation** : chaque deal exécuté augmente le stress des 3 rôles impliqués ; un collaborateur peut être envoyé en sabbatique/formation pour faire retomber son stress et progresser en compétence.
+  - **Climat Social & Démissions** : stress ≥ 85% déclenche un burn-out (arrêt de travail forcé) ; satisfaction < 30% déclenche une demande d'augmentation (accordable par la RH) ; satisfaction critique garde un vrai risque de démission sèche (mécanique déjà existante, désormais reliée à ce climat social élargi).
+  - **Discipline & Compliance** : une alerte de conformité ciblant nommément un collaborateur (ex. délit d'initié) permet à la RH de le suspendre temporairement, lui donner un blâme, ou le licencier pour faute grave.
+- **🏛 Board of Directors & Activist Shareholders** : le Conseil d'Administration IA évalue la performance du Head of CIB à chaque clôture de journée de marché ; après plusieurs périodes consécutives de résultat non positif, il vote son renvoi et nomme aussitôt un(e) autre collaborateur/trice éligible si possible.
+- **📋 Pitchbook Competition** : un client IA met régulièrement un mandat M&A en concurrence entre banques (3 minutes pour soumettre une offre chiffrée). Le client arbitre entre commission et crédibilité — cette dernière directement dérivée de la note de crédit (Rating Agency, Patch 16). Une victoire crée un vrai deal M&A dans le pipeline.
+- **🧩 Produits Structurés & Swaps** : des clients corporate générés par l'IA ont ponctuellement besoin d'une couverture sur-mesure (taux, change, matières premières, crédit) ; le Desk Marchés leur packages un swap/collar/option — une structure bien adaptée à l'exposition rapporte nettement plus qu'un choix approximatif.
+- **🚫 Refus de Prêt Interbancaire & Illiquidité** : si la santé de la banque tombe sous 35%, les banques rivales coupent leurs lignes de crédit Repo — le Desk Marchés ne peut plus ouvrir de nouvelles positions. L'accès revient naturellement au-dessus de 55% de santé, ou immédiatement via le guichet d'urgence de la Banque Centrale (Board Of Directors uniquement), à un vrai coût en résultat net et en santé.
+- **🧩 Workspace modulable** : sur Vue d'ensemble, un nouveau panneau permet d'afficher, masquer et réorganiser (haut/bas) les panneaux informatifs (League Table, Chat d'équipe, Priorités, Hall of Fame…) — préférence locale au navigateur.
+- Règlement enrichi avec toutes les mécaniques ci-dessus, ainsi que celles du Patch 16 (Dark Pool, IPO, Rating Agency, Bonus Pool CIB, Terminal Chat) qui n'y avaient pas encore été documentées.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- `server/gameState.js` : nouveau `buildPublicRoster()` centralisé (satisfaction, stress, loyauté, compétence, salaire, sabbatique/arrêt/suspension) — évite un cycle de dépendances entre `server/handlers/hr.js`, `server/satisfaction.js` et `server/handlers/join.js`.
+- `server/rooms.js` : le player gagne à la connexion `baseSalary`, `stress`, `loyalty`, `skillRating`, `onSabbatical`, `onSickLeave`, `raiseRequested`, `onSuspension`, `isHeadOfCIB` (précalculé plutôt que dupliqué côté client).
+- `server/talentManagement.js`, `server/socialClimat.js`, `server/complianceHR.js` (nouveaux) : chacun a sa propre boucle indépendante (5-8s) — les sabbatiques/burn-out/suspensions durent 2-5 minutes, bien plus courtes que le cycle de 15 minutes de la journée de marché, donc impossible de les rattacher à `settleMarketDay()` comme la paie ou la Rating Agency.
+- `server/boardOfDirectors.js` (nouveau) : distingue `player.isHeadOfCIB` (permission d'accès générique) de `gameState.cibLeadership` (l'office formel unique que le Conseil attribue et peut vacater).
+- `server/pitchbook.js`, `server/structuredProducts.js`, `server/interbank.js` (nouveaux) : suivent la même convention spawn/sweep en boucles indépendantes que le reste du jeu.
+
+---
+
+## Patch 16 — Dark Pool, IPO, Rating Agency, Bonus Pool CIB, Terminal Chat & Board Of Directors (2026-07-28)
+
+### Ajouts
+- **🌑 Dark Pool** : le Desk Marchés peut désormais passer des ordres anonymes de gros volume (≥ 300 M$) qui n'affectent pas le prix affiché. Sous quelques secondes, une banque rivale peut anonymement en prendre l'autre côté OTC — un match donne un petit gain garanti (position évitée sur le marché ouvert), sans contrepartie ni coût en cas d'expiration.
+- **📈 Système d'IPO** : les banques concourent pour le mandat d'introduction en bourse d'une entreprise cliente (soumission d'un pitch sous 45s). La banque gagnante fixe le prix puis collecte les intentions d'achat des joueurs et d'investisseurs institutionnels simulés avant la mise en cotation — une sursouscription forte fait bondir le cours, un prix mal calibré le fait chuter. Frais d'introduction encaissés dans tous les cas d'exécution réussie.
+- **📐 Rating Agency** : un agent autonome calcule à chaque clôture de journée de marché le ratio de solvabilité et de liquidité de Blackwell & Co pour ajuster sa note de crédit (AAA à D) — visible dans le classement des banques. La note impacte désormais directement le coût des emprunts : elle multiplie le résultat net réellement encaissé sur chaque exécution de deal, jusqu'à +15% en AAA et -65% en D.
+- **💼 Bonus Pool CIB** : une enveloppe spécifique au Dealmaking (cluster A) s'accumule automatiquement à chaque clôture de journée (6% du résultat net positif du jour). Seul un Head of CIB (Director ou grade supérieur au sein du Dealmaking) peut la répartir entre son équipe — joueurs et postes non pourvus (« Équipe IA »).
+- **😊 Satisfaction & démission** : chaque joueur a désormais une satisfaction individuelle, influencée par les primes reçues, les décisions de congés et les sanctions Compliance. En cas de satisfaction critique, un joueur risque réellement de démissionner à la clôture d'une journée de marché — son poste redevient vacant, sans déconnexion brutale (retour à l'écran de connexion).
+- **💻 Terminal Chat**, nouvelle page accessible à tous, style Bloomberg/Slack : canal News (le fil d'équipe existant), canal Deals (commentaires IA en continu sur les deals en cours) et messagerie privée instantanée entre joueurs.
+- **🏛 Panel Board Of Directors** : un tableau de bord exécutif sur le Comité de Direction agrégeant la note de crédit, l'enveloppe CIB, l'activité Dark Pool, le statut IPO en cours et les collaborateurs à risque de démission.
+- Passe d'amélioration esthétique : traitement de focus cohérent sur tous les champs de saisie du site (y compris les nouveaux panels), défilement personnalisé sur les écrans du Terminal Chat.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- **Le Comité de Direction (page Stratégie) est désormais réservé exclusivement au département Board Of Directors** (tous grades confondus) — un Managing Director ou Director d'un autre département, qui y avait accès depuis les patchs précédents, ne le voit plus du tout. Cette règle ne s'applique qu'à cette page ; les autres privilèges liés au grade (bouton « Nouvelle partie », etc.) sont inchangés.
+
+### Notes techniques
+- **Renommage** : le département « Direction Générale » est renommé « Board Of Directors » dans tout le code et l'interface (clé de `DEPARTMENT_CLUSTER`, libellés client, textes). `hasStrategyAccess(dept)` ne dépend plus du grade — uniquement du département — et `getAccessForPosition()` retire explicitement « strategy » de la liste complète accordée par grade (`hasFullAccess`) quand le département n'est pas Board Of Directors.
+- `server/ratingAgency.js` (nouveau) : `computeBlackwellRating()` (solvabilité/liquidité réelles) et `computeRivalRating()` (nudge d'une note selon la tendance de P&L) sont des fonctions pures testées indépendamment ; `getBorrowingCostMultiplier()` est consommé par `server/handlers/dealWorkflow.js` sur les deux chemins d'exécution (direct et syndiqué).
+- `server/satisfaction.js` (nouveau) : évite délibérément d'importer `publicRoster` de `server/handlers/join.js` (qui importe déjà `server/handlers/hr.js`, lui-même désormais consommateur de `adjustSatisfaction`) — un import circulaire a été détecté et contourné en dupliquant la sérialisation minimale du roster plutôt qu'en la partageant.
+- `server/cibBonus.js` (nouveau) : `player.isHeadOfCIB` est précalculé côté serveur à la connexion (`server/rooms.js`) plutôt que dupliqué côté client.
+- `server/handlers/markets.js` : le Dark Pool est distinct de `markets:buy`/`markets:sell` — aucune position n'est ouverte, le résultat (gain ou expiration) est réglé immédiatement via sa propre boucle de balayage.
+- `server/ipo.js` (nouveau) : `resolveBidding()`/`resolveListing()` sont testées unitairement avec `Math.random` maîtrisé pour couvrir victoire/défaite du mandat et sursouscription/flop à la cotation.
+- `server/terminal.js` (nouveau) : le canal « News » réutilise directement `gameState.teamChat` plutôt que de le dupliquer.
+
+---
+
 ## Patch 15 — Crise Majeure, Mercato, Syndication inter-banques, Information Privilégiée & Règlement (2026-07-27)
 
 ### Ajouts

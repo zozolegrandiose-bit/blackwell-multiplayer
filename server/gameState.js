@@ -59,7 +59,7 @@ function createGameState() {
         valuation: 450, synergies: 22, leadBankerPlayerId: null, leadBankerName: "Poste vacant",
         description: "Étude d'un rapprochement stratégique entre Cobalt Ridge Capital et un fonds concurrent.",
         ddChecklist: [{ item: "Audit financier", done: true }, { item: "Audit juridique", done: false }],
-        icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: false }, { item: "Validation Direction Générale", done: false }],
+        icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: false }, { item: "Validation Board Of Directors", done: false }],
         createdByPlayerId: null, updatedAt: now, revenueBooked: false, workflow: null
       },
       {
@@ -67,7 +67,7 @@ function createGameState() {
         valuation: 600, synergies: 0, leadBankerPlayerId: null, leadBankerName: "Poste vacant",
         description: "Étude préliminaire d'une introduction en bourse.",
         ddChecklist: [{ item: "Étude de faisabilité marché", done: true }, { item: "Revue de conformité préalable", done: false }],
-        icVote: [{ item: "Validation Risques", done: false }, { item: "Validation Juridique", done: false }, { item: "Validation Direction Générale", done: false }],
+        icVote: [{ item: "Validation Risques", done: false }, { item: "Validation Juridique", done: false }, { item: "Validation Board Of Directors", done: false }],
         createdByPlayerId: null, updatedAt: now, revenueBooked: false, workflow: null
       },
       {
@@ -75,7 +75,7 @@ function createGameState() {
         valuation: 320, synergies: 8, leadBankerPlayerId: null, leadBankerName: "Poste vacant",
         description: "Refinancement de la dette senior de Vantage Industrial Holdings.",
         ddChecklist: [{ item: "Audit financier", done: true }, { item: "Audit juridique", done: true }],
-        icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: true }, { item: "Validation Direction Générale", done: false }],
+        icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: true }, { item: "Validation Board Of Directors", done: false }],
         createdByPlayerId: null, updatedAt: now - 2 * 86400000, revenueBooked: false, workflow: null
       },
       {
@@ -83,7 +83,7 @@ function createGameState() {
         valuation: 275, synergies: 0, leadBankerPlayerId: null, leadBankerName: "Poste vacant",
         description: "Cession de la branche midstream de Cascade Energy Partners.",
         ddChecklist: [{ item: "Audit financier", done: true }, { item: "Audit juridique", done: true }],
-        icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: true }, { item: "Validation Direction Générale", done: true }],
+        icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: true }, { item: "Validation Board Of Directors", done: true }],
         createdByPlayerId: null, updatedAt: now - 1 * 86400000, revenueBooked: false, workflow: null
       },
       {
@@ -91,7 +91,7 @@ function createGameState() {
         valuation: 380, synergies: 15, leadBankerPlayerId: null, leadBankerName: "Équipe historique",
         description: "Opération clôturée sous la direction précédente — fait partie du palmarès repris.",
         ddChecklist: [{ item: "Audit financier", done: true }, { item: "Audit juridique", done: true }],
-        icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: true }, { item: "Validation Direction Générale", done: true }],
+        icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: true }, { item: "Validation Board Of Directors", done: true }],
         createdByPlayerId: null, updatedAt: now - 60 * 86400000, revenueBooked: true, workflow: null
       },
       {
@@ -99,7 +99,7 @@ function createGameState() {
         valuation: 510, synergies: 0, leadBankerPlayerId: null, leadBankerName: "Équipe historique",
         description: "Opération clôturée sous la direction précédente — fait partie du palmarès repris.",
         ddChecklist: [{ item: "Audit financier", done: true }, { item: "Audit juridique", done: true }],
-        icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: true }, { item: "Validation Direction Générale", done: true }],
+        icVote: [{ item: "Validation Risques", done: true }, { item: "Validation Juridique", done: true }, { item: "Validation Board Of Directors", done: true }],
         createdByPlayerId: null, updatedAt: now - 35 * 86400000, revenueBooked: true, workflow: null
       },
       {
@@ -107,7 +107,7 @@ function createGameState() {
         valuation: 190, synergies: 0, leadBankerPlayerId: null, leadBankerName: "Poste vacant",
         description: "Étude préliminaire d'une levée de série C pour Aurora Biotech Ventures.",
         ddChecklist: [{ item: "Étude de faisabilité marché", done: false }, { item: "Revue de conformité préalable", done: false }],
-        icVote: [{ item: "Validation Risques", done: false }, { item: "Validation Juridique", done: false }, { item: "Validation Direction Générale", done: false }],
+        icVote: [{ item: "Validation Risques", done: false }, { item: "Validation Juridique", done: false }, { item: "Validation Board Of Directors", done: false }],
         createdByPlayerId: null, updatedAt: now, revenueBooked: false, workflow: null
       }
     ],
@@ -235,7 +235,7 @@ function createGameState() {
       capitalRatio: Math.round((18000 / 145000) * 1000) / 10,
       esgScore: 60,
       // Deliberately over-allocated vs budgetPool.total (568) by 232 M$ — the new
-      // Direction Générale inherits a cost structure already running over, a
+      // Board Of Directors inherits a cost structure already running over, a
       // concrete first priority rather than a clean slate.
       budgetPool: { total: Math.round(1420 * 0.4), allocated: 800 },
       lastDividendQuarter: 0,
@@ -249,7 +249,7 @@ function createGameState() {
         { dept: "Ressources Humaines", budget: 25, actual: 24 },
         { dept: "Marchés Financiers", budget: 150, actual: 158 },
         { dept: "Gestion d'Actifs", budget: 60, actual: 55 },
-        { dept: "Direction Générale", budget: 35, actual: 33 }
+        { dept: "Board Of Directors", budget: 35, actual: 33 }
       ]
     },
     activityLog: [],
@@ -274,7 +274,8 @@ function createGameState() {
       positions: [],
       cash: 8000,
       realizedPnL: 0,
-      tradeLog: []
+      tradeLog: [],
+      darkPoolOrders: []
     },
     directive: null,
     liveEvents: [],
@@ -298,36 +299,68 @@ function createGameState() {
       dayNumber: 1,
       deadline: null,
       dayStartNetIncome: 108,
-      dayStartScores: {}
+      dayStartScores: {},
+      dayStartLeagueTable: { "Blackwell & Co Capital": 7.1, "Ashford & Vane": 0, "Northfield Partners": 0, "Meridian Capital Group": 0, "Solenne & Rocher": 0, "Ironhall Securities": 0 }
+    },
+    // Rating Agency (server/ratingAgency.js) -- one entry per bank in leagueTable,
+    // recomputed at every market day settlement. Blackwell & Co's own rating is a
+    // real solvency/liquidity calculation off financeKPIs/markets; rival banks get a
+    // lighter pnl-trend nudge, consistent with how they're NPC/flavor entities
+    // everywhere else (rivalTalent, league table).
+    creditRatings: {
+      "Blackwell & Co Capital": { rating: "BBB", solvencyRatio: 12.4, liquidityRatio: 5.5, updatedAt: now },
+      "Ashford & Vane": { rating: "A", solvencyRatio: null, liquidityRatio: null, updatedAt: now },
+      "Northfield Partners": { rating: "A", solvencyRatio: null, liquidityRatio: null, updatedAt: now },
+      "Meridian Capital Group": { rating: "A", solvencyRatio: null, liquidityRatio: null, updatedAt: now },
+      "Solenne & Rocher": { rating: "A", solvencyRatio: null, liquidityRatio: null, updatedAt: now },
+      "Ironhall Securities": { rating: "A", solvencyRatio: null, liquidityRatio: null, updatedAt: now }
     },
     warRoom: null,
     // Mercato Inter-Banques — a lightweight NPC talent pool per rival bank (same 5
     // names as the league table / Patch 12's stalled-deal competitors), browsable
     // by HR/Direction to make poaching offers against. Not simulated employees
     // doing real work elsewhere — just enough to make the mercato mechanic real.
+    // loyalty (0-100): below 40, server/mercato.js's HR-2 loyalty-gated flow lets
+    // an offer near-instantly land, opening a 60s window for the origin bank to
+    // counter, instead of the flat probabilistic roll used at/above 40.
     rivalTalent: {
       "Ashford & Vane": [
-        { id: "rt1", name: "Julien Ferrand", role: "Head of Trading", skillRating: 82, currentSalary: 18 },
-        { id: "rt2", name: "Camille Roussel", role: "Senior M&A Banker", skillRating: 75, currentSalary: 14 }
+        { id: "rt1", name: "Julien Ferrand", role: "Head of Trading", skillRating: 82, currentSalary: 18, loyalty: 62 },
+        { id: "rt2", name: "Camille Roussel", role: "Senior M&A Banker", skillRating: 75, currentSalary: 14, loyalty: 32 }
       ],
       "Northfield Partners": [
-        { id: "rt3", name: "Léa Berthier", role: "Head of Risk", skillRating: 78, currentSalary: 16 },
-        { id: "rt4", name: "Nicolas Vasseur", role: "Wealth Relationship Manager", skillRating: 70, currentSalary: 12 }
+        { id: "rt3", name: "Léa Berthier", role: "Head of Risk", skillRating: 78, currentSalary: 16, loyalty: 58 },
+        { id: "rt4", name: "Nicolas Vasseur", role: "Wealth Relationship Manager", skillRating: 70, currentSalary: 12, loyalty: 28 }
       ],
       "Meridian Capital Group": [
-        { id: "rt5", name: "Sofia Marchetti", role: "Quant Trader", skillRating: 85, currentSalary: 19 },
-        { id: "rt6", name: "Antoine Lucchesi", role: "Compliance Officer", skillRating: 68, currentSalary: 11 }
+        { id: "rt5", name: "Sofia Marchetti", role: "Quant Trader", skillRating: 85, currentSalary: 19, loyalty: 70 },
+        { id: "rt6", name: "Antoine Lucchesi", role: "Compliance Officer", skillRating: 68, currentSalary: 11, loyalty: 35 }
       ],
       "Solenne & Rocher": [
-        { id: "rt7", name: "Manon Delcroix", role: "M&A Director", skillRating: 88, currentSalary: 22 },
-        { id: "rt8", name: "Hugo Fabre", role: "HR Business Partner", skillRating: 65, currentSalary: 10 }
+        { id: "rt7", name: "Manon Delcroix", role: "M&A Director", skillRating: 88, currentSalary: 22, loyalty: 66 },
+        { id: "rt8", name: "Hugo Fabre", role: "HR Business Partner", skillRating: 65, currentSalary: 10, loyalty: 25 }
       ],
       "Ironhall Securities": [
-        { id: "rt9", name: "Chloé Renard", role: "Structuring Specialist", skillRating: 80, currentSalary: 17 },
-        { id: "rt10", name: "Mathieu Blanchard", role: "Sales Trader", skillRating: 72, currentSalary: 13 }
+        { id: "rt9", name: "Chloé Renard", role: "Structuring Specialist", skillRating: 80, currentSalary: 17, loyalty: 54 },
+        { id: "rt10", name: "Mathieu Blanchard", role: "Sales Trader", skillRating: 72, currentSalary: 13, loyalty: 38 }
       ]
     },
-    mercatoOffers: []
+    mercatoOffers: [],
+    cibBonusPool: { available: 0, periodNumber: 1, distributedLog: [] },
+    cibLeadership: { holderPlayerId: null, holderName: null, consecutiveBadCycles: 0, appointedAt: null },
+    pitchbookCompetitions: [],
+    hedgingRequests: [],
+    structuredProducts: [],
+    repoStatus: { blocked: false, blockedSince: null, emergencyFacilityUsed: 0 },
+    ipo: null,
+    // Terminal Chat -- distinct from Mail (formal, subject/body inbox): a casual
+    // Bloomberg/Slack-style component. "News" reuses gameState.teamChat directly
+    // (already aggregates every system's congrats/alert messages) rather than
+    // duplicating it; terminalDealsFeed is new ambient AI commentary specifically
+    // about deals still in progress (not the closing-moment messages teamChat
+    // already covers); terminalDMs are real-time private messages between players.
+    terminalDMs: [],
+    terminalDealsFeed: []
   };
 }
 
@@ -381,4 +414,27 @@ function resetGame(gameState) {
 
 const gameState = createGameState();
 
-module.exports = { gameState, createGameState, pushActivity, postTeamChat, recordBankPnl, resetGame };
+// Shared, dependency-free roster serialization -- lives here (not in
+// server/handlers/join.js) specifically so modules like hr.js and satisfaction.js
+// can broadcast roster:update without importing join.js, which would close a
+// require cycle (join.js already imports hr.js for hrRosterView).
+function buildPublicRoster(gameState) {
+  return gameState.players.map(p => ({
+    id: p.id,
+    fullName: p.fullName,
+    grade: p.grade,
+    dept: p.dept,
+    cluster: p.cluster,
+    satisfaction: p.satisfaction,
+    baseSalary: p.baseSalary,
+    loyalty: p.loyalty,
+    stress: p.stress,
+    skillRating: p.skillRating,
+    onSabbatical: p.onSabbatical,
+    onSickLeave: p.onSickLeave,
+    raiseRequested: p.raiseRequested,
+    onSuspension: p.onSuspension
+  }));
+}
+
+module.exports = { gameState, createGameState, pushActivity, postTeamChat, recordBankPnl, resetGame, buildPublicRoster };

@@ -2,6 +2,71 @@ const LEAVE_TYPES = ["Congés payés", "RTT", "Arrêt maladie", "Congé sans sol
 const LEAVE_STATUS_CLASS = { "En attente": "chip-warning", "Approuvé": "chip-good", "Refusé": "chip-critical" };
 const BONUS_POOL_RATE = 0.10;
 
+// One flagship department per cluster (A-F) -- lets HR move a player between
+// desks without needing the full 39-department picker; matches the user's own
+// framing of "desks" as M&A / Trading / Risk / Wealth / Finance / RH.
+const DESK_OPTIONS = [
+  { dept: "Fusions-Acquisitions (M&A)", label: "M&A" },
+  { dept: "Trading FICC", label: "Trading" },
+  { dept: "Gestion de Fortune", label: "Gestion de Fortune" },
+  { dept: "Conformité", label: "Risk / Conformité" },
+  { dept: "Trésorerie de Groupe", label: "Finance" },
+  { dept: "Ressources Humaines", label: "RH" }
+];
+
+function satisfactionMeterColor(value) {
+  if (value >= 60) return "var(--series-green)";
+  if (value >= 30) return "#f5b942";
+  return "var(--series-red)";
+}
+
+function orgChartPanelHtml() {
+  const roster = appState.players || [];
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🗂️ Organigramme</div>
+      <table class="data-table">
+        <thead><tr><th>Collaborateur</th><th>Grade</th><th>Desk</th><th>Salaire</th><th>Satisfaction</th><th>Stress</th><th>Compétence</th><th>Réaffecter</th><th></th><th></th></tr></thead>
+        <tbody>
+          ${roster.map(p => `
+            <tr>
+              <td><div class="person-row">${avatarHtml(p.fullName, 20)}<span class="person-row-name">${escapeHtml(p.fullName)}</span></div>${p.onSabbatical ? `<div style="font-size:10px; color:var(--text-muted);">🌴 En sabbatique</div>` : ""}${p.onSickLeave ? `<div style="font-size:10px; color:var(--series-red);">🤒 Arrêt (burn-out)</div>` : ""}${p.raiseRequested ? `<div style="font-size:10px; color:var(--warning);">💬 Demande d'augmentation <button data-org-grant-raise="${p.id}" class="btn-sm" style="padding:1px 6px; font-size:10px;">Accorder</button></div>` : ""}</td>
+              <td>${escapeHtml(p.grade)}</td>
+              <td>${escapeHtml(p.dept)}</td>
+              <td class="tnum">${p.baseSalary != null ? fmtMoney(p.baseSalary) + "/an" : "—"}</td>
+              <td><span class="chip" style="background:transparent; color:${satisfactionMeterColor(p.satisfaction == null ? 70 : p.satisfaction)};">${p.satisfaction == null ? "—" : p.satisfaction + "%"}</span></td>
+              <td><span class="chip" style="background:transparent; color:${(p.stress || 0) >= 85 ? "var(--series-red)" : (p.stress || 0) >= 50 ? "#f5b942" : "var(--series-green)"};">${p.stress || 0}%</span></td>
+              <td class="tnum">${p.skillRating != null ? p.skillRating : "—"}</td>
+              <td>
+                <select data-org-desk-select="${p.id}" class="btn-sm">
+                  ${DESK_OPTIONS.map(d => `<option value="${d.dept}" ${p.dept === d.dept ? "selected" : ""}>${escapeHtml(d.label)}</option>`).join("")}
+                </select>
+              </td>
+              <td><button data-org-promote="${p.id}" class="btn-sm">Promouvoir</button></td>
+              <td>${p.onSabbatical ? "—" : `<button data-org-sabbatical="${p.id}" class="btn-sm">🌴 Sabbatique</button>`}</td>
+            </tr>
+          `).join("") || `<tr><td colspan="10" class="empty-cell">Aucun collaborateur connecté.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function bindOrgChartPanel() {
+  document.querySelectorAll("[data-org-promote]").forEach(el => {
+    el.addEventListener("click", () => socket.emit("hr:promotePlayer", { playerId: el.getAttribute("data-org-promote") }));
+  });
+  document.querySelectorAll("[data-org-desk-select]").forEach(el => {
+    el.addEventListener("change", () => socket.emit("hr:reassignDesk", { playerId: el.getAttribute("data-org-desk-select"), newDept: el.value }));
+  });
+  document.querySelectorAll("[data-org-sabbatical]").forEach(el => {
+    el.addEventListener("click", () => socket.emit("hr:sendOnSabbatical", { playerId: el.getAttribute("data-org-sabbatical"), durationMs: 120000 }));
+  });
+  document.querySelectorAll("[data-org-grant-raise]").forEach(el => {
+    el.addEventListener("click", () => socket.emit("hr:grantRaise", { playerId: el.getAttribute("data-org-grant-raise"), raiseAmount: 2 }));
+  });
+}
+
 function moraleColor(morale) {
   if (morale >= 60) return "var(--series-green)";
   if (morale >= 40) return "#f5b942";
@@ -76,6 +141,7 @@ function renderHr() {
     <div class="page-title">RH</div>
     <div class="page-sub">Effectif, recrutement, moral des équipes et primes.</div>
     ${taskPanelHtml("hr")}
+    ${orgChartPanelHtml()}
     <div class="kpi-grid">
       <div class="kpi-card"><div class="kpi-label">Effectif joueurs</div><div class="kpi-value">${appState.players.length}</div></div>
       <div class="kpi-card"><div class="kpi-label">Recrues embauchées</div><div class="kpi-value">${hr.headcountNPC || 0}</div></div>
@@ -141,9 +207,11 @@ function renderHr() {
             `).join("")}
           </tbody>
         </table>
-        <button id="hr-bonus-submit" class="btn-sm" style="margin-top:10px;">Distribuer les primes</button>
+        <button id="hr-bonus-submit" class="btn-sm" style="margin-top:10px;">Distribuer manuellement</button>
+        <button id="hr-bonus-auto" class="btn-sm" style="margin-top:10px;">🤖 Répartition automatique (au prorata du score)</button>
         <div id="hr-bonus-error" class="join-error"></div>
       ` : `<div class="empty-cell">Aucun joueur connecté.</div>`}
+      ${hr.lastPayrollAmount ? `<div style="font-size:11px; color:var(--text-muted); margin-top:8px;">💸 Masse salariale mensuelle prélevée à la dernière clôture de journée : ${fmtMoney(hr.lastPayrollAmount)}</div>` : ""}
     </div>
     <div class="panel" style="margin-bottom:16px;">
       <div class="panel-title">Demander un congé</div>
@@ -227,10 +295,15 @@ function mercatoPanelHtml() {
               <div style="border:1px solid var(--border); border-radius:8px; padding:8px 10px; min-width:210px;">
                 <div style="font-weight:600; font-size:12.5px;">${escapeHtml(npc.name)}</div>
                 <div style="font-size:11px; color:var(--text-muted); margin:2px 0 6px;">${escapeHtml(npc.role)} · niveau ${npc.skillRating} · salaire actuel ${fmtMoney(npc.currentSalary)}</div>
-                <div style="display:flex; gap:6px; align-items:center;">
-                  <input data-mercato-salary-input="${bankName}|${npc.id}" type="number" step="0.5" min="${npc.currentSalary * 1.05}" placeholder="Offre (M$)" style="width:110px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:11.5px;"/>
-                  <button data-mercato-offer="${bankName}|${npc.id}" class="btn-sm">Débaucher</button>
-                </div>
+                <div style="font-size:11px; margin-bottom:6px;">Loyauté : <span style="color:${npc.loyalty < 40 ? "var(--series-red)" : "var(--series-green)"};">${npc.loyalty}%</span>${npc.loyalty < 40 ? " — cible facile" : ""}</div>
+                ${npc.pendingOffer ? `
+                  <div style="font-size:11px; color:var(--warning);">⏳ Offre de ${escapeHtml(npc.pendingOffer.byName)} (${fmtMoney(npc.pendingOffer.offeredSalary)}) — contre-offre possible sous ${Math.max(0, Math.round((npc.pendingOffer.deadline - Date.now()) / 1000))}s</div>
+                ` : `
+                  <div style="display:flex; gap:6px; align-items:center;">
+                    <input data-mercato-salary-input="${bankName}|${npc.id}" type="number" step="0.5" min="${npc.currentSalary * 1.05}" placeholder="Offre (M$)" style="width:110px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:11.5px;"/>
+                    <button data-mercato-offer="${bankName}|${npc.id}" class="btn-sm">Débaucher</button>
+                  </div>
+                `}
               </div>
             `).join("")}
           </div>
@@ -242,7 +315,7 @@ function mercatoPanelHtml() {
           <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">Dernières offres</div>
           ${offers.slice(0, 6).map(o => `
             <div style="font-size:11.5px; padding:4px 0; border-top:1px solid var(--border);">
-              ${o.success ? "✅" : "❌"} ${escapeHtml(o.byName)} → ${escapeHtml(o.npcName)} (${escapeHtml(o.bankName)}) — ${fmtMoney(o.offeredSalary)}
+              ${o.success ? "✅" : (o.countered ? "🛡️" : "❌")} ${escapeHtml(o.byName)} → ${escapeHtml(o.npcName)} (${escapeHtml(o.bankName)}) — ${fmtMoney(o.offeredSalary)}${o.countered ? " (contre-offre réussie, cible retenue)" : ""}
             </div>
           `).join("")}
         </div>
@@ -310,8 +383,11 @@ function bindHr() {
     });
     socket.emit("hr:distributeBonus", { allocations });
   });
+  const autoBonusBtn = document.getElementById("hr-bonus-auto");
+  if (autoBonusBtn) autoBonusBtn.addEventListener("click", () => socket.emit("hr:autoDistributeBonus"));
   bindTaskPanel();
   bindMercatoPanel();
+  bindOrgChartPanel();
 }
 
 PAGE_RENDERERS.hr = renderHr;

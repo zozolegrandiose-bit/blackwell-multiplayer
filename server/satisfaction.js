@@ -4,25 +4,15 @@
 // market day settlement (the natural "end of period" review point already in this
 // codebase): a critically dissatisfied player has a real chance of resigning,
 // losing their seat and having to rejoin from scratch.
-const { pushActivity, postTeamChat } = require("./gameState");
+const { pushActivity, postTeamChat, buildPublicRoster } = require("./gameState");
 
 const RESIGNATION_THRESHOLD = 20;
 const RESIGNATION_PROBABILITY = 0.3;
 
-// Deliberately NOT importing publicRoster from ./handlers/join here: join.js
-// already requires ./handlers/hr (for hrRosterView), and hr.js needs to call
-// adjustSatisfaction on leave decisions -- importing join.js from this module
-// would close a require cycle (hr.js -> satisfaction.js -> join.js -> hr.js).
-// The roster shape is tiny and stable enough that duplicating it here is simpler
-// and safer than restructuring three files to share it.
-function rosterSnapshot(gameState) {
-  return gameState.players.map(p => ({ id: p.id, fullName: p.fullName, grade: p.grade, dept: p.dept, cluster: p.cluster, satisfaction: p.satisfaction }));
-}
-
 function adjustSatisfaction(io, gameState, player, delta) {
   if (!player) return;
   player.satisfaction = Math.max(0, Math.min(100, Math.round((player.satisfaction == null ? 70 : player.satisfaction) + delta)));
-  io.to("game").emit("roster:update", { players: rosterSnapshot(gameState) });
+  io.to("game").emit("roster:update", { players: buildPublicRoster(gameState) });
 }
 
 // Called from settleMarketDay() -- each critically dissatisfied player independently
@@ -46,7 +36,7 @@ function sweepResignations(io, gameState) {
       tone: "alert"
     });
     io.to("game").emit("teamChat:update", gameState.teamChat[0]);
-    io.to("game").emit("roster:update", { players: rosterSnapshot(gameState) });
+    io.to("game").emit("roster:update", { players: buildPublicRoster(gameState) });
 
     const resignedSocket = io.sockets.sockets.get(player.socketId);
     if (resignedSocket) {

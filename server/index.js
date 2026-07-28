@@ -23,7 +23,16 @@ const { registerLiveEventsHandlers, startLiveEventsLoop } = require("./liveEvent
 const { registerDealWorkflowHandlers, startDealWorkflowLoop } = require("./handlers/dealWorkflow");
 const { startMarketDayLoop } = require("./marketDay");
 const { registerWarRoomHandlers, startWarRoomLoop } = require("./warRoom");
-const { registerMercatoHandlers } = require("./mercato");
+const { registerMercatoHandlers, startMercatoLoop } = require("./mercato");
+const { registerCibBonusHandlers } = require("./cibBonus");
+const { registerIpoHandlers, startIpoLoop } = require("./ipo");
+const { registerTerminalHandlers, startTerminalLoop } = require("./terminal");
+const { registerTalentManagementHandlers, startTalentManagementLoop } = require("./talentManagement");
+const { registerSocialClimatHandlers, startSocialClimatLoop } = require("./socialClimat");
+const { registerComplianceHRHandlers, startComplianceHRLoop } = require("./complianceHR");
+const { registerPitchbookHandlers, startPitchbookLoop } = require("./pitchbook");
+const { registerStructuredProductsHandlers, startStructuredProductsLoop } = require("./structuredProducts");
+const { registerInterbankHandlers, startInterbankLoop } = require("./interbank");
 
 const app = express();
 const httpServer = createServer(app);
@@ -51,6 +60,15 @@ io.on("connection", socket => {
   registerDealWorkflowHandlers(io, socket, gameState);
   registerWarRoomHandlers(io, socket, gameState);
   registerMercatoHandlers(io, socket, gameState);
+  registerCibBonusHandlers(io, socket, gameState);
+  registerIpoHandlers(io, socket, gameState);
+  registerTerminalHandlers(io, socket, gameState);
+  registerTalentManagementHandlers(io, socket, gameState);
+  registerSocialClimatHandlers(io, socket, gameState);
+  registerComplianceHRHandlers(io, socket, gameState);
+  registerPitchbookHandlers(io, socket, gameState);
+  registerStructuredProductsHandlers(io, socket, gameState);
+  registerInterbankHandlers(io, socket, gameState);
 });
 
 startAiLoop(io, gameState);
@@ -64,6 +82,15 @@ startLiveEventsLoop(io, gameState);
 startDealWorkflowLoop(io, gameState);
 startMarketDayLoop(io, gameState);
 startWarRoomLoop(io, gameState);
+startMercatoLoop(io, gameState);
+startIpoLoop(io, gameState);
+startTerminalLoop(io, gameState);
+startTalentManagementLoop(io, gameState);
+startSocialClimatLoop(io, gameState);
+startComplianceHRLoop(io, gameState);
+startPitchbookLoop(io, gameState);
+startStructuredProductsLoop(io, gameState);
+startInterbankLoop(io, gameState);
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {

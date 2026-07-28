@@ -27,6 +27,8 @@ const appState = {
   paused: false,
   difficulty: "standard",
   markets: { instruments: [], positions: [], cash: 0, realizedPnL: 0, tradeLog: [] },
+  hedgingRequests: [],
+  structuredProducts: [],
   directive: null,
   liveEvents: [],
   executedWorkflows: [],
@@ -34,8 +36,16 @@ const appState = {
   leagueTable: {},
   marketDay: { dayNumber: 1, deadline: null },
   warRoom: null,
+  repoStatus: { blocked: false, blockedSince: null, emergencyFacilityUsed: 0 },
   rivalTalent: null,
-  mercatoOffers: []
+  mercatoOffers: [],
+  creditRatings: {},
+  cibBonusPool: { available: 0, periodNumber: 1, distributedLog: [] },
+  cibLeadership: { holderPlayerId: null, holderName: null, consecutiveBadCycles: 0, appointedAt: null },
+  pitchbookCompetitions: [],
+  ipo: null,
+  terminalDMs: [],
+  terminalDealsFeed: []
 };
 
 const PAGE_RENDERERS = {};
@@ -215,6 +225,12 @@ function renderApp() {
             <div>📢 <b>Priorité de la direction : ${escapeHtml((typeof OVERVIEW_CLUSTER_LABELS !== "undefined" && OVERVIEW_CLUSTER_LABELS[appState.directive.cluster]) || appState.directive.cluster)}</b> — +50% de points pour ce département tant que la directive tient.</div>
           </div>
         ` : ""}
+        ${appState.repoStatus && appState.repoStatus.blocked ? `
+          <div class="bankruptcy-banner">
+            <div>🚫 <b>Marché interbancaire fermé.</b> Les lignes de crédit Repo sont coupées — le Desk Marchés ne peut plus ouvrir de nouvelles positions, jusqu'à ce que la santé de la banque remonte ou que la Banque Centrale intervienne.</div>
+            ${player.hasFullAccess ? `<button id="btn-central-bank-facility" class="btn-sm">🏦 Guichet d'urgence (coût réel)</button>` : ""}
+          </div>
+        ` : ""}
         ${appState.paused ? `
           <div class="event-banner">
             <div>⏸ <b>Partie en pause.</b> Toutes les mécaniques temporisées sont figées${player.hasFullAccess ? " — utilisez le panneau GM sur Comité de Direction pour reprendre." : "."}</div>
@@ -223,12 +239,12 @@ function renderApp() {
         ${appState.victory ? `
           <div class="victory-banner">
             <div>🎉 <b>Victoire !</b> L'objectif de ${fmtMoney(appState.campaignGoal.targetAUM)} d'AUM est atteint.</div>
-            ${player.hasFullAccess ? `<button id="btn-game-reset" class="btn-sm">Nouvelle partie</button>` : `<span style="font-size:11.5px; color:var(--text-muted);">Seule la Direction Générale peut relancer une partie.</span>`}
+            ${player.hasFullAccess ? `<button id="btn-game-reset" class="btn-sm">Nouvelle partie</button>` : `<span style="font-size:11.5px; color:var(--text-muted);">Seul le Board Of Directors peut relancer une partie.</span>`}
           </div>
         ` : appState.bankrupt ? `
           <div class="bankruptcy-banner">
             <div>💥 <b>Faillite de la banque.</b> La santé de la banque est tombée à zéro — la partie est terminée.</div>
-            ${player.hasFullAccess ? `<button id="btn-game-reset" class="btn-sm">Nouvelle partie</button>` : `<span style="font-size:11.5px; color:var(--text-muted);">Seule la Direction Générale peut relancer une partie.</span>`}
+            ${player.hasFullAccess ? `<button id="btn-game-reset" class="btn-sm">Nouvelle partie</button>` : `<span style="font-size:11.5px; color:var(--text-muted);">Seul le Board Of Directors peut relancer une partie.</span>`}
           </div>
         ` : ""}
         ${(appState.activeEvents || []).map(ev => `
@@ -250,6 +266,8 @@ function bindApp() {
   });
   const resetBtn = document.getElementById("btn-game-reset");
   if (resetBtn) resetBtn.addEventListener("click", () => socket.emit("game:requestReset"));
+  const centralBankBtn = document.getElementById("btn-central-bank-facility");
+  if (centralBankBtn) centralBankBtn.addEventListener("click", () => socket.emit("game:useCentralBankFacility"));
   const binder = PAGE_BINDERS[appState.currentPage];
   if (binder) binder();
 }

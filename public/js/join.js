@@ -98,6 +98,71 @@ socket.on("join:success", data => {
   initApp(data.player, data.snapshot);
 });
 
+// Resigning (server/satisfaction.js's sweepResignations) frees the slot but keeps
+// the socket connected -- send the player back to the join screen instead of a
+// hard disconnect, same "resync without disconnect" spirit as game:reset.
+socket.on("game:youResigned", data => {
+  window.currentPlayer = null;
+  socket.emit("join:request");
+  notify("🚪 " + data.reason);
+});
+
+// Promotion/reassignment (server/handlers/hr.js) can change grade/dept/cluster/
+// access all at once -- simplest to just replace appState.player wholesale with
+// the fresh copy the server sends, then re-render (nav depends on access).
+socket.on("hr:youWerePromoted", data => {
+  if (!window.currentPlayer) return;
+  window.currentPlayer = data.player;
+  appState.player = data.player;
+  notify("⬆️ Promotion : " + data.player.grade + " (" + fmtMoney(data.player.baseSalary) + "/an).");
+  renderApp();
+});
+
+socket.on("hr:youWereReassigned", data => {
+  if (!window.currentPlayer) return;
+  window.currentPlayer = data.player;
+  appState.player = data.player;
+  if (!visibleNav(data.player).some(item => item.id === appState.currentPage)) {
+    appState.currentPage = visibleNav(data.player)[0] ? visibleNav(data.player)[0].id : "overview";
+  }
+  notify("🔀 Réaffecté(e) : " + data.player.dept + ".");
+  renderApp();
+});
+
+socket.on("hr:sabbaticalStarted", () => {
+  notify("🌴 Vous êtes envoyé(e) en sabbatique / formation — stress en baisse.");
+});
+
+socket.on("hr:sabbaticalEnded", data => {
+  notify("🌴 Retour de sabbatique — compétence désormais à " + data.newSkillRating + ".");
+});
+
+socket.on("hr:burnout", () => {
+  notify("🤒 Burn-out — vous êtes en arrêt de travail forcé, votre stress était trop élevé.");
+});
+
+socket.on("hr:backFromLeave", () => {
+  notify("✅ Vous reprenez le travail après votre arrêt.");
+});
+
+socket.on("hr:raiseGranted", data => {
+  notify("💬 Augmentation accordée — nouveau salaire : " + fmtMoney(data.newSalary) + "/an.");
+});
+
+socket.on("hr:disciplined", data => {
+  if (data.action === "blame") notify("⚠️ Vous avez reçu un blâme suite à une alerte de conformité.");
+  else if (data.action === "suspend") notify("🚫 Vous êtes suspendu(e) temporairement suite à une alerte de conformité.");
+});
+
+// Termination is harsher framing than a voluntary resignation but the same
+// underlying mechanic: free the slot, send the player back to the join screen
+// without a hard disconnect.
+socket.on("game:youWereTerminated", data => {
+  window.currentPlayer = null;
+  socket.emit("join:request");
+  notify("⚖️ " + data.reason);
+});
+
 socket.on("mail:new", message => {
   if (!window.currentPlayer) return;
   appState.mail.push(message);
@@ -148,6 +213,85 @@ socket.on("warRoom:update", data => {
   if (!window.currentPlayer) return;
   appState.warRoom = data;
   renderWarRoomOverlay();
+});
+
+socket.on("terminal:dm", message => {
+  if (!window.currentPlayer) return;
+  appState.terminalDMs = [...(appState.terminalDMs || []), message];
+  if (appState.currentPage === "terminal") renderApp();
+  else if (message.fromPlayerId !== appState.player.id) notify("💬 " + message.fromName + " : " + message.body);
+});
+
+socket.on("terminal:sendDM:rejected", data => {
+  const errEl = document.getElementById("terminal-dm-error");
+  if (errEl) errEl.textContent = data.reason;
+});
+
+socket.on("terminal:dealsFeedUpdate", entry => {
+  if (!window.currentPlayer) return;
+  appState.terminalDealsFeed = [entry, ...(appState.terminalDealsFeed || [])].slice(0, 30);
+  if (appState.currentPage === "terminal") renderApp();
+});
+
+socket.on("ipo:update", data => {
+  if (!window.currentPlayer) return;
+  appState.ipo = data;
+  if (appState.currentPage === "ma") renderApp();
+});
+
+socket.on("cibBonus:update", data => {
+  if (!window.currentPlayer) return;
+  appState.cibBonusPool = data;
+  if (appState.currentPage === "ma") renderApp();
+});
+
+socket.on("boardOfDirectors:update", data => {
+  if (!window.currentPlayer) return;
+  appState.cibLeadership = data;
+  if (appState.currentPage === "ma") renderApp();
+});
+
+socket.on("board:youWereAppointed", data => {
+  notify("🏛 Le Conseil d'Administration vous nomme " + data.role + " !");
+});
+
+socket.on("board:youWereFired", data => {
+  notify("🏛 Le Conseil d'Administration vous démet de votre poste de " + data.role + ".");
+});
+
+socket.on("pitchbook:update", data => {
+  if (!window.currentPlayer) return;
+  appState.pitchbookCompetitions = data;
+  if (appState.currentPage === "ma") renderApp();
+});
+
+socket.on("pitchbook:bidRejected", data => {
+  const errEl = document.getElementById("pitchbook-error");
+  if (errEl) errEl.textContent = data.reason;
+});
+
+socket.on("repoStatus:update", data => {
+  if (!window.currentPlayer) return;
+  appState.repoStatus = data;
+  renderApp();
+});
+
+socket.on("structuredProducts:update", data => {
+  if (!window.currentPlayer) return;
+  appState.hedgingRequests = data.hedgingRequests;
+  appState.structuredProducts = data.structuredProducts;
+  if (appState.currentPage === "markets") renderApp();
+});
+
+socket.on("cib:distributeBonus:rejected", data => {
+  const errEl = document.getElementById("cib-bonus-error");
+  if (errEl) errEl.textContent = data.reason;
+});
+
+socket.on("creditRatings:update", data => {
+  if (!window.currentPlayer) return;
+  appState.creditRatings = data;
+  if (appState.currentPage === "overview") renderApp();
 });
 
 socket.on("mercato:update", data => {
@@ -246,6 +390,11 @@ socket.on("markets:buy:rejected", data => {
   if (errorEl) errorEl.textContent = data.reason;
   const insiderErrorEl = document.getElementById("insider-error");
   if (insiderErrorEl) insiderErrorEl.textContent = data.reason;
+});
+
+socket.on("markets:darkPoolOrder:rejected", data => {
+  const errEl = document.getElementById("dp-error");
+  if (errEl) errEl.textContent = data.reason;
 });
 
 socket.on("markets:insiderResult", data => {

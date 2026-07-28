@@ -58,6 +58,40 @@ function syndicatingDealsHtml() {
   `;
 }
 
+function structuredProductsPanelHtml() {
+  const requests = appState.hedgingRequests || [];
+  const products = appState.structuredProducts || [];
+  const structureOptions = ["Swap de taux", "Collar (Cap+Floor)", "Option Vanille", "Swap de devises", "Swap de matières premières"];
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🧩 Produits Structurés &amp; Swaps</div>
+      <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px;">Packagez une structure sur-mesure pour couvrir l'exposition d'un client corporate — une structure bien adaptée à l'exposition rapporte nettement plus qu'un choix approximatif.</div>
+      ${requests.length ? requests.map(r => `
+        <div style="border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div style="flex:1; min-width:180px;">
+            <div style="font-weight:600; font-size:12.5px;">${escapeHtml(r.clientName)}</div>
+            <div style="font-size:11px; color:var(--text-muted);">Exposition : ${escapeHtml(r.exposureType)} · Notionnel ${fmtMoney(r.notional)} · ⏱ ${Math.max(0, Math.round((r.deadline - Date.now()) / 1000))}s</div>
+          </div>
+          <select data-structure-select="${r.id}" class="btn-sm">
+            ${structureOptions.map(s => `<option value="${s}">${escapeHtml(s)}</option>`).join("")}
+          </select>
+          <button data-structure-submit="${r.id}" class="btn-sm">Packager</button>
+        </div>
+      `).join("") : `<div class="empty-cell">Aucune demande de couverture pour l'instant.</div>`}
+      ${products.length ? `
+        <div style="margin-top:10px;">
+          <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">Dernières structures créées</div>
+          ${products.slice(0, 6).map(p => `
+            <div style="font-size:11.5px; padding:4px 0; border-top:1px solid var(--border);">
+              ${p.matched ? "✅" : "⚠️"} ${escapeHtml(p.byName)} → ${escapeHtml(p.structureType)} pour ${escapeHtml(p.clientName)} (${escapeHtml(p.exposureType)}) — +${fmtMoney(p.fee)}
+            </div>
+          `).join("")}
+        </div>
+      ` : ""}
+    </div>
+  `;
+}
+
 // Information Privilégiée -- deals not yet public (stage !== "Clôturé") are already
 // visible here via the shared maDeals snapshot (Patch 11). Trading on them ahead of
 // the announcement is a deliberate rule-break: framed with a warning border/copy,
@@ -85,6 +119,48 @@ function insiderTradingPanelHtml() {
   `;
 }
 
+const DARK_POOL_MIN_NOTIONAL_CLIENT = 300;
+const DARK_POOL_STATUS_LABEL = { pending: "⏳ en négociation OTC", matched: "✅ exécuté", expired: "❌ expiré" };
+
+// Anonymous large-volume orders (server/handlers/markets.js's markets:placeDarkPoolOrder)
+// -- a short response window during which a rival bank may anonymously take the
+// other side OTC. Rides the same appState.markets object as everything else on
+// this page (darkPoolOrders is just another field on it), no separate socket
+// listener needed for the data itself.
+function darkPoolPanelHtml() {
+  const markets = appState.markets || {};
+  const instruments = markets.instruments || [];
+  const orders = markets.darkPoolOrders || [];
+  return `
+    <div class="panel" style="margin-bottom:16px; border-color:rgba(181,140,255,0.35);">
+      <div class="panel-title">🌑 Dark Pool <span style="font-weight:400; font-size:11px; color:var(--text-muted);">(ordres anonymes, gros volumes ≥ ${DARK_POOL_MIN_NOTIONAL_CLIENT} M$)</span></div>
+      <div style="font-size:11.5px; color:var(--text-muted); margin-bottom:10px;">Un ordre de gros volume placé ici n'affecte pas le prix affiché — une banque rivale peut anonymement en prendre l'autre côté (OTC) sous quelques secondes.</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+        <select id="dp-side"><option value="buy">Achat</option><option value="sell">Vente</option></select>
+        <select id="dp-instrument">${instruments.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join("")}</select>
+        <input id="dp-notional" type="number" step="10" min="${DARK_POOL_MIN_NOTIONAL_CLIENT}" placeholder="Notionnel (M$)" style="width:140px; padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
+        <button id="dp-submit" class="btn-sm">Soumettre l'ordre</button>
+      </div>
+      <div id="dp-error" class="join-error"></div>
+      ${orders.length ? `
+        <table class="data-table">
+          <thead><tr><th>Instrument</th><th>Sens</th><th>Notionnel</th><th>Statut</th></tr></thead>
+          <tbody>
+            ${orders.slice(0, 8).map(o => `
+              <tr>
+                <td>${escapeHtml(o.instrumentName)}</td>
+                <td>${o.side === "buy" ? "Achat" : "Vente"}</td>
+                <td class="tnum">${fmtMoney(o.notional)}</td>
+                <td>${DARK_POOL_STATUS_LABEL[o.status]}${o.status === "matched" ? ` — ${escapeHtml(o.matchedBank)} (+${o.gain} M$)` : ""}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      ` : ""}
+    </div>
+  `;
+}
+
 function renderMarkets() {
   const markets = appState.markets || { instruments: [], positions: [], cash: 0, realizedPnL: 0, tradeLog: [] };
   const instruments = markets.instruments || [];
@@ -96,7 +172,9 @@ function renderMarkets() {
     ${taskPanelHtml("markets")}
     ${executionQueueHtml()}
     ${syndicatingDealsHtml()}
+    ${structuredProductsPanelHtml()}
     ${insiderTradingPanelHtml()}
+    ${darkPoolPanelHtml()}
     <div class="kpi-grid">
       <div class="kpi-card"><div class="kpi-label">Capital disponible</div><div class="kpi-value">${fmtMoney(markets.cash)}</div></div>
       <div class="kpi-card"><div class="kpi-label">Résultat réalisé cumulé</div><div class="kpi-value">${fmtMoney(markets.realizedPnL)}</div></div>
@@ -199,6 +277,26 @@ function bindMarkets() {
         return;
       }
       socket.emit("markets:insiderTrade", { dealId, notional });
+    });
+  });
+  const dpBtn = document.getElementById("dp-submit");
+  if (dpBtn) dpBtn.addEventListener("click", () => {
+    const side = document.getElementById("dp-side").value;
+    const instrumentId = document.getElementById("dp-instrument").value;
+    const notional = Number(document.getElementById("dp-notional").value);
+    const errEl = document.getElementById("dp-error");
+    if (errEl) errEl.textContent = "";
+    if (!notional) {
+      if (errEl) errEl.textContent = "Indiquez un notionnel.";
+      return;
+    }
+    socket.emit("markets:placeDarkPoolOrder", { side, instrumentId, notional });
+  });
+  document.querySelectorAll("[data-structure-submit]").forEach(el => {
+    el.addEventListener("click", () => {
+      const requestId = el.getAttribute("data-structure-submit");
+      const select = document.querySelector(`[data-structure-select="${requestId}"]`);
+      socket.emit("markets:createStructuredProduct", { requestId, structureType: select ? select.value : null });
     });
   });
   bindTaskPanel();

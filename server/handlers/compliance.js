@@ -29,7 +29,11 @@ function progressRandomComplianceItem(io, gameState, actor) {
 
 // Reusable: mints a compliance item via the same id counter as compliance:create,
 // used by server/events.js to spawn a "Contrôle réglementaire" crisis.
-function createUrgentComplianceItem(io, gameState, flag) {
+// targetPlayerId/targetPlayerName identify the employee the alert is actually
+// about (e.g. an insider-trading catch) -- distinct from assignedTo, which is
+// whoever in Compliance is handling the case. HR-6 (server/complianceHR.js) acts
+// on this target, not on whoever gets assigned to resolve it.
+function createUrgentComplianceItem(io, gameState, flag, targetPlayerId, targetPlayerName) {
   const item = {
     id: "cp" + (nextItemId++),
     type: "Réglementaire",
@@ -40,7 +44,9 @@ function createUrgentComplianceItem(io, gameState, flag) {
     raisedByPlayerId: null,
     raisedByName: "Alerte automatique",
     assignedToPlayerId: null,
-    assignedToName: null
+    assignedToName: null,
+    targetPlayerId: targetPlayerId || null,
+    targetPlayerName: targetPlayerName || null
   };
   gameState.complianceItems.push(item);
   io.to("access:compliance").emit("compliance:update", gameState.complianceItems);

@@ -1,3 +1,112 @@
+// Workspace Modulable -- the informational/social panels on Overview (not the
+// core financial KPI grid, which stays fixed) can be shown/hidden and reordered.
+// Persisted client-side only (a display preference, not shared game state); real
+// drag-and-drop needs a live browser, so reordering is done via up/down controls
+// instead, which is fully testable and just as functional.
+const WORKSPACE_STORAGE_KEY = "blackwell_workspace_overview";
+const WORKSPACE_WIDGETS = [
+  { id: "liveEvents", label: "Événements en direct" },
+  { id: "leagueTable", label: "League Table & P&L" },
+  { id: "teamChat", label: "Chat d'équipe" },
+  { id: "priorities", label: "Priorités" },
+  { id: "executedWorkflows", label: "Deals exécutés" },
+  { id: "taskSummary", label: "Résumé des tâches" },
+  { id: "hallOfFame", label: "Hall of Fame" }
+];
+
+function getWorkspaceLayout() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(WORKSPACE_STORAGE_KEY)); } catch (e) { saved = null; }
+  const defaultOrder = WORKSPACE_WIDGETS.map(w => w.id);
+  if (!saved || !Array.isArray(saved.order)) return { order: defaultOrder, hidden: [] };
+  // Merge in any widget ids added since the layout was saved (forward-compatible).
+  const merged = saved.order.filter(id => defaultOrder.includes(id));
+  defaultOrder.forEach(id => { if (!merged.includes(id)) merged.push(id); });
+  return { order: merged, hidden: Array.isArray(saved.hidden) ? saved.hidden : [] };
+}
+
+function saveWorkspaceLayout(layout) {
+  localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(layout));
+}
+
+let workspaceEditorOpen = false;
+
+function workspaceControlsHtml() {
+  const layout = getWorkspaceLayout();
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" data-workspace-toggle="1">
+        <span>🧩 Workspace modulable</span>
+        <span style="font-size:11px; color:var(--text-muted);">${workspaceEditorOpen ? "▲ Réduire" : "▼ Personnaliser"}</span>
+      </div>
+      ${workspaceEditorOpen ? `
+        <div style="font-size:11px; color:var(--text-muted); margin:8px 0;">Affichez, masquez et réorganisez les panneaux ci-dessous — préférence locale à votre navigateur.</div>
+        ${layout.order.map((id, i) => {
+          const widget = WORKSPACE_WIDGETS.find(w => w.id === id);
+          if (!widget) return "";
+          const hidden = layout.hidden.includes(id);
+          return `
+          <div style="display:flex; align-items:center; gap:8px; padding:5px 0; border-top:1px solid var(--border);">
+            <label style="flex:1; font-size:12.5px; ${hidden ? "color:var(--text-muted);" : ""}">
+              <input type="checkbox" data-workspace-visible="${id}" ${hidden ? "" : "checked"}/> ${escapeHtml(widget.label)}
+            </label>
+            <button data-workspace-up="${id}" class="btn-sm" ${i === 0 ? "disabled" : ""} style="padding:2px 8px;">↑</button>
+            <button data-workspace-down="${id}" class="btn-sm" ${i === layout.order.length - 1 ? "disabled" : ""} style="padding:2px 8px;">↓</button>
+          </div>
+        `;
+        }).join("")}
+      ` : ""}
+    </div>
+  `;
+}
+
+function bindWorkspaceControls() {
+  const toggle = document.querySelector("[data-workspace-toggle]");
+  if (toggle) toggle.addEventListener("click", () => { workspaceEditorOpen = !workspaceEditorOpen; renderApp(); });
+  document.querySelectorAll("[data-workspace-visible]").forEach(el => {
+    el.addEventListener("change", () => {
+      const id = el.getAttribute("data-workspace-visible");
+      const layout = getWorkspaceLayout();
+      layout.hidden = el.checked ? layout.hidden.filter(h => h !== id) : [...layout.hidden, id];
+      saveWorkspaceLayout(layout);
+      renderApp();
+    });
+  });
+  document.querySelectorAll("[data-workspace-up]").forEach(el => {
+    el.addEventListener("click", () => {
+      const id = el.getAttribute("data-workspace-up");
+      const layout = getWorkspaceLayout();
+      const i = layout.order.indexOf(id);
+      if (i > 0) { [layout.order[i - 1], layout.order[i]] = [layout.order[i], layout.order[i - 1]]; saveWorkspaceLayout(layout); renderApp(); }
+    });
+  });
+  document.querySelectorAll("[data-workspace-down]").forEach(el => {
+    el.addEventListener("click", () => {
+      const id = el.getAttribute("data-workspace-down");
+      const layout = getWorkspaceLayout();
+      const i = layout.order.indexOf(id);
+      if (i !== -1 && i < layout.order.length - 1) { [layout.order[i + 1], layout.order[i]] = [layout.order[i], layout.order[i + 1]]; saveWorkspaceLayout(layout); renderApp(); }
+    });
+  });
+}
+
+function renderWorkspaceWidgets() {
+  const layout = getWorkspaceLayout();
+  const renderers = {
+    liveEvents: liveEventsPanelHtml,
+    leagueTable: leagueTablePanelHtml,
+    teamChat: teamChatHtml,
+    priorities: prioritiesPanelHtml,
+    executedWorkflows: executedWorkflowsHtml,
+    taskSummary: taskSummaryPanelHtml,
+    hallOfFame: hallOfFameHtml
+  };
+  return layout.order
+    .filter(id => !layout.hidden.includes(id))
+    .map(id => (renderers[id] ? renderers[id]() : ""))
+    .join("");
+}
+
 function bankHealthColor(health) {
   if (health >= 60) return "var(--series-green)";
   if (health >= 30) return "#f5b942";
@@ -73,8 +182,15 @@ function marketDayCountdownLabel() {
 // server/handlers/markets.js (trading P&L). The employee side reuses the same
 // bonusEarned/score fields already tracked by server/scoring.js — no new
 // per-player bookkeeping needed.
+const RATING_CHIP_CLASS = {
+  AAA: "chip-good", AA: "chip-good", A: "chip-good",
+  BBB: "chip-warning", BB: "chip-warning",
+  B: "chip-critical", CCC: "chip-critical", D: "chip-critical"
+};
+
 function leagueTablePanelHtml() {
   const league = appState.leagueTable || {};
+  const ratings = appState.creditRatings || {};
   const banks = Object.keys(league).map(name => ({ name, ...league[name] })).sort((a, b) => b.pnl - a.pnl);
   const employees = Object.values(appState.playerScores || {})
     .filter(e => (e.bonusEarned || 0) > 0)
@@ -91,16 +207,20 @@ function leagueTablePanelHtml() {
       <div class="panel">
         <div class="panel-title">🏦 Classement des banques</div>
         <table class="data-table">
-          <thead><tr><th>#</th><th>Banque</th><th>P&amp;L cumulé</th><th>Deals clos</th></tr></thead>
+          <thead><tr><th>#</th><th>Banque</th><th>P&amp;L cumulé</th><th>Deals clos</th><th>Note 📐</th></tr></thead>
           <tbody>
-            ${banks.map((b, i) => `
+            ${banks.map((b, i) => {
+              const rating = ratings[b.name];
+              return `
               <tr class="${b.isPlayer ? "strategy-my-row" : ""}">
                 <td class="tnum">${i + 1}</td>
                 <td>${escapeHtml(b.name)}${b.isPlayer ? " <b>(nous)</b>" : ""}</td>
                 <td class="tnum">${b.pnl >= 0 ? "+" : ""}${b.pnl} M$</td>
                 <td class="tnum">${b.dealsClosed}</td>
+                <td>${rating ? `<span class="chip ${RATING_CHIP_CLASS[rating.rating] || "chip-neutral"}" ${rating.solvencyRatio != null ? `title="Solvabilité ${rating.solvencyRatio}% · Liquidité ${rating.liquidityRatio}%"` : ""}>${rating.rating}</span>` : "—"}</td>
               </tr>
-            `).join("")}
+            `;
+            }).join("")}
           </tbody>
         </table>
       </div>
@@ -247,7 +367,7 @@ const OVERVIEW_CLUSTER_LABELS = {
   D: "Conformité, Risque & Juridique",
   E: "Finance & Trésorerie",
   F: "RH & Communication",
-  G: "Direction Générale"
+  G: "Board Of Directors"
 };
 
 function clusterLeaderboardHtml() {
@@ -298,13 +418,8 @@ function renderOverview() {
   return `
     <div class="page-title">Vue d'ensemble</div>
     <div class="page-sub">Tableau de bord partagé — visible par tous les joueurs. Vous reprenez une banque avec des années d'historique : consultez les priorités ci-dessous pour savoir où intervenir en premier.</div>
-    ${liveEventsPanelHtml()}
-    ${leagueTablePanelHtml()}
-    ${teamChatHtml()}
-    ${prioritiesPanelHtml()}
-    ${executedWorkflowsHtml()}
-    ${taskSummaryPanelHtml()}
-    ${hallOfFameHtml()}
+    ${workspaceControlsHtml()}
+    ${renderWorkspaceWidgets()}
     <div class="panel-row" style="margin-bottom:16px;">
       <div class="panel">
         <div class="panel-title">Santé de la banque</div>
@@ -387,6 +502,7 @@ function bindOverview() {
       socket.emit("liveEvents:claim", { cardId: el.getAttribute("data-live-claim") });
     });
   });
+  bindWorkspaceControls();
 }
 
 PAGE_RENDERERS.overview = renderOverview;

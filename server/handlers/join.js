@@ -1,24 +1,19 @@
 const { GRADES, DEPARTMENTS } = require("../seedData");
 const { claimSlot, releaseSlotBySocketId, getTakenSlots } = require("../rooms");
-const { pushActivity } = require("../gameState");
+const { pushActivity, buildPublicRoster } = require("../gameState");
 const { hrRosterView } = require("./hr");
 const { buildDecisionsView } = require("../strategy");
 const { summarizeTasks } = require("../tasks");
 
 function publicRoster(gameState) {
-  return gameState.players.map(p => ({
-    id: p.id,
-    fullName: p.fullName,
-    grade: p.grade,
-    dept: p.dept,
-    cluster: p.cluster
-  }));
+  return buildPublicRoster(gameState);
 }
 
 // Shared by join:claim and game:requestReset (server/handlers/game.js) — the shape
 // a player's client expects, filtered to only the state slices their access allows.
 function buildSnapshot(gameState, player) {
   const ownMail = gameState.mail.filter(m => m.fromPlayerId === player.id || m.toPlayerId === player.id);
+  const ownDMs = gameState.terminalDMs.filter(m => m.fromPlayerId === player.id || m.toPlayerId === player.id);
   const snapshot = {
     players: publicRoster(gameState),
     activityLog: gameState.activityLog,
@@ -46,7 +41,12 @@ function buildSnapshot(gameState, player) {
     teamChat: gameState.teamChat,
     leagueTable: gameState.leagueTable,
     marketDay: { dayNumber: gameState.marketDay.dayNumber, deadline: gameState.marketDay.deadline },
-    warRoom: gameState.warRoom
+    warRoom: gameState.warRoom,
+    repoStatus: gameState.repoStatus,
+    creditRatings: gameState.creditRatings,
+    ipo: gameState.ipo,
+    terminalDMs: ownDMs,
+    terminalDealsFeed: gameState.terminalDealsFeed
   };
   // Compliance (Risk Manager) and Markets (Desk Trading) both surface workflow
   // panels derived from maDeals even though neither has the M&A page itself —
@@ -54,6 +54,11 @@ function buildSnapshot(gameState, player) {
   if (player.access.includes("ma") || player.access.includes("compliance") || player.access.includes("markets")) {
     snapshot.maDeals = gameState.maDeals;
   }
+  if (player.access.includes("ma")) {
+    snapshot.cibBonusPool = gameState.cibBonusPool;
+    snapshot.pitchbookCompetitions = gameState.pitchbookCompetitions;
+  }
+  snapshot.cibLeadership = gameState.cibLeadership;
   if (player.access.includes("clients")) snapshot.clients = gameState.clients;
   if (player.access.includes("compliance")) snapshot.complianceItems = gameState.complianceItems;
   if (player.access.includes("hr")) {
@@ -67,7 +72,11 @@ function buildSnapshot(gameState, player) {
   if (player.access.includes("agenda")) snapshot.agenda = gameState.agenda;
   if (player.access.includes("documents")) snapshot.documents = gameState.documents;
   if (player.access.includes("expenses")) snapshot.expenseReports = gameState.expenseReports;
-  if (player.access.includes("markets")) snapshot.markets = gameState.markets;
+  if (player.access.includes("markets")) {
+    snapshot.markets = gameState.markets;
+    snapshot.hedgingRequests = gameState.hedgingRequests;
+    snapshot.structuredProducts = gameState.structuredProducts;
+  }
   return snapshot;
 }
 

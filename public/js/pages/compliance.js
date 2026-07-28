@@ -61,7 +61,7 @@ function renderCompliance() {
     <div class="panel">
       <div class="panel-title">Alertes (${items.length})</div>
       <table class="data-table">
-        <thead><tr><th>Type</th><th>Desk</th><th>Description</th><th>Ancienneté</th><th>Assigné à</th><th>Statut</th></tr></thead>
+        <thead><tr><th>Type</th><th>Desk</th><th>Description</th><th>Ancienneté</th><th>Assigné à</th><th>Statut</th><th>Discipline RH</th></tr></thead>
         <tbody>
           ${items.map(i => `
             <tr>
@@ -76,8 +76,16 @@ function renderCompliance() {
                 </select>
               </td>
               <td><select data-cp-status="${i.id}" class="btn-sm">${COMPLIANCE_STATUSES.map(s => `<option value="${s}" ${i.status === s ? "selected" : ""}>${s}</option>`).join("")}</select></td>
+              <td>
+                ${i.targetPlayerId ? `
+                  <div style="font-size:10.5px; color:var(--text-muted); margin-bottom:3px;">Ciblé : ${escapeHtml(i.targetPlayerName)}</div>
+                  <button data-discipline="${i.targetPlayerId}|blame" class="btn-sm" style="padding:2px 6px;">Blâme</button>
+                  <button data-discipline="${i.targetPlayerId}|suspend" class="btn-sm" style="padding:2px 6px;">Suspendre</button>
+                  <button data-discipline="${i.targetPlayerId}|terminate" class="btn-sm" style="padding:2px 6px; border-color:#ff5c7a; color:#ffb3c1;">Licencier</button>
+                ` : "—"}
+              </td>
             </tr>
-          `).join("") || `<tr><td colspan="6" class="empty-cell">Aucune alerte pour l'instant.</td></tr>`}
+          `).join("") || `<tr><td colspan="7" class="empty-cell">Aucune alerte pour l'instant.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -101,6 +109,12 @@ function bindCompliance() {
   document.querySelectorAll("[data-cp-assign]").forEach(el => {
     el.addEventListener("change", () => {
       socket.emit("compliance:assign", { itemId: el.getAttribute("data-cp-assign"), playerId: el.value || null });
+    });
+  });
+  document.querySelectorAll("[data-discipline]").forEach(el => {
+    el.addEventListener("click", () => {
+      const [playerId, action] = el.getAttribute("data-discipline").split("|");
+      socket.emit("hr:disciplineEmployee", { playerId, action });
     });
   });
   document.querySelectorAll("[data-risk-approve]").forEach(el => {
