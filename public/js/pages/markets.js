@@ -223,8 +223,8 @@ function renderMarkets() {
     ${insiderTradingPanelHtml()}
     ${darkPoolPanelHtml()}
     <div class="kpi-grid">
-      <div class="kpi-card"><div class="kpi-label">Capital disponible</div><div class="kpi-value">${fmtMoney(markets.cash)}</div></div>
-      <div class="kpi-card"><div class="kpi-label">Résultat réalisé cumulé</div><div class="kpi-value">${fmtMoney(markets.realizedPnL)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Capital disponible</div><div class="kpi-value" data-flash-key="mk-cash" data-flash-val="${markets.cash}">${fmtMoney(markets.cash)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Résultat réalisé cumulé</div><div class="kpi-value" data-flash-key="mk-pnl" data-flash-val="${markets.realizedPnL}">${fmtMoney(markets.realizedPnL)}</div></div>
       <div class="kpi-card"><div class="kpi-label">Positions ouvertes</div><div class="kpi-value">${positions.length}</div></div>
     </div>
     <div class="panel" style="margin-bottom:16px;">
@@ -236,7 +236,7 @@ function renderMarkets() {
               <span style="font-weight:700; font-size:12.5px;">${escapeHtml(inst.name)}</span>
               <span class="dept-badge" style="background:${MARKET_CATEGORY_COLOR[inst.category] || "#6c7488"}22; color:${MARKET_CATEGORY_COLOR[inst.category] || "#6c7488"}; border:1px solid ${MARKET_CATEGORY_COLOR[inst.category] || "#6c7488"}55;">${escapeHtml(inst.category)}</span>
             </div>
-            <div style="font-size:16px; font-weight:800; margin-bottom:4px;">${inst.price}</div>
+            <div class="tnum" style="font-size:16px; font-weight:800; margin-bottom:4px;" data-flash-key="mk-price-${inst.id}" data-flash-val="${inst.price}">${inst.price}</div>
             <div class="sparkline-wrap">${sparklineSvg(inst.history, 180, 32)}</div>
             <div style="display:flex; gap:6px; margin-top:8px;">
               <input data-mk-notional="${inst.id}" type="number" step="1" min="1" placeholder="M$" style="width:70px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>

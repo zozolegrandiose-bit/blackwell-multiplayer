@@ -50,7 +50,9 @@ const appState = {
   pitchbookCompetitions: [],
   ipo: null,
   terminalDMs: [],
-  terminalDealsFeed: []
+  terminalDealsFeed: [],
+  globalBank: { bankName: "Blackwell & Co Capital", totalGlobalHeadcount: 0, globalPnL: 0, globalTier1CapitalRatio: 0, entities: [] },
+  publicTicker: []
 };
 
 const PAGE_RENDERERS = {};
@@ -150,6 +152,7 @@ function initApp(player, snapshot) {
     appState.currentPage = visibleNav(player)[0] ? visibleNav(player)[0].id : "overview";
   }
   renderApp();
+  renderGlobalTicker();
   maybeShowTutorial();
   renderWarRoomOverlay();
   renderTrophyOverlay(appState.sessionEnded ? appState.trophies : null);
@@ -321,6 +324,7 @@ function renderApp() {
     </div>
   `;
   bindApp();
+  applyFlashes(app);
 }
 
 function bindApp() {
@@ -338,11 +342,12 @@ function bindApp() {
 }
 
 // Bloomberg/FactSet-style quick navigation -- F1 News (Terminal Chat), F2 Trading
-// (Marchés), F3 DRH (RH), F4 M&A. Registered once at load (not in bindApp, which
-// re-runs on every render) since it's a global window-level listener, not scoped
-// to any rendered element. Silently no-ops if the player lacks access to that
-// page, rather than switching to a blank/forbidden view.
-const FUNCTION_KEY_PAGES = { F1: "terminal", F2: "markets", F3: "hr", F4: "ma" };
+// (Marchés), F3 DRH (RH), F4 M&A, F5 Vue d'ensemble, F6 Global Footprint.
+// Registered once at load (not in bindApp, which re-runs on every render) since
+// it's a global window-level listener, not scoped to any rendered element.
+// Silently no-ops if the player lacks access to that page, rather than switching
+// to a blank/forbidden view.
+const FUNCTION_KEY_PAGES = { F1: "terminal", F2: "markets", F3: "hr", F4: "ma", F5: "overview", F6: "global" };
 window.addEventListener("keydown", e => {
   const targetPage = FUNCTION_KEY_PAGES[e.key];
   if (!targetPage || !window.currentPlayer) return;

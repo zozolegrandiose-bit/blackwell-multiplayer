@@ -136,7 +136,7 @@ function renderReglement() {
     `)}
 
     ${reglementSectionHtml("🧩 Workspace modulable", `
-      Sur Vue d'ensemble, un panneau « Workspace modulable » permet d'afficher, masquer et réorganiser les panneaux informatifs (League Table, Chat d'équipe, Priorités…) selon vos préférences — réglage local à votre navigateur.
+      Sur Vue d'ensemble, un panneau « Workspace modulable » permet d'afficher, masquer, réorganiser (↑/↓) et redimensionner (⤒/⤓) les panneaux informatifs (League Table, Chat d'équipe, Priorités…) selon vos préférences — réglage local à votre navigateur.
     `)}
 
     ${reglementSectionHtml("📨 RFQ — Demandes de prix institutionnelles", `
@@ -193,6 +193,20 @@ function renderReglement() {
 
     ${reglementSectionHtml("💾 Sauvegarde & Historique", `
       Le Hall of Fame et le résultat de chaque Cérémonie des Trophées sont enregistrés pour préserver l'historique et la réputation des joueurs de partie en partie, y compris après une réinitialisation ou un redémarrage du serveur.
+    `)}
+
+    ${reglementSectionHtml("📟 Terminal Financier — Ticker Tape mondial", `
+      Un bandeau défilant en haut de l'écran, visible sur toutes les pages, affiche 4 indices dérivés du marché en temps réel (S&amp;P 500, EUR/USD, Taux US 10Y, Brent) ainsi que l'heure locale des 4 grandes places financières (New York, Londres, Tokyo, Hong Kong). Ces indices sont calculés à partir des instruments déjà simulés par le jeu (aucun flux de marché externe n'est appelé).
+    `)}
+
+    ${reglementSectionHtml("⚡ Micro-interactions", `
+      Les chiffres clés (cours d'un instrument, P&amp;L, capital alloué…) flashent brièvement en vert ou en rouge dès qu'ils viennent de changer — un repère visuel rapide plutôt qu'une simple mise à jour silencieuse.
+    `)}
+
+    ${reglementSectionHtml("🌍 Global Footprint — présence mondiale multi-entités", `
+      Blackwell &amp; Co opère désormais à travers <b>4 entités juridiques régionales</b> : Blackwell &amp; Co Capital, N.A. (New York, Amériques), Blackwell &amp; Co Europe SE (Francfort, Europe), Blackwell &amp; Co International Bank (Londres, Europe) et Blackwell &amp; Co Securities Asia (Hong Kong, Asie-Pacifique) — plus de 300 000 collaborateurs au total. Chaque entité a ses propres effectifs, régulateur local, capital alloué, ratio CET1, P&amp;L régional, coût de masse salariale et desks actifs, modifiables par le <b>Head of CIB</b>, la <b>DRH Global</b> (Director et grades supérieurs, RH &amp; Communication) ou le <b>Board Of Directors</b>.<br/>
+      La page affiche une <b>carte du monde</b> où chaque hub s'allume selon son activité et son statut d'ouverture de marché (calculé sur les heures d'ouverture locales réelles de chaque fuseau horaire).<br/>
+      <b>Transferts inter-entités :</b> les managers autorisés peuvent transférer du capital d'une entité à une autre (liquidité overnight). Si l'entité européenne ne dispose pas d'assez de fonds propres pour couvrir un gros deal M&amp;A en cours d'exécution, le siège de New York <b>injecte automatiquement</b> le capital manquant via une transaction intra-groupe.
     `)}
 
     <div class="panel">

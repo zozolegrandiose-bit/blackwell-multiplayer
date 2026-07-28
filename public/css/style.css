@@ -1,21 +1,28 @@
+/* ---------- Design System : Terminal Financier Institutionnel ----------
+   Thème sombre profond + bleu glacier / or institutionnel, remplace l'ancien
+   accent vert néon "gaming" de style startup. Les noms de variables restent
+   inchangés (seules leurs valeurs changent) pour ne pas devoir toucher chaque
+   règle qui les consomme dans ce fichier. */
 :root {
-  --bg: #0a0d14;
-  --surface: #12151f;
-  --surface-2: #1a1f2e;
-  --surface-3: #232a3d;
-  --border: #242a3a;
-  --text-900: #eef0f6;
-  --text-600: #aab0c2;
-  --text-muted: #6c7488;
-  --accent: #2ee6a6;
-  --accent-dim: #1c9c72;
-  --accent-2: #6c8dff;
-  --gold: #e8b64a;
-  --series-green: #2ee6a6;
-  --series-red: #ff5c7a;
-  --warning: #f5b942;
-  --radius: 12px;
-  --radius-sm: 8px;
+  --bg: #0b0e14;
+  --surface: #121824;
+  --surface-2: #182234;
+  --surface-3: #202c42;
+  --border: #2a3346;
+  --text-900: #e8ebf2;
+  --text-600: #9aa4b8;
+  --text-muted: #626c82;
+  --accent: #3b82f6;
+  --accent-dim: #1d4ed8;
+  --accent-2: #60a5fa;
+  --gold: #d97706;
+  --gold-dim: #b45309;
+  --series-green: #22c55e;
+  --series-red: #ef4444;
+  --warning: #d97706;
+  --radius: 8px;
+  --radius-sm: 5px;
+  --font-mono: "JetBrains Mono", "Roboto Mono", "SF Mono", Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -24,9 +31,18 @@ body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg);
-  background-image: radial-gradient(circle at 15% 0%, rgba(46,230,166,0.06), transparent 40%), radial-gradient(circle at 85% 10%, rgba(108,141,255,0.06), transparent 40%);
+  background-image: radial-gradient(circle at 15% 0%, rgba(59,130,246,0.05), transparent 40%), radial-gradient(circle at 85% 10%, rgba(217,119,6,0.04), transparent 40%);
   color: var(--text-900);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Chiffres, P&L, timestamps, compteurs -- alignement monospace technique pour
+   toute figure quantitative déjà distinguée par une classe dédiée existante,
+   sans devoir retoucher chaque page qui les consomme. */
+.tnum, .kpi-value, .credit-file-value, .task-summary-count, .warroom-countdown,
+.ma-breakthrough-price, .event-banner-deadline, .task-row-timer, .activity-time,
+.global-ticker-value, .flash-value {
+  font-family: var(--font-mono);
 }
 
 #app { min-height: 100vh; }
@@ -156,11 +172,11 @@ input:focus, select:focus, textarea:focus {
 }
 
 .sidebar {
-  width: 250px;
+  width: 230px;
   flex-shrink: 0;
   background: #070911;
   border-right: 1px solid var(--border);
-  padding: 22px 14px;
+  padding: 16px 11px;
   display: flex;
   flex-direction: column;
 }
@@ -198,7 +214,7 @@ input:focus, select:focus, textarea:focus {
 
 .main-content {
   flex: 1;
-  padding: 30px 40px;
+  padding: 18px 26px;
   overflow-y: auto;
 }
 
@@ -216,7 +232,7 @@ input:focus, select:focus, textarea:focus {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px 18px;
+  padding: 11px 14px;
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
 .kpi-card:hover { border-color: var(--surface-3); transform: translateY(-1px); }
@@ -232,16 +248,16 @@ input:focus, select:focus, textarea:focus {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px;
+  padding: 13px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   transition: border-color 0.15s ease;
 }
 .panel:hover { border-color: var(--surface-3); }
-.panel-title { font-size: 13px; font-weight: 700; margin-bottom: 13px; color: var(--text-900); }
+.panel-title { font-size: 12.5px; font-weight: 700; margin-bottom: 10px; color: var(--text-900); }
 
-.data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.data-table th { text-align: left; color: var(--text-muted); font-weight: 700; padding: 7px 9px; border-bottom: 1px solid var(--border); text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.03em; }
-.data-table td { padding: 8px 9px; border-bottom: 1px solid var(--border); color: var(--text-600); }
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table th { text-align: left; color: var(--text-muted); font-weight: 700; padding: 5px 7px; border-bottom: 1px solid var(--border); text-transform: uppercase; font-size: 10px; letter-spacing: 0.03em; }
+.data-table td { padding: 5px 7px; border-bottom: 1px solid var(--border); color: var(--text-600); }
 .data-table tr:hover td { background: var(--surface-2); color: var(--text-900); }
 .data-table tr:last-child td { border-bottom: none; }
 
@@ -636,3 +652,52 @@ input:focus, select:focus, textarea:focus {
 
 .team-chat-congrats { border-left: 3px solid var(--series-green); padding-left: 8px; }
 .team-chat-alert { border-left: 3px solid var(--series-red); padding-left: 8px; }
+
+/* ---------- Global Ticker Tape ---------- */
+#global-ticker:empty { display: none; }
+#global-ticker {
+  position: sticky;
+  top: 0;
+  z-index: 500;
+  height: 30px;
+  background: #05070c;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.global-ticker-track {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  animation: global-ticker-scroll 45s linear infinite;
+}
+@keyframes global-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.global-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 18px;
+  border-right: 1px solid var(--border);
+  font-size: 11.5px;
+}
+.global-ticker-label { color: var(--text-muted); font-weight: 700; letter-spacing: 0.03em; }
+.global-ticker-value { color: var(--text-900); font-weight: 700; }
+
+/* Micro-interactions -- brief flash on a value that just changed, applied via
+   flashValue()/flashDirection() (public/js/util.js) rather than a permanent
+   color, so it reads as "just moved" instead of a static good/bad state. */
+@keyframes flash-up-anim {
+  0% { background: rgba(34,197,94,0.35); }
+  100% { background: transparent; }
+}
+@keyframes flash-down-anim {
+  0% { background: rgba(239,68,68,0.35); }
+  100% { background: transparent; }
+}
+.flash-up { animation: flash-up-anim 0.9s ease-out; }
+.flash-down { animation: flash-down-anim 0.9s ease-out; }
+.flash-up-static { color: var(--series-green) !important; }
+.flash-down-static { color: var(--series-red) !important; }

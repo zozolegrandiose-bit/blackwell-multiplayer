@@ -1,5 +1,36 @@
 # Journal des mises à jour
 
+## Patch 19 — Design System Terminal Institutionnel & Global Footprint multi-entités (2026-07-29)
+
+### Ajouts
+- **🎨 Refonte visuelle complète — Terminal Financier institutionnel** :
+  - Nouvelle palette sombre profonde (#0B0E14 / #121824), accents bleu glacier (#3B82F6) et or institutionnel (#D97706), remplaçant l'ancien accent vert néon "gaming".
+  - Police monospace technique (JetBrains Mono) appliquée à tous les chiffres et P&L pour un alignement parfait.
+  - Densité d'information augmentée : padding réduit sur les panneaux, tableaux, cartes KPI et la barre latérale.
+  - **Micro-interactions** : flash vert/rouge bref sur les chiffres qui viennent de changer (cours, P&L, capital) plutôt qu'une mise à jour silencieuse.
+  - **Global Ticker Tape** : bandeau défilant en haut de toutes les pages, affichant 4 indices dérivés du marché simulé (S&P 500, EUR/USD, Taux US 10Y, Brent) et l'heure locale de New York, Londres, Tokyo et Hong Kong.
+  - Raccourcis clavier étendus à F5 (Vue d'ensemble) et F6 (Global Footprint), en plus de F1-F4 existants.
+  - Le panneau Workspace modulable (Patch 17) peut désormais aussi être **redimensionné** par paliers (⤒/⤓), en plus d'être réorganisé et masqué.
+- **🌍 Global Entities & Footprint** : Blackwell & Co Capital devient un groupe multi-entités façon grande banque internationale, avec 4 entités juridiques régionales (New York — Amériques, Francfort — Europe, Londres — Europe/Offshore, Hong Kong — Asie-Pacifique) totalisant plus de 300 000 collaborateurs. Chaque entité a ses effectifs locaux, son régulateur, son capital alloué, son ratio CET1, son P&L régional, son coût de masse salariale et ses desks actifs — tous modifiables par le Head of CIB, la DRH Global ou le Board Of Directors. Une carte du monde stylisée affiche les hubs, leur activité et leur statut d'ouverture de marché en temps réel (calculé sur les vrais fuseaux horaires). Les managers autorisés peuvent transférer du capital entre entités (liquidité overnight) ; si l'entité européenne manque de fonds propres pour un gros deal M&A en cours d'exécution, New York injecte automatiquement le capital manquant.
+- Règlement enrichi avec l'intégralité des mécaniques ci-dessus.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- **Adaptation honnête (comme le précédent de server/negotiation.js au Patch 18)** : la demande initiale spécifiait un fichier de types TypeScript (`/src/types/globalBank.ts`) connecté à un "store" côté client. Ce projet n'a ni pipeline TypeScript, ni arborescence `/src/`, ni abstraction de store — tout le jeu repose déjà sur un unique `gameState` faisant autorité côté serveur, diffusé par Socket.io et reflété dans un `appState` côté client (c'est le "store global" de ce jeu). La forme demandée est reproduite dans `server/globalBank.js` en JS + JSDoc (champs structurellement identiques, réellement lus/mutés/diffusés par le serveur qui tourne) plutôt qu'en `.ts` qu'aucune étape de build ne compilerait jamais.
+- `server/globalBank.js` (nouveau) : suit la même convention spawn/sweep en boucle auto-reprogrammée que le reste du jeu ; `isDrhGlobal()` mirrore exactement la forme de `isHeadOfCIB()` (cluster + grade Director+) pour l'autre rôle explicitement nommé dans la demande.
+- L'injection automatique de capital est une boucle d'observation indépendante (`sweepCapitalInjections`), pas un hook direct dans `server/handlers/dealWorkflow.js` déjà testé — même logique de séparation que la Margin Call du Risk Manager (Patch 18) vis-à-vis du reste du Trading.
+- Le Global Ticker Tape ne fait appel à aucune donnée de marché externe réelle : les 4 indices affichés sont dérivés des instruments déjà simulés par le jeu (`server/handlers/markets.js`), diffusés à tous les joueurs via un événement public allégé (`globalTicker:update`, id/nom/prix/catégorie uniquement) distinct du `markets:update` complet réservé aux accès Marchés/Conformité.
+- `player.isDrhGlobal` est précalculé côté serveur à la connexion et recalculé sur promotion/réaffectation RH — même traitement que `player.isHeadOfCIB` déjà existant.
+- Redimensionnement du Workspace modulable adapté en contrôle par paliers (+/- 60px) plutôt qu'en drag-resize libre par poignée : un vrai système de grille redimensionnable à la main sans framework aurait démesurément élargi le risque de ce patch pour un gain d'ergonomie marginal — même esprit d'adaptation honnête que le choix "haut/bas" déjà fait pour le réordonnancement au Patch 17.
+- Régression complète menée en direct via `socket.io-client` sur les nouveaux flux (snapshot globalBank/publicTicker, diffusion du ticker, contrôle d'accès des mutations Global Footprint, transfert de capital autorisé/refusé, mise à jour d'entité, injection automatique de capital de bout en bout).
+
+---
+
 ## Patch 18 — Refonte Trading & M&A, Risk Manager passionnant, Terminal Financier & Fin de partie (2026-07-28)
 
 ### Ajouts

@@ -4,6 +4,7 @@ const { pushActivity, buildPublicRoster } = require("../gameState");
 const { hrRosterView } = require("./hr");
 const { buildDecisionsView } = require("../strategy");
 const { summarizeTasks } = require("../tasks");
+const { publicInstrumentTicker } = require("./markets");
 
 function publicRoster(gameState) {
   return buildPublicRoster(gameState);
@@ -49,7 +50,9 @@ function buildSnapshot(gameState, player) {
     creditRatings: gameState.creditRatings,
     ipo: gameState.ipo,
     terminalDMs: ownDMs,
-    terminalDealsFeed: gameState.terminalDealsFeed
+    terminalDealsFeed: gameState.terminalDealsFeed,
+    globalBank: gameState.globalBank,
+    publicTicker: publicInstrumentTicker(gameState)
   };
   // Compliance (Risk Manager) and Markets (Desk Trading) both surface workflow
   // panels derived from maDeals even though neither has the M&A page itself —

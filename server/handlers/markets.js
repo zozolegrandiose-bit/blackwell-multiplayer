@@ -49,6 +49,14 @@ function findInstrument(gameState, instrumentId) {
   return gameState.markets.instruments.find(i => i.id === instrumentId);
 }
 
+// Global Ticker Tape -- a lightweight, universally-broadcast subset of the
+// instrument list (id/name/price/category only, no cash/positions/P&L) so every
+// connected player sees the header ticker regardless of whether they hold
+// "markets" access, without leaking the full (gated) gameState.markets object.
+function publicInstrumentTicker(gameState) {
+  return gameState.markets.instruments.map(i => ({ id: i.id, name: i.name, price: i.price, category: i.category }));
+}
+
 // Random walk per instrument, scaled by its own volatility — self-rescheduling loop,
 // same convention as every other timed system in this game (tasks/events/strategy).
 function tickPrices(io, gameState) {
@@ -59,6 +67,7 @@ function tickPrices(io, gameState) {
     if (instrument.history.length > MAX_HISTORY) instrument.history.shift();
   });
   io.to("access:markets").emit("markets:update", gameState.markets);
+  io.to("game").emit("globalTicker:update", publicInstrumentTicker(gameState));
 }
 
 function scheduleMarketTickLoop(io, gameState) {
@@ -335,7 +344,7 @@ function scheduleDarkPoolSweepLoop(io, gameState) {
 }
 
 module.exports = {
-  registerMarketsHandlers, startMarketsLoop, tickPrices, sweepDarkPoolOrders,
+  registerMarketsHandlers, startMarketsLoop, tickPrices, sweepDarkPoolOrders, publicInstrumentTicker,
   INSIDER_GAIN_PCT, INSIDER_CATCH_PROBABILITY, INSIDER_FINE_MULTIPLIER,
   DARK_POOL_MIN_NOTIONAL, DARK_POOL_WINDOW_MS, DARK_POOL_MATCH_PROBABILITY, DARK_POOL_GAIN_PCT
 };

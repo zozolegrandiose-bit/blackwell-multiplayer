@@ -149,8 +149,33 @@ function sparklineSvg(values, width, height) {
     return x + "," + y;
   }).join(" ");
   const lastUp = values[values.length - 1] >= values[0];
-  const strokeColor = lastUp ? "#2ee6a6" : "#ff5c7a";
+  const strokeColor = lastUp ? "#22c55e" : "#ef4444";
   return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
     <polyline points="${points}" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
   </svg>`;
+}
+
+// Micro-interactions: a brief green/red flash on a figure that just changed
+// value (a price tick, a P&L update, a deal closing) rather than a permanent
+// color -- reads as "just moved", not a static good/bad state. Since every page
+// re-renders via a wholesale innerHTML replace (renderApp()), the old DOM node
+// carrying the previous value is gone by the time the new one exists; a small
+// keyed cache is what lets us compare "did this number change" across renders.
+// Templates opt in with data-flash-key="<stable-id>" data-flash-val="<number>"
+// on any element also carrying the .tnum/.kpi-value class (already monospace).
+const FLASH_CACHE = {};
+function applyFlashes(root) {
+  if (!root) return;
+  root.querySelectorAll("[data-flash-key]").forEach(el => {
+    const key = el.getAttribute("data-flash-key");
+    const val = parseFloat(el.getAttribute("data-flash-val"));
+    if (!Number.isFinite(val)) return;
+    const prev = FLASH_CACHE[key];
+    if (prev != null && val !== prev) {
+      el.classList.remove("flash-up", "flash-down");
+      void el.offsetWidth; // restart the CSS animation even if the class name is unchanged
+      el.classList.add(val > prev ? "flash-up" : "flash-down");
+    }
+    FLASH_CACHE[key] = val;
+  });
 }

@@ -3,6 +3,7 @@ const { getAccessForPosition, hasFullAccess, getClusterForPosition } = require("
 const { ONBOARDING_ITEMS, computeBaseSalary } = require("./handlers/hr");
 const { playerKey } = require("./scoring");
 const { isHeadOfCIB } = require("./cibBonus");
+const { isDrhGlobal } = require("./globalBank");
 
 function slotKey(grade, dept) {
   return grade + "|||" + dept;
@@ -77,6 +78,7 @@ function claimSlot(gameState, { socketId, firstName, lastName, grade, dept }) {
     onboarding: ONBOARDING_ITEMS.map(item => ({ item, done: false }))
   };
   player.isHeadOfCIB = isHeadOfCIB(player);
+  player.isDrhGlobal = isDrhGlobal(player);
   gameState.players.push(player);
   return { ok: true, player };
 }

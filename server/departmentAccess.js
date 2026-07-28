@@ -1,6 +1,11 @@
 const { GRADES } = require("./seedData");
 
-const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses", "reglement", "terminal"];
+// "global" (Global Footprint / World Map Operations) is viewable by everyone,
+// like the other universal pages -- the actual entity/capital mutation handlers
+// in server/globalBank.js are separately gated to Head of CIB, DRH Global, or
+// Board Of Directors, the same split already used elsewhere (e.g. Compliance
+// page is universal-ish via cluster D but Kill Switch itself is requireAccess-gated).
+const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses", "reglement", "terminal", "global"];
 
 const CLUSTER_PAGES = {
   A: [...UNIVERSAL_PAGES, "ma", "clients"],

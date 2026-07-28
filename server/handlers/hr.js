@@ -4,6 +4,7 @@ const { DEPARTMENT_CLUSTER, getAccessForPosition, hasFullAccess, getClusterForPo
 const { adjustSatisfaction } = require("../satisfaction");
 const { GRADES, DEPARTMENTS } = require("../seedData");
 const { isHeadOfCIB } = require("../cibBonus");
+const { isDrhGlobal } = require("../globalBank");
 
 const LEAVE_TYPES = ["Congés payés", "RTT", "Arrêt maladie", "Congé sans solde"];
 const ONBOARDING_ITEMS = ["Contrat signé", "Poste de travail", "Compte IT", "Badge d'accès", "Formation d'intégration"];
@@ -347,6 +348,7 @@ function registerHrHandlers(io, socket, gameState) {
     target.hasFullAccess = hasFullAccess(target.dept, target.grade);
     target.cluster = getClusterForPosition(target.dept, target.grade);
     target.isHeadOfCIB = isHeadOfCIB(target);
+    target.isDrhGlobal = isDrhGlobal(target);
     resyncPlayerAccessRooms(io, target, oldAccess);
     adjustSatisfaction(io, gameState, target, 15);
 
@@ -378,6 +380,7 @@ function registerHrHandlers(io, socket, gameState) {
     target.hasFullAccess = hasFullAccess(target.dept, target.grade);
     target.cluster = getClusterForPosition(target.dept, target.grade);
     target.isHeadOfCIB = isHeadOfCIB(target);
+    target.isDrhGlobal = isDrhGlobal(target);
     resyncPlayerAccessRooms(io, target, oldAccess);
 
     pushActivity(gameState, {

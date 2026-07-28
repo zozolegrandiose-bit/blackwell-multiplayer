@@ -14,15 +14,28 @@ const WORKSPACE_WIDGETS = [
   { id: "hallOfFame", label: "Hall of Fame" }
 ];
 
+const WORKSPACE_HEIGHT_MIN = 140;
+const WORKSPACE_HEIGHT_MAX = 800;
+const WORKSPACE_HEIGHT_STEP = 60;
+
 function getWorkspaceLayout() {
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(WORKSPACE_STORAGE_KEY)); } catch (e) { saved = null; }
   const defaultOrder = WORKSPACE_WIDGETS.map(w => w.id);
-  if (!saved || !Array.isArray(saved.order)) return { order: defaultOrder, hidden: [] };
+  if (!saved || !Array.isArray(saved.order)) return { order: defaultOrder, hidden: [], heights: {} };
   // Merge in any widget ids added since the layout was saved (forward-compatible).
   const merged = saved.order.filter(id => defaultOrder.includes(id));
   defaultOrder.forEach(id => { if (!merged.includes(id)) merged.push(id); });
-  return { order: merged, hidden: Array.isArray(saved.hidden) ? saved.hidden : [] };
+  return {
+    order: merged,
+    hidden: Array.isArray(saved.hidden) ? saved.hidden : [],
+    // Panels déplaçables ET redimensionnables : un drag-resize par poignée libre
+    // demanderait de reconstruire un mini système de grille (façon react-grid-layout)
+    // dans une base 100% vanilla JS sans framework -- adapté ici en un contrôle par
+    // paliers (+/- 60px), aussi fonctionnel et bien plus simple à fiabiliser, dans le
+    // même esprit que le choix "haut/bas" déjà fait pour le réordonnancement (Patch 17).
+    heights: (saved.heights && typeof saved.heights === "object") ? saved.heights : {}
+  };
 }
 
 function saveWorkspaceLayout(layout) {
@@ -52,6 +65,8 @@ function workspaceControlsHtml() {
             </label>
             <button data-workspace-up="${id}" class="btn-sm" ${i === 0 ? "disabled" : ""} style="padding:2px 8px;">↑</button>
             <button data-workspace-down="${id}" class="btn-sm" ${i === layout.order.length - 1 ? "disabled" : ""} style="padding:2px 8px;">↓</button>
+            <button data-workspace-shrink="${id}" class="btn-sm" ${(layout.heights[id] || WORKSPACE_HEIGHT_MAX) <= WORKSPACE_HEIGHT_MIN ? "disabled" : ""} style="padding:2px 8px;">⤒</button>
+            <button data-workspace-grow="${id}" class="btn-sm" ${(layout.heights[id] || WORKSPACE_HEIGHT_MAX) >= WORKSPACE_HEIGHT_MAX ? "disabled" : ""} style="padding:2px 8px;">⤓</button>
           </div>
         `;
         }).join("")}
@@ -88,6 +103,26 @@ function bindWorkspaceControls() {
       if (i !== -1 && i < layout.order.length - 1) { [layout.order[i + 1], layout.order[i]] = [layout.order[i], layout.order[i + 1]]; saveWorkspaceLayout(layout); renderApp(); }
     });
   });
+  document.querySelectorAll("[data-workspace-shrink]").forEach(el => {
+    el.addEventListener("click", () => {
+      const id = el.getAttribute("data-workspace-shrink");
+      const layout = getWorkspaceLayout();
+      const current = layout.heights[id] || WORKSPACE_HEIGHT_MAX;
+      layout.heights[id] = Math.max(WORKSPACE_HEIGHT_MIN, current - WORKSPACE_HEIGHT_STEP);
+      saveWorkspaceLayout(layout);
+      renderApp();
+    });
+  });
+  document.querySelectorAll("[data-workspace-grow]").forEach(el => {
+    el.addEventListener("click", () => {
+      const id = el.getAttribute("data-workspace-grow");
+      const layout = getWorkspaceLayout();
+      const current = layout.heights[id] || WORKSPACE_HEIGHT_MAX;
+      layout.heights[id] = Math.min(WORKSPACE_HEIGHT_MAX, current + WORKSPACE_HEIGHT_STEP);
+      saveWorkspaceLayout(layout);
+      renderApp();
+    });
+  });
 }
 
 function renderWorkspaceWidgets() {
@@ -103,7 +138,12 @@ function renderWorkspaceWidgets() {
   };
   return layout.order
     .filter(id => !layout.hidden.includes(id))
-    .map(id => (renderers[id] ? renderers[id]() : ""))
+    .map(id => {
+      if (!renderers[id]) return "";
+      const height = layout.heights[id];
+      const style = height ? `max-height:${height}px; overflow-y:auto;` : "";
+      return `<div data-resize-wrapper="${id}" style="${style}">${renderers[id]()}</div>`;
+    })
     .join("");
 }
 
@@ -449,9 +489,9 @@ function renderOverview() {
     </div>
     <div class="kpi-grid">
       <div class="kpi-card"><div class="kpi-label">Joueurs connectés</div><div class="kpi-value">${appState.players.length}</div></div>
-      <div class="kpi-card"><div class="kpi-label">AUM</div><div class="kpi-value">${fmtMoney(kpis.aum)}</div></div>
-      <div class="kpi-card"><div class="kpi-label">Revenus</div><div class="kpi-value">${fmtMoney(kpis.revenue)}</div></div>
-      <div class="kpi-card"><div class="kpi-label">Résultat net</div><div class="kpi-value">${fmtMoney(kpis.netIncome)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">AUM</div><div class="kpi-value" data-flash-key="ov-aum" data-flash-val="${kpis.aum}">${fmtMoney(kpis.aum)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Revenus</div><div class="kpi-value" data-flash-key="ov-revenue" data-flash-val="${kpis.revenue}">${fmtMoney(kpis.revenue)}</div></div>
+      <div class="kpi-card"><div class="kpi-label">Résultat net</div><div class="kpi-value" data-flash-key="ov-netincome" data-flash-val="${kpis.netIncome}">${fmtMoney(kpis.netIncome)}</div></div>
       <div class="kpi-card"><div class="kpi-label">Ratio CET1</div><div class="kpi-value">${kpis.capitalRatio == null ? "—" : kpis.capitalRatio + "%"}</div></div>
       <div class="kpi-card"><div class="kpi-label">Moral RH</div><div class="kpi-value">${appState.hr && appState.hr.morale != null ? appState.hr.morale + "%" : "—"}</div></div>
     </div>

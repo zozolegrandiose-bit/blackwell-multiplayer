@@ -12,6 +12,7 @@ const NAV = [
   { id: "hr", label: "RH", icon: "❖" },
   { id: "finance", label: "Finance", icon: "📊" },
   { id: "markets", label: "Marchés", icon: "📈" },
+  { id: "global", label: "Global Footprint", icon: "🌍" },
   { id: "reglement", label: "Règlement", icon: "📖" }
 ];
 

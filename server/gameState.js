@@ -57,6 +57,25 @@ function seedDataRoom(valuation) {
   return { bilanFinancier, ebitda, detteNette, analyzed: false, fairValue: null };
 }
 
+// Duplicated in miniature from server/globalBank.js's seedGlobalBank() -- kept
+// local for the same require-cycle reason as seedDataRoom above (globalBank.js
+// requires this file for pushActivity/postTeamChat).
+function seedGlobalBank() {
+  const entities = [
+    { id: "ny", name: "Blackwell & Co Capital, N.A.", city: "New York", region: "AMER", headcount: 145000, regulatoryBody: "FED / SEC", allocatedCapital: 4200, localPnL: 0, activeDesks: ["TRADING", "MA", "TREASURY", "RISK"], isMarketOpen: false, timezone: "America/New_York", capitalRatioPct: 15.2, payrollCostM: 2100 },
+    { id: "fra", name: "Blackwell & Co Europe SE", city: "Francfort", region: "EMEA", headcount: 62000, regulatoryBody: "BCE (ECB)", allocatedCapital: 1800, localPnL: 0, activeDesks: ["MA", "PRIVATE_BANKING", "RISK"], isMarketOpen: false, timezone: "Europe/Berlin", capitalRatioPct: 13.8, payrollCostM: 980 },
+    { id: "hk", name: "Blackwell & Co Securities Asia", city: "Hong Kong", region: "APAC", headcount: 38000, regulatoryBody: "SFC / MAS", allocatedCapital: 1200, localPnL: 0, activeDesks: ["TRADING", "PRIVATE_BANKING"], isMarketOpen: false, timezone: "Asia/Hong_Kong", capitalRatioPct: 14.6, payrollCostM: 640 },
+    { id: "ldn", name: "Blackwell & Co International Bank", city: "Londres", region: "EMEA", headcount: 54000, regulatoryBody: "FCA", allocatedCapital: 1500, localPnL: 0, activeDesks: ["TRADING", "TREASURY", "RH"], isMarketOpen: false, timezone: "Europe/London", capitalRatioPct: 14.1, payrollCostM: 860 }
+  ];
+  return {
+    bankName: "Blackwell & Co Capital",
+    totalGlobalHeadcount: entities.reduce((sum, e) => sum + e.headcount, 0),
+    globalPnL: 0,
+    globalTier1CapitalRatio: 14.5,
+    entities
+  };
+}
+
 function createGameState() {
   const now = Date.now();
   const state = {
@@ -376,7 +395,8 @@ function createGameState() {
     // about deals still in progress (not the closing-moment messages teamChat
     // already covers); terminalDMs are real-time private messages between players.
     terminalDMs: [],
-    terminalDealsFeed: []
+    terminalDealsFeed: [],
+    globalBank: seedGlobalBank()
   };
   state.maDeals.forEach(d => { if (!d.dataRoom) d.dataRoom = seedDataRoom(d.valuation); });
   return state;
