@@ -71,6 +71,8 @@ function claimSlot(gameState, { socketId, firstName, lastName, grade, dept }) {
     raiseRequested: false,
     onSuspension: false,
     suspensionUntil: null,
+    tradingFrozen: false,
+    tradingFrozenUntil: null,
     baseSalary: computeBaseSalary(grade),
     onboarding: ONBOARDING_ITEMS.map(item => ({ item, done: false }))
   };

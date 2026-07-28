@@ -10,6 +10,7 @@ const { accrueCibBonusPool } = require("./cibBonus");
 const { sweepResignations } = require("./satisfaction");
 const { runPayrollDeduction } = require("./handlers/hr");
 const { evaluateCibLeadership } = require("./boardOfDirectors");
+const { endSession, MAX_TRADING_DAYS } = require("./trophies");
 
 const DAY_LENGTH_MS = 15 * 60 * 1000;
 const SWEEP_MIN_MS = 10 * 1000;
@@ -43,6 +44,7 @@ function snapshotLeagueTable(gameState) {
 // Pure-ish core (only side effects are on gameState/io), unit-testable directly —
 // same convention as server/strategy.js's resolveQuarter().
 function settleMarketDay(io, gameState) {
+  if (gameState.sessionEnded) return null; // guards against game:resume re-triggering endSession after the ceremony
   const day = gameState.marketDay;
   const kpis = gameState.financeKPIs;
   const dayNetIncome = round1(kpis.netIncome - day.dayStartNetIncome);
@@ -86,6 +88,14 @@ function settleMarketDay(io, gameState) {
   io.to("access:ma").emit("cibBonus:update", gameState.cibBonusPool);
   sweepResignations(io, gameState);
   runPayrollDeduction(io, gameState);
+
+  // A full session is MAX_TRADING_DAYS Journées de Bourse (1h real time at the
+  // default 15min/day) -- the 4th day's close triggers the Trophy Ceremony
+  // instead of starting a 5th day.
+  if (closedDayNumber >= MAX_TRADING_DAYS) {
+    endSession(io, gameState);
+    return { dayNetIncome, bonusPool, payouts, closedDayNumber };
+  }
 
   day.dayNumber += 1;
   day.deadline = Date.now() + DAY_LENGTH_MS * getDifficultyPreset(gameState.difficulty).quarterLength;

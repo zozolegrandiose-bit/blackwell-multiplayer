@@ -29,6 +29,8 @@ const appState = {
   markets: { instruments: [], positions: [], cash: 0, realizedPnL: 0, tradeLog: [] },
   hedgingRequests: [],
   structuredProducts: [],
+  rfqRequests: [],
+  pendingHedges: [],
   directive: null,
   liveEvents: [],
   executedWorkflows: [],
@@ -37,6 +39,9 @@ const appState = {
   marketDay: { dayNumber: 1, deadline: null },
   warRoom: null,
   repoStatus: { blocked: false, blockedSince: null, emergencyFacilityUsed: 0 },
+  marginCall: { active: false, deadline: null, requiredAmount: 0 },
+  sessionEnded: false,
+  trophies: null,
   rivalTalent: null,
   mercatoOffers: [],
   creditRatings: {},
@@ -73,6 +78,23 @@ function notify(message) {
   el.textContent = message;
   container.appendChild(el);
   setTimeout(() => el.remove(), 4500);
+}
+
+// M&A Breakthrough -- a brief, dramatic global flash (not persisted state, no
+// snapshot field) shown to every connected player the instant a big deal clears
+// Risk, distinct from the quieter team-chat congrats message that also fires.
+function showMaBreakthrough(data) {
+  const overlay = document.getElementById("ma-breakthrough-overlay");
+  if (!overlay) return;
+  const up = data.changePct >= 0;
+  overlay.innerHTML = `
+    <div class="ma-breakthrough-banner">
+      <div class="ma-breakthrough-title">🚀 M&amp;A BREAKTHROUGH</div>
+      <div class="ma-breakthrough-body">« ${escapeHtml(data.dealName)} » (${fmtMoney(data.valuation)}) vient de se conclure !</div>
+      <div class="ma-breakthrough-price">${escapeHtml(data.instrumentName)} ${up ? "📈" : "📉"} ${up ? "+" : ""}${data.changePct}% (${data.oldPrice} → ${data.newPrice})</div>
+    </div>
+  `;
+  setTimeout(() => { overlay.innerHTML = ""; }, 6000);
 }
 
 const ORIGINAL_TITLE = document.title;
@@ -130,6 +152,7 @@ function initApp(player, snapshot) {
   renderApp();
   maybeShowTutorial();
   renderWarRoomOverlay();
+  renderTrophyOverlay(appState.sessionEnded ? appState.trophies : null);
 }
 
 // War Room (Crise Majeure) is a global, all-hands overlay — kept in its own
@@ -137,6 +160,38 @@ function initApp(player, snapshot) {
 // innerHTML, so it survives page navigation and doesn't need rebinding on
 // every unrelated socket update.
 let warRoomTickInterval = null;
+
+// Cérémonie des Trophées -- shown once the 4th Journée de Bourse closes
+// (server/trophies.js). Persistent overlay div, same convention as the War Room
+// modal, so it survives page navigation and doesn't need renderApp() plumbing.
+function renderTrophyOverlay(trophies) {
+  const overlay = document.getElementById("trophy-overlay");
+  if (!overlay) return;
+  if (!trophies) { overlay.innerHTML = ""; return; }
+  const rows = [
+    { icon: "🏦", label: "Banque de l'Année", entry: trophies.bankOfTheYear, fmt: v => fmtMoney(v) },
+    { icon: "🤝", label: "Dealmaker of the Year", entry: trophies.dealmakerOfTheYear, fmt: v => fmtMoney(v) },
+    { icon: "📈", label: "Star Trader", entry: trophies.starTrader, fmt: v => fmtMoney(v) },
+    { icon: "👥", label: "Meilleur Employeur", entry: trophies.bestEmployer, fmt: v => v + " action(s) RH" }
+  ];
+  overlay.innerHTML = `
+    <div class="warroom-modal" style="text-align:center;">
+      <h2 style="justify-content:center;">🏆 Cérémonie des Trophées</h2>
+      <p>Les 4 Journées de Bourse sont closes — voici le palmarès de la session.</p>
+      <div style="text-align:left;">
+        ${rows.map(r => `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-top:1px solid var(--border);">
+            <span style="font-size:13px;">${r.icon} <b>${r.label}</b></span>
+            <span style="font-size:13px; color:var(--series-green);">${r.entry ? escapeHtml(r.entry.name) + " — " + r.fmt(r.entry.pnl != null ? r.entry.pnl : r.entry.value) : "—"}</span>
+          </div>
+        `).join("")}
+      </div>
+      ${appState.player && appState.player.hasFullAccess ? `<button id="btn-game-reset" class="btn-sm" style="margin-top:16px;">Nouvelle partie</button>` : `<div style="font-size:11.5px; color:var(--text-muted); margin-top:16px;">Seul le Board Of Directors peut relancer une partie.</div>`}
+    </div>
+  `;
+  const resetBtn = overlay.querySelector("#btn-game-reset");
+  if (resetBtn) resetBtn.addEventListener("click", () => socket.emit("game:requestReset"));
+}
 
 function renderWarRoomOverlay() {
   const overlay = document.getElementById("warroom-overlay");
@@ -189,6 +244,8 @@ function renderWarRoomOverlay() {
 
 function switchPage(pageId) {
   appState.currentPage = pageId;
+  if (pageId === "markets") startTradingFloorAmbience();
+  else stopTradingFloorAmbience();
   renderApp();
 }
 
@@ -231,6 +288,12 @@ function renderApp() {
             ${player.hasFullAccess ? `<button id="btn-central-bank-facility" class="btn-sm">🏦 Guichet d'urgence (coût réel)</button>` : ""}
           </div>
         ` : ""}
+        ${appState.marginCall && appState.marginCall.active ? `
+          <div class="bankruptcy-banner">
+            <div>🚨 <b>MARGIN CALL</b> — le book dépasse le capital disponible. Injection requise : ${fmtMoney(appState.marginCall.requiredAmount)} sous ${Math.max(0, Math.round((appState.marginCall.deadline - Date.now()) / 1000))}s, ou la position la plus risquée sera liquidée d'office.</div>
+            ${(player.access || []).includes("compliance") ? `<button id="btn-inject-margin-cash" class="btn-sm">💉 Injecter ${fmtMoney(appState.marginCall.requiredAmount)}</button>` : ""}
+          </div>
+        ` : ""}
         ${appState.paused ? `
           <div class="event-banner">
             <div>⏸ <b>Partie en pause.</b> Toutes les mécaniques temporisées sont figées${player.hasFullAccess ? " — utilisez le panneau GM sur Comité de Direction pour reprendre." : "."}</div>
@@ -268,6 +331,24 @@ function bindApp() {
   if (resetBtn) resetBtn.addEventListener("click", () => socket.emit("game:requestReset"));
   const centralBankBtn = document.getElementById("btn-central-bank-facility");
   if (centralBankBtn) centralBankBtn.addEventListener("click", () => socket.emit("game:useCentralBankFacility"));
+  const injectMarginBtn = document.getElementById("btn-inject-margin-cash");
+  if (injectMarginBtn) injectMarginBtn.addEventListener("click", () => socket.emit("compliance:injectMarginCash"));
   const binder = PAGE_BINDERS[appState.currentPage];
   if (binder) binder();
 }
+
+// Bloomberg/FactSet-style quick navigation -- F1 News (Terminal Chat), F2 Trading
+// (Marchés), F3 DRH (RH), F4 M&A. Registered once at load (not in bindApp, which
+// re-runs on every render) since it's a global window-level listener, not scoped
+// to any rendered element. Silently no-ops if the player lacks access to that
+// page, rather than switching to a blank/forbidden view.
+const FUNCTION_KEY_PAGES = { F1: "terminal", F2: "markets", F3: "hr", F4: "ma" };
+window.addEventListener("keydown", e => {
+  const targetPage = FUNCTION_KEY_PAGES[e.key];
+  if (!targetPage || !window.currentPlayer) return;
+  const tag = (e.target && e.target.tagName) || "";
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
+  if (!appState.player || !appState.player.access.includes(targetPage)) return;
+  e.preventDefault();
+  switchPage(targetPage);
+});

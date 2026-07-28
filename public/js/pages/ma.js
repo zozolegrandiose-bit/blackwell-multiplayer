@@ -20,6 +20,51 @@ const WORKFLOW_METHOD_LABEL = { syndication: "syndication", couverture: "couvert
 // Renders the current step of the Analyste → Risk Manager → Desk Trading workflow
 // for a given deal, from the M&A page's point of view (read-only past the
 // submission step — the next two steps happen on Conformité/Marchés).
+const NEGOTIATION_CLAUSES_CLIENT = ["Minimale", "Standard", "Renforcée"];
+
+function negotiationHtml(d) {
+  if (d.stage !== "Négociation") return "";
+  if (!d.negotiation) {
+    return `<div class="workflow-box" style="margin-top:8px;"><button data-open-negotiation="${d.id}" class="btn-sm">💬 Ouvrir le canal de négociation (3 min)</button></div>`;
+  }
+  const neg = d.negotiation;
+  return `
+    <div class="workflow-box" style="margin-top:8px;">
+      <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:6px;">💬 Négociation ${neg.active ? "en cours" : "close"}${neg.active ? " — ⏱ " + Math.max(0, Math.round((neg.deadline - Date.now()) / 1000)) + "s" : ""}</div>
+      <div style="max-height:120px; overflow-y:auto; margin-bottom:8px;">
+        ${neg.messages.map(m => `<div style="font-size:11.5px; padding:2px 0; ${m.from === "us" ? "color:var(--series-green);" : ""}">${escapeHtml(m.text)}</div>`).join("")}
+      </div>
+      ${neg.active ? `
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          <input data-negotiation-offer="${d.id}" type="number" step="1" placeholder="Votre offre (M$)" style="width:130px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:11.5px;"/>
+          <select data-negotiation-clause="${d.id}" class="btn-sm">
+            ${NEGOTIATION_CLAUSES_CLIENT.map(c => `<option value="${c}" ${neg.clause === c ? "selected" : ""}>${c}</option>`).join("")}
+          </select>
+          <button data-negotiation-submit="${d.id}" class="btn-sm">Proposer</button>
+        </div>
+      ` : neg.agreedPrice ? `<div style="font-size:12px; color:var(--series-green);">✅ Accord à ${fmtMoney(neg.agreedPrice)}</div>` : `<div style="font-size:12px; color:var(--text-muted);">Aucun accord trouvé.</div>`}
+    </div>
+  `;
+}
+
+function dataRoomHtml(d) {
+  if (!d.dataRoom) return "";
+  const dr = d.dataRoom;
+  return `
+    <div class="workflow-box" style="margin-top:8px;">
+      <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:6px;">📁 Data Room</div>
+      <div class="credit-file-grid">
+        <div class="credit-file-item"><div class="credit-file-value">${fmtMoney(dr.bilanFinancier)}</div><div class="credit-file-label">Bilan financier</div></div>
+        <div class="credit-file-item"><div class="credit-file-value">${fmtMoney(dr.ebitda)}</div><div class="credit-file-label">EBITDA</div></div>
+        <div class="credit-file-item"><div class="credit-file-value">${fmtMoney(dr.detteNette)}</div><div class="credit-file-label">Dette nette</div></div>
+      </div>
+      ${dr.analyzed
+        ? `<div style="font-size:12px; margin-top:6px; color:${d.valuation > dr.fairValue * 1.1 ? "var(--series-red)" : d.valuation < dr.fairValue * 0.9 ? "var(--series-green)" : "var(--text-600)"};">Juste valeur estimée : <b>${fmtMoney(dr.fairValue)}</b> (proposée à ${fmtMoney(d.valuation)})</div>`
+        : `<button data-analyze-dataroom="${d.id}" class="btn-sm" style="margin-top:6px;">Analyser la data room</button>`}
+    </div>
+  `;
+}
+
 function workflowSectionHtml(d) {
   const wf = d.workflow;
   if (!wf) {
@@ -250,6 +295,8 @@ function renderMa() {
               `).join("")}
             </div>
           </div>
+          ${dataRoomHtml(d)}
+          ${negotiationHtml(d)}
           ${workflowSectionHtml(d)}
         </div>
       `).join("") || `<div class="empty-cell">Aucun projet en cours.</div>`}
@@ -314,6 +361,22 @@ function bindMa() {
       const rate = rateInput ? rateInput.value : "";
       if (!rate) return;
       socket.emit("dealWorkflow:submitToRisk", { dealId, rate });
+    });
+  });
+  document.querySelectorAll("[data-analyze-dataroom]").forEach(el => {
+    el.addEventListener("click", () => socket.emit("ma:analyzeDataRoom", { dealId: el.getAttribute("data-analyze-dataroom") }));
+  });
+  document.querySelectorAll("[data-open-negotiation]").forEach(el => {
+    el.addEventListener("click", () => socket.emit("ma:openNegotiation", { dealId: el.getAttribute("data-open-negotiation") }));
+  });
+  document.querySelectorAll("[data-negotiation-submit]").forEach(el => {
+    el.addEventListener("click", () => {
+      const dealId = el.getAttribute("data-negotiation-submit");
+      const offerInput = document.querySelector(`[data-negotiation-offer="${dealId}"]`);
+      const clauseSelect = document.querySelector(`[data-negotiation-clause="${dealId}"]`);
+      const offerPrice = Number(offerInput && offerInput.value);
+      if (!offerPrice) return;
+      socket.emit("ma:submitNegotiationOffer", { dealId, offerPrice, clause: clauseSelect ? clauseSelect.value : null });
     });
   });
   const ipoPitchBtn = document.getElementById("ipo-pitch-submit");

@@ -58,6 +58,51 @@ function syndicatingDealsHtml() {
   `;
 }
 
+// RFQ -- a live 15s window, urgent enough to warrant its own countdown span
+// updated every second (same technique as the War Room overlay in app.js)
+// rather than relying on the next full renderApp() to refresh the number.
+let rfqTickInterval = null;
+
+function rfqPanelHtml() {
+  const rfq = (appState.rfqRequests || []).find(r => !r.resolved);
+  if (!rfq) return "";
+  return `
+    <div class="panel" style="margin-bottom:16px; border-color:rgba(232,182,74,0.4);">
+      <div class="panel-title">📞 RFQ — ${escapeHtml(rfq.clientName)}</div>
+      <div style="font-size:12.5px; margin-bottom:8px;">Demande de <b>${rfq.side}</b> sur ${escapeHtml(rfq.instrumentName)} — notionnel ${fmtMoney(rfq.notional)} · prix référence ${rfq.referencePrice}</div>
+      <div class="warroom-countdown" id="rfq-countdown-text" style="font-size:22px;">--</div>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <input id="rfq-quote-input" type="number" step="0.01" placeholder="Votre prix" style="width:120px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
+        <button id="rfq-submit" class="btn-sm">Coter</button>
+      </div>
+    </div>
+  `;
+}
+
+function tickRfqCountdown() {
+  const el = document.getElementById("rfq-countdown-text");
+  const rfq = (appState.rfqRequests || []).find(r => !r.resolved);
+  if (!el || !rfq) return;
+  const remaining = Math.max(0, Math.round((rfq.deadline - Date.now()) / 1000));
+  el.textContent = "⏱ " + remaining + "s";
+}
+
+function deltaHedgingHtml() {
+  const unhedged = (appState.pendingHedges || []).filter(h => !h.hedged);
+  if (!unhedged.length) return "";
+  return `
+    <div style="margin-top:12px; border-top:1px solid var(--border); padding-top:10px;">
+      <div style="font-size:11px; color:var(--warning); margin-bottom:6px;">⚖️ Delta non couvert — reste dans la VaR du book tant qu'il n'est pas hedgé sur le spot :</div>
+      ${unhedged.map(h => `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:4px 0;">
+          <span style="font-size:11.5px;">${escapeHtml(h.structureType)} (${escapeHtml(h.clientName)}) — delta ${fmtMoney(h.deltaExposure)}</span>
+          <button data-hedge-delta="${h.id}" class="btn-sm">Couvrir sur le spot</button>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function structuredProductsPanelHtml() {
   const requests = appState.hedgingRequests || [];
   const products = appState.structuredProducts || [];
@@ -88,6 +133,7 @@ function structuredProductsPanelHtml() {
           `).join("")}
         </div>
       ` : ""}
+      ${deltaHedgingHtml()}
     </div>
   `;
 }
@@ -172,6 +218,7 @@ function renderMarkets() {
     ${taskPanelHtml("markets")}
     ${executionQueueHtml()}
     ${syndicatingDealsHtml()}
+    ${rfqPanelHtml()}
     ${structuredProductsPanelHtml()}
     ${insiderTradingPanelHtml()}
     ${darkPoolPanelHtml()}
@@ -299,6 +346,24 @@ function bindMarkets() {
       socket.emit("markets:createStructuredProduct", { requestId, structureType: select ? select.value : null });
     });
   });
+  document.querySelectorAll("[data-hedge-delta]").forEach(el => {
+    el.addEventListener("click", () => socket.emit("markets:hedgeDelta", { hedgeId: el.getAttribute("data-hedge-delta") }));
+  });
+  const rfqBtn = document.getElementById("rfq-submit");
+  if (rfqBtn) rfqBtn.addEventListener("click", () => {
+    const rfq = (appState.rfqRequests || []).find(r => !r.resolved);
+    const input = document.getElementById("rfq-quote-input");
+    const quotedPrice = Number(input && input.value);
+    if (!rfq || !quotedPrice) return;
+    socket.emit("markets:respondRfq", { rfqId: rfq.id, quotedPrice });
+  });
+  tickRfqCountdown();
+  if (rfqTickInterval) clearInterval(rfqTickInterval);
+  if ((appState.rfqRequests || []).some(r => !r.resolved)) {
+    rfqTickInterval = setInterval(tickRfqCountdown, 1000);
+  } else {
+    rfqTickInterval = null;
+  }
   bindTaskPanel();
 }
 

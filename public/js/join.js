@@ -191,10 +191,17 @@ socket.on("executedWorkflows:update", data => {
   if (appState.currentPage === "overview") renderApp();
 });
 
+// teamChat already aggregates every congrats/alert moment across the whole game
+// (deals, mercato, syndication, war room, margin call, audits, burnout...) --
+// the single natural hook point for widening toasts to team-impact events and
+// for the Sound Design cues, rather than instrumenting each system separately.
 socket.on("teamChat:update", message => {
   if (!window.currentPlayer) return;
   appState.teamChat = [message, ...(appState.teamChat || [])].slice(0, 30);
   if (appState.currentPage === "overview") renderApp();
+  notify((message.tone === "alert" ? "⚠️ " : "🔔 ") + message.text);
+  if (message.tone === "congrats") playBellSound();
+  else if (message.tone === "alert") playAlertBeep();
 });
 
 socket.on("leagueTable:update", data => {
@@ -276,10 +283,48 @@ socket.on("repoStatus:update", data => {
   renderApp();
 });
 
+socket.on("marginCall:update", data => {
+  if (!window.currentPlayer) return;
+  appState.marginCall = data;
+  renderApp();
+});
+
+socket.on("riskControl:update", () => {
+  if (!window.currentPlayer) return;
+  if (["compliance", "markets"].includes(appState.currentPage)) renderApp();
+});
+
+socket.on("compliance:killSwitched", data => {
+  notify("🛑 Kill Switch — le Risk Manager vous interdit de trader pendant " + Math.round((data.untilTs - Date.now()) / 60000) + " min.");
+});
+
+socket.on("compliance:killSwitchLifted", () => {
+  notify("✅ Kill Switch levé — vous pouvez de nouveau trader.");
+});
+
 socket.on("structuredProducts:update", data => {
   if (!window.currentPlayer) return;
   appState.hedgingRequests = data.hedgingRequests;
   appState.structuredProducts = data.structuredProducts;
+  appState.pendingHedges = data.pendingHedges;
+  if (appState.currentPage === "markets") renderApp();
+});
+
+socket.on("session:trophies", data => {
+  if (!window.currentPlayer) return;
+  appState.sessionEnded = true;
+  appState.trophies = data;
+  renderTrophyOverlay(data);
+});
+
+socket.on("maBreakthrough:announce", data => {
+  if (!window.currentPlayer) return;
+  showMaBreakthrough(data);
+});
+
+socket.on("rfq:update", data => {
+  if (!window.currentPlayer) return;
+  appState.rfqRequests = data;
   if (appState.currentPage === "markets") renderApp();
 });
 

@@ -23,6 +23,19 @@ const STRUCTURE_MATCH = {
   "Matières Premières": ["Swap de matières premières"],
   "Crédit": ["Option Vanille"]
 };
+// Delta Hedging -- packaging a derivative leaves the bank exposed to a fraction
+// of its notional; leaving that delta unhedged past the window counts as extra
+// phantom VaR (server/riskControl.js's computeVaR sums gameState.pendingHedges
+// alongside real spot positions), which is what can actually trigger a Margin
+// Call -- hedging it (any spot trade via markets:hedgeDelta) clears it.
+const DELTA_FACTOR = {
+  "Swap de taux": 0.8,
+  "Collar (Cap+Floor)": 0.3,
+  "Option Vanille": 0.5,
+  "Swap de devises": 0.8,
+  "Swap de matières premières": 0.8
+};
+const HEDGE_WINDOW_MS = 90 * 1000;
 
 let nextRequestId = 1;
 
@@ -49,7 +62,7 @@ function spawnHedgingRequest(io, gameState) {
   gameState.hedgingRequests.push(request);
   pushActivity(gameState, { actorPlayerId: null, page: "markets", text: "🏭 " + clientName + " recherche une couverture (" + exposureType + ", notionnel " + notional + " M$) — un Trader peut lui packager un produit sur-mesure." });
   io.to("game").emit("activity:update", gameState.activityLog[0]);
-  io.to("access:markets").emit("structuredProducts:update", { hedgingRequests: gameState.hedgingRequests, structuredProducts: gameState.structuredProducts });
+  io.to("access:markets").emit("structuredProducts:update", { hedgingRequests: gameState.hedgingRequests, structuredProducts: gameState.structuredProducts, pendingHedges: gameState.pendingHedges });
 }
 
 function registerStructuredProductsHandlers(io, socket, gameState) {
@@ -87,6 +100,17 @@ function registerStructuredProductsHandlers(io, socket, gameState) {
     gameState.structuredProducts.unshift(product);
     if (gameState.structuredProducts.length > 30) gameState.structuredProducts.length = 30;
 
+    const deltaExposure = round1(request.notional * (DELTA_FACTOR[payload.structureType] || 0.5));
+    gameState.pendingHedges.push({
+      id: "hedge" + Date.now() + Math.round(Math.random() * 1000),
+      productId: product.id,
+      clientName: request.clientName,
+      structureType: payload.structureType,
+      deltaExposure,
+      hedged: false,
+      deadline: Date.now() + HEDGE_WINDOW_MS
+    });
+
     awardPoints(io, gameState, player, "markets_trade");
     pushActivity(gameState, {
       actorPlayerId: player.id,
@@ -96,12 +120,47 @@ function registerStructuredProductsHandlers(io, socket, gameState) {
     io.to("game").emit("activity:update", gameState.activityLog[0]);
     io.to("access:finance").emit("finance:update", kpis);
     io.to("game").emit("overview:kpis", kpis);
-    io.to("access:markets").emit("structuredProducts:update", { hedgingRequests: gameState.hedgingRequests, structuredProducts: gameState.structuredProducts });
+    io.to("access:markets").emit("structuredProducts:update", { hedgingRequests: gameState.hedgingRequests, structuredProducts: gameState.structuredProducts, pendingHedges: gameState.pendingHedges });
 
     if (matched && request.notional >= 300) {
       postTeamChat(gameState, { authorName: "IA — Salle des marchés", text: "🧩 Beau produit structuré sur-mesure pour " + request.clientName + " (" + payload.structureType + ") — bien joué " + player.fullName + " !", tone: "congrats" });
       io.to("game").emit("teamChat:update", gameState.teamChat[0]);
     }
+  });
+
+  socket.on("markets:hedgeDelta", payload => {
+    if (!requireAccess(socket, "markets")) return;
+    const player = gameState.players.find(p => p.id === socket.data.playerId);
+    if (!player) return;
+    const hedge = gameState.pendingHedges.find(h => h.id === payload.hedgeId && !h.hedged);
+    if (!hedge) return;
+
+    hedge.hedged = true;
+    pushActivity(gameState, { actorPlayerId: player.id, page: "markets", text: player.fullName + " couvre le delta du " + hedge.structureType + " (" + hedge.clientName + ") sur le marché spot — exposition neutralisée." });
+    io.to("game").emit("activity:update", gameState.activityLog[0]);
+    io.to("access:markets").emit("structuredProducts:update", { hedgingRequests: gameState.hedgingRequests, structuredProducts: gameState.structuredProducts, pendingHedges: gameState.pendingHedges });
+  });
+}
+
+// Called from server/riskControl.js's computeVaR() -- unhedged delta from
+// structured products counts as phantom exposure alongside real spot positions,
+// for as long as it stays unhedged (no expiry removal -- the risk is real until
+// a trader actually covers it).
+function unhedgedDeltaTotal(gameState) {
+  return gameState.pendingHedges.filter(h => !h.hedged).reduce((sum, h) => sum + h.deltaExposure, 0);
+}
+
+// Fires the "resté non couvert" warning exactly once per hedge, once its 90s
+// window lapses -- purely informational (the phantom VaR contribution already
+// applies regardless via unhedgedDeltaTotal above), entries are only ever
+// removed once actually hedged.
+function sweepPendingHedges(io, gameState) {
+  const now = Date.now();
+  gameState.pendingHedges.forEach(h => {
+    if (h.hedged || h.warned || now < h.deadline) return;
+    h.warned = true;
+    pushActivity(gameState, { actorPlayerId: null, page: "markets", text: "⚠️ Delta du " + h.structureType + " (" + h.clientName + ") resté non couvert — la VaR du book en tient compte tant qu'il n'est pas hedgé." });
+    io.to("game").emit("activity:update", gameState.activityLog[0]);
   });
 }
 
@@ -116,7 +175,7 @@ function sweepHedgingRequests(io, gameState) {
     pushActivity(gameState, { actorPlayerId: null, page: "markets", text: "⌛ " + r.clientName + " renonce à sa demande de couverture, faute de réponse à temps." });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
   });
-  io.to("access:markets").emit("structuredProducts:update", { hedgingRequests: gameState.hedgingRequests, structuredProducts: gameState.structuredProducts });
+  io.to("access:markets").emit("structuredProducts:update", { hedgingRequests: gameState.hedgingRequests, structuredProducts: gameState.structuredProducts, pendingHedges: gameState.pendingHedges });
 }
 
 function randomDelay(min, max) {
@@ -131,11 +190,17 @@ function startStructuredProductsLoop(io, gameState) {
   setTimeout(spawnTick, randomDelay(SPAWN_MIN_MS, SPAWN_MAX_MS));
 
   function sweepTick() {
-    if (!gameState.paused) sweepHedgingRequests(io, gameState);
+    if (!gameState.paused) {
+      sweepHedgingRequests(io, gameState);
+      sweepPendingHedges(io, gameState);
+    }
     setTimeout(sweepTick, randomDelay(SWEEP_MIN_MS, SWEEP_MAX_MS));
   }
   setTimeout(sweepTick, randomDelay(SWEEP_MIN_MS, SWEEP_MAX_MS));
   console.log("Produits Structurés & Swaps activé (nouvelle demande de couverture toutes les 2-4 min).");
 }
 
-module.exports = { registerStructuredProductsHandlers, startStructuredProductsLoop, spawnHedgingRequest, sweepHedgingRequests, STRUCTURE_TYPES, STRUCTURE_MATCH, EXPOSURE_TYPES, FEE_PCT_MATCHED, FEE_PCT_MISMATCHED };
+module.exports = {
+  registerStructuredProductsHandlers, startStructuredProductsLoop, spawnHedgingRequest, sweepHedgingRequests, sweepPendingHedges, unhedgedDeltaTotal,
+  STRUCTURE_TYPES, STRUCTURE_MATCH, EXPOSURE_TYPES, FEE_PCT_MATCHED, FEE_PCT_MISMATCHED, DELTA_FACTOR, HEDGE_WINDOW_MS
+};

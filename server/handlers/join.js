@@ -43,6 +43,9 @@ function buildSnapshot(gameState, player) {
     marketDay: { dayNumber: gameState.marketDay.dayNumber, deadline: gameState.marketDay.deadline },
     warRoom: gameState.warRoom,
     repoStatus: gameState.repoStatus,
+    marginCall: gameState.marginCall,
+    sessionEnded: gameState.sessionEnded,
+    trophies: gameState.trophies,
     creditRatings: gameState.creditRatings,
     ipo: gameState.ipo,
     terminalDMs: ownDMs,
@@ -60,7 +63,10 @@ function buildSnapshot(gameState, player) {
   }
   snapshot.cibLeadership = gameState.cibLeadership;
   if (player.access.includes("clients")) snapshot.clients = gameState.clients;
-  if (player.access.includes("compliance")) snapshot.complianceItems = gameState.complianceItems;
+  if (player.access.includes("compliance")) {
+    snapshot.complianceItems = gameState.complianceItems;
+    snapshot.markets = gameState.markets; // needed for the VaR control panel
+  }
   if (player.access.includes("hr")) {
     snapshot.hr = gameState.hr;
     snapshot.hrRoster = hrRosterView(gameState);
@@ -76,6 +82,8 @@ function buildSnapshot(gameState, player) {
     snapshot.markets = gameState.markets;
     snapshot.hedgingRequests = gameState.hedgingRequests;
     snapshot.structuredProducts = gameState.structuredProducts;
+    snapshot.rfqRequests = gameState.rfqRequests;
+    snapshot.pendingHedges = gameState.pendingHedges;
   }
   return snapshot;
 }

@@ -372,6 +372,7 @@ function bindHr() {
     el.addEventListener("click", () => {
       const [positionId, candidateId] = el.getAttribute("data-hr-hire").split("|");
       socket.emit("hr:hireCandidate", { positionId, candidateId });
+      playStampSound();
     });
   });
   const bonusBtn = document.getElementById("hr-bonus-submit");

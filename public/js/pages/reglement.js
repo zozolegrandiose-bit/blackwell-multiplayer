@@ -139,6 +139,62 @@ function renderReglement() {
       Sur Vue d'ensemble, un panneau « Workspace modulable » permet d'afficher, masquer et réorganiser les panneaux informatifs (League Table, Chat d'équipe, Priorités…) selon vos préférences — réglage local à votre navigateur.
     `)}
 
+    ${reglementSectionHtml("📨 RFQ — Demandes de prix institutionnelles", `
+      Un client institutionnel IA envoie en direct une demande de prix (RFQ) sur un gros volume d'un instrument coté. Le Desk Marchés a <b>15 secondes</b> pour proposer un cours d'achat/vente — un écart trop large par rapport au cours de référence (plus de 3%) fait échouer la demande. Une cotation acceptée rapporte un profit immédiat.
+    `)}
+
+    ${reglementSectionHtml("🛡 Delta Hedging & couverture", `
+      Créer un produit structuré (swap, collar, option…) laisse une <b>exposition delta</b> non couverte sur le marché spot. Le Desk Marchés dispose d'une fenêtre de 90 secondes pour la couvrir via un ordre de couverture — au-delà, l'exposition reste ouverte et continue de gonfler la VaR de la banque tant qu'elle n'est pas hedgée.
+    `)}
+
+    ${reglementSectionHtml("📉 Effet de levier, Margin Call & liquidation forcée", `
+      Quand la VaR totale de la banque (risque des positions ouvertes + expositions non couvertes) dépasse la moitié de la trésorerie, un <b>Margin Call</b> se déclenche. Le Risk Manager a <b>30 secondes</b> pour injecter le cash nécessaire depuis le résultat net. Sans intervention à temps, la position la plus risquée de la banque est <b>liquidée d'office</b> à perte (jusqu'à -15% de son notionnel) et la santé de la banque en pâtit.
+    `)}
+
+    ${reglementSectionHtml("📊 Panneau de Contrôle VaR", `
+      Sur la page Conformité, une matrice affiche en temps réel la Value at Risk portée par chaque Trader et Analyste (positions marchés + expositions structurées non couvertes), avec des seuils d'alerte visuels — l'outil de diagnostic principal du Risk Manager avant qu'un Margin Call ne survienne.
+    `)}
+
+    ${reglementSectionHtml("🔴 Kill Switch", `
+      Le Risk Manager peut, depuis la page Conformité, <b>interdire à un Trader de passer un ordre</b> pendant 2 minutes, ou <b>geler un deal M&amp;A</b> en cours si son risque de défaut dépasse un seuil critique — bloquant toute action dessus jusqu'à la levée automatique du gel.
+    `)}
+
+    ${reglementSectionHtml("🕵️ Audits SEC / BCE impromptus", `
+      Toutes les 3 à 6 minutes, une IA régulatrice contrôle la banque : trop d'alertes de conformité en retard ou de positions non couvertes depuis plus de 5 minutes déclenche une <b>amende record</b> prélevée immédiatement sur la trésorerie, plus une pénalité de santé.
+    `)}
+
+    ${reglementSectionHtml("🗂 Data Room Interactive", `
+      Chaque deal M&amp;A/LBO génère une <b>Data Room</b> avec 3 documents clés (bilan financier, EBITDA, dette nette). L'Analyste M&amp;A peut l'analyser pour révéler une <b>juste valeur</b> estimée et un verdict (cible sur/sous-évaluée) avant de s'engager sur le prix.
+    `)}
+
+    ${reglementSectionHtml("🤝 Négociation M&amp;A", `
+      Sur un deal en cours, l'Analyste peut ouvrir un <b>canal de négociation</b> de 3 minutes pour s'accorder sur le prix par action avec la contrepartie du deal — chaque offre est comparée à la position adverse, qui peut contre-proposer, jusqu'à accord ou expiration de la fenêtre.
+    `)}
+
+    ${reglementSectionHtml("📢 M&amp;A Breakthrough", `
+      Quand un deal suffisamment important (≥ 300 M$) est signé et exécuté, une <b>annonce de marché globale</b> s'affiche pour tous les joueurs, avec une hausse ou une baisse immédiate du cours d'une action liée au secteur du deal.
+    `)}
+
+    ${reglementSectionHtml("⌨️ Terminal Financier — raccourcis & interface", `
+      L'interface adopte un style terminal professionnel sombre. Des raccourcis clavier permettent de changer de page instantanément : <b>F1</b> Terminal Chat, <b>F2</b> Marchés, <b>F3</b> RH, <b>F4</b> M&amp;A (désactivés pendant la saisie dans un champ de texte).
+    `)}
+
+    ${reglementSectionHtml("🔊 Ambiance sonore", `
+      Un bruit d'ambiance léger de salle de marché tourne en fond sur la page Marchés, ponctué d'effets sonores : <b>clochette de bourse</b> sur un gros deal clos, <b>bip d'urgence</b> sur une alerte Risk (Margin Call, Kill Switch, audit), <b>bruit de tampon</b> sur une embauche RH. Réglable dans les Paramètres ci-dessous.
+    `)}
+
+    ${reglementSectionHtml("🔔 Notifications Flash", `
+      Une pop-up discrète apparaît en haut à droite dès qu'un collègue ou une IA réalise une action d'impact dans la banque (deal, alerte, embauche, crise…) — reprend le même flux que le fil d'équipe.
+    `)}
+
+    ${reglementSectionHtml("🕐 Journées de Bourse & Cérémonie des Trophées", `
+      Une session complète dure <b>4 Journées de Bourse</b> de 15 minutes réelles (1h de jeu). À la clôture de la 4ᵉ journée, la partie se fige et une <b>Cérémonie des Trophées</b> récompense : <b>Banque de l'Année</b> (P&amp;L le plus élevé), <b>Dealmaker of the Year</b> (plus gros volume M&amp;A géré), <b>Star Trader</b> (meilleur P&amp;L de trading), <b>Meilleur Employeur</b> (RH avec le plus d'actions positives envers ses équipes).
+    `)}
+
+    ${reglementSectionHtml("💾 Sauvegarde & Historique", `
+      Le Hall of Fame et le résultat de chaque Cérémonie des Trophées sont enregistrés pour préserver l'historique et la réputation des joueurs de partie en partie, y compris après une réinitialisation ou un redémarrage du serveur.
+    `)}
+
     <div class="panel">
       <div class="panel-title">⚙️ Paramètres</div>
       <div class="form-row" style="align-items:center;">
@@ -146,6 +202,11 @@ function renderReglement() {
         <input type="checkbox" id="reglement-notif-toggle" ${notificationsDisabled ? "" : "checked"}/>
       </div>
       <div style="font-size:11px; color:var(--text-muted); margin:6px 0 14px;">Décochez pour couper les petites notifications qui apparaissent en haut à droite. Ce réglage est local à votre navigateur.</div>
+      <div class="form-row" style="align-items:center;">
+        <label style="flex:1;">Sons (clochette, bip d'urgence, tampon RH, ambiance salle de marché)</label>
+        <input type="checkbox" id="reglement-sound-toggle" ${localStorage.getItem(SOUND_DISABLED_KEY) === "1" ? "" : "checked"}/>
+      </div>
+      <div style="font-size:11px; color:var(--text-muted); margin:6px 0 14px;">Décochez pour couper tous les effets sonores. Ce réglage est local à votre navigateur.</div>
       <div class="form-row" style="align-items:center;">
         <label style="flex:1;">Difficulté actuelle de la partie</label>
         <span class="chip">${escapeHtml(difficultyLabel)}</span>
@@ -161,6 +222,11 @@ function bindReglement() {
   if (toggle) toggle.addEventListener("change", () => {
     if (toggle.checked) localStorage.removeItem(NOTIFICATIONS_DISABLED_KEY);
     else localStorage.setItem(NOTIFICATIONS_DISABLED_KEY, "1");
+  });
+  const soundToggle = document.getElementById("reglement-sound-toggle");
+  if (soundToggle) soundToggle.addEventListener("change", () => {
+    if (soundToggle.checked) localStorage.removeItem(SOUND_DISABLED_KEY);
+    else localStorage.setItem(SOUND_DISABLED_KEY, "1");
   });
   const replayBtn = document.getElementById("reglement-replay-tutorial");
   if (replayBtn) replayBtn.addEventListener("click", () => {

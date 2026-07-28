@@ -3,6 +3,7 @@ const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const { gameState } = require("./gameState");
+const { primeGameStateFromHistory } = require("./persistence");
 const { registerJoinHandlers } = require("./handlers/join");
 const { registerMailHandlers } = require("./handlers/mail");
 const { registerMaHandlers, scheduleDealRiskLoop } = require("./handlers/ma");
@@ -33,6 +34,12 @@ const { registerComplianceHRHandlers, startComplianceHRLoop } = require("./compl
 const { registerPitchbookHandlers, startPitchbookLoop } = require("./pitchbook");
 const { registerStructuredProductsHandlers, startStructuredProductsLoop } = require("./structuredProducts");
 const { registerInterbankHandlers, startInterbankLoop } = require("./interbank");
+const { registerRiskControlHandlers, startRiskControlLoop } = require("./riskControl");
+const { registerRfqHandlers, startRfqLoop } = require("./rfq");
+const { registerDataRoomHandlers } = require("./dataRoom");
+const { registerNegotiationHandlers, startNegotiationLoop } = require("./negotiation");
+
+primeGameStateFromHistory(gameState);
 
 const app = express();
 const httpServer = createServer(app);
@@ -69,6 +76,10 @@ io.on("connection", socket => {
   registerPitchbookHandlers(io, socket, gameState);
   registerStructuredProductsHandlers(io, socket, gameState);
   registerInterbankHandlers(io, socket, gameState);
+  registerRiskControlHandlers(io, socket, gameState);
+  registerRfqHandlers(io, socket, gameState);
+  registerDataRoomHandlers(io, socket, gameState);
+  registerNegotiationHandlers(io, socket, gameState);
 });
 
 startAiLoop(io, gameState);
@@ -91,6 +102,9 @@ startComplianceHRLoop(io, gameState);
 startPitchbookLoop(io, gameState);
 startStructuredProductsLoop(io, gameState);
 startInterbankLoop(io, gameState);
+startRiskControlLoop(io, gameState);
+startRfqLoop(io, gameState);
+startNegotiationLoop(io, gameState);
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {

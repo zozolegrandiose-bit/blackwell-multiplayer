@@ -45,6 +45,30 @@ function round1(n) {
   return Math.round(n * 10) / 10;
 }
 
+// M&A Breakthrough -- a global, dramatic announcement (a temporary broadcast, not
+// persisted state) when a sizeable deal signs and clears Risk: a related equity
+// instrument gets an immediate, visible price pop, tying the M&A desk's work to
+// something every player watching the markets page actually sees move.
+function announceMaBreakthrough(io, gameState, deal) {
+  if (deal.valuation < BIG_DEAL_THRESHOLD) return;
+  const equities = gameState.markets.instruments.filter(i => i.category === "Actions");
+  if (!equities.length) return;
+  const instrument = equities[Math.floor(Math.random() * equities.length)];
+  const changePct = round1(3 + Math.random() * 5);
+  const oldPrice = instrument.price;
+  instrument.price = round1(instrument.price * (1 + changePct / 100));
+  instrument.history.push(instrument.price);
+  io.to("access:markets").emit("markets:update", gameState.markets);
+  io.to("game").emit("maBreakthrough:announce", {
+    dealName: deal.name,
+    valuation: deal.valuation,
+    instrumentName: instrument.name,
+    changePct,
+    oldPrice,
+    newPrice: instrument.price
+  });
+}
+
 function pickRandomBanks(list, n) {
   const pool = list.slice();
   const picked = [];
@@ -89,7 +113,7 @@ function registerDealWorkflowHandlers(io, socket, gameState) {
     if (!requireAccess(socket, "ma")) return;
     const player = gameState.players.find(p => p.id === socket.data.playerId);
     const deal = gameState.maDeals.find(d => d.id === payload.dealId);
-    if (!player || !deal || deal.workflow || deal.stage === "Clôturé") return;
+    if (!player || !deal || deal.workflow || deal.stage === "Clôturé" || deal.frozen) return;
     const rate = Number(payload.rate);
     if (Number.isNaN(rate) || rate <= 0) return;
 
@@ -117,7 +141,7 @@ function registerDealWorkflowHandlers(io, socket, gameState) {
     if (!requireAccess(socket, "compliance")) return;
     const player = gameState.players.find(p => p.id === socket.data.playerId);
     const deal = gameState.maDeals.find(d => d.id === payload.dealId);
-    if (!player || !deal || !deal.workflow || deal.workflow.phase !== "pending_risk") return;
+    if (!player || !deal || !deal.workflow || deal.workflow.phase !== "pending_risk" || deal.frozen) return;
     if (!["approve", "reject"].includes(payload.decision)) return;
 
     if (payload.decision === "reject") {
@@ -155,7 +179,7 @@ function registerDealWorkflowHandlers(io, socket, gameState) {
     if (!requireAccess(socket, "markets")) return;
     const player = gameState.players.find(p => p.id === socket.data.playerId);
     const deal = gameState.maDeals.find(d => d.id === payload.dealId);
-    if (!player || !deal || !deal.workflow || deal.workflow.phase !== "pending_execution") return;
+    if (!player || !deal || !deal.workflow || deal.workflow.phase !== "pending_execution" || deal.frozen) return;
     if (!["syndication", "couverture"].includes(payload.method)) return;
 
     executeDeal(io, gameState, deal, payload.method, player);
@@ -165,7 +189,7 @@ function registerDealWorkflowHandlers(io, socket, gameState) {
     if (!requireAccess(socket, "markets")) return;
     const player = gameState.players.find(p => p.id === socket.data.playerId);
     const deal = gameState.maDeals.find(d => d.id === payload.dealId);
-    if (!player || !deal || !deal.workflow || deal.workflow.phase !== "pending_execution") return;
+    if (!player || !deal || !deal.workflow || deal.workflow.phase !== "pending_execution" || deal.frozen) return;
     if (deal.valuation < MASSIVE_DEAL_THRESHOLD) return;
 
     const rivalBanks = Object.keys(gameState.leagueTable).filter(name => name !== PLAYER_BANK_NAME);
@@ -307,6 +331,7 @@ function executeSyndicatedDeal(io, gameState, deal) {
     });
     io.to("game").emit("teamChat:update", gameState.teamChat[0]);
   }
+  announceMaBreakthrough(io, gameState, deal);
 }
 
 function executeDeal(io, gameState, deal, method, trader) {
@@ -380,6 +405,7 @@ function executeDeal(io, gameState, deal, method, trader) {
     });
     io.to("game").emit("teamChat:update", gameState.teamChat[0]);
   }
+  announceMaBreakthrough(io, gameState, deal);
 }
 
 // Two ambient behaviors, both deliberately scoped: the Risk Manager step can be

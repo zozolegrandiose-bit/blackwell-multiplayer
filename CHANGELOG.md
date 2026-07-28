@@ -1,5 +1,46 @@
 # Journal des mises à jour
 
+## Patch 18 — Refonte Trading & M&A, Risk Manager passionnant, Terminal Financier & Fin de partie (2026-07-28)
+
+### Ajouts
+- **📨 Refonte du Trading — Risque réel**, en 3 volets :
+  - **RFQ (Request for Quote)** : des clients institutionnels IA envoient en direct des demandes de prix sur un gros volume. Le Desk Marchés a 15 secondes pour proposer un cours d'achat/vente — un écart de plus de 3% par rapport au cours de référence fait échouer la demande ; une cotation acceptée rapporte un profit immédiat.
+  - **Delta Hedging & couverture** : créer un produit structuré (swap, collar, option…) laisse une exposition delta non couverte, qui alimente directement la VaR de la banque tant qu'elle n'est pas hedgée sur le marché spot sous 90 secondes.
+  - **Effet de levier, Margin Call & liquidation forcée** : quand la VaR totale du book dépasse la moitié de la trésorerie disponible, un Margin Call se déclenche — le Risk Manager a 30 secondes pour injecter le cash requis, sinon la position la plus risquée est liquidée d'office à perte réelle (jusqu'à -15% de son notionnel) avec pénalité de santé.
+- **🤝 Refonte du M&A / Corporate Finance**, en 3 volets :
+  - **Data Room Interactive** : chaque deal M&A/LBO génère désormais une Data Room (bilan financier, EBITDA, dette nette) que l'Analyste peut analyser pour révéler une juste valeur estimée et un verdict (cible sur/sous-évaluée) avant de s'engager.
+  - **Négociation M&A** : un canal de négociation de 3 minutes s'ouvre sur un deal en cours pour s'accorder sur le prix par action et une clause de garantie d'actif/passif — adapté honnêtement contre une contrepartie IA (le jeu n'a qu'une seule banque réellement jouable, une négociation littérale acheteur-joueur / vendeur-joueur n'était pas possible sans une refonte multi-tenant beaucoup plus large).
+  - **M&A Breakthrough** : quand un deal suffisamment important (≥ 300 M$) est signé et exécuté, une annonce de marché globale s'affiche pour tous les joueurs, avec une hausse immédiate du cours d'une action liée au secteur du deal.
+- **🛡 Risk Manager & Compliance rendu passionnant**, en 3 volets :
+  - **Panneau de Contrôle VaR** : matrice en temps réel de la Value at Risk portée par chaque Trader/Analyste (positions marchés + expositions structurées non couvertes), avec seuils d'alerte visuels.
+  - **Kill Switch** : le Risk Manager peut interdire à un Trader de passer un ordre pendant 2 minutes, ou geler un deal M&A dont le risque de défaut dépasse un seuil critique.
+  - **Audits SEC/BCE impromptus** : toutes les 3 à 6 minutes, une IA régulatrice contrôle la banque — trop d'alertes en retard ou de positions non couvertes depuis plus de 5 minutes déclenche une amende record prélevée immédiatement sur la trésorerie.
+- **⌨️ Terminal Financier & ambiance**, en 3 volets :
+  - **UI style terminal pro** avec raccourcis clavier F1 (Terminal Chat), F2 (Marchés), F3 (RH), F4 (M&A) — désactivés pendant la saisie dans un champ de texte.
+  - **Sound Design** : ambiance de salle de marché en fond sur la page Marchés, clochette de bourse sur un gros deal clos, bip d'urgence sur une alerte Risk, bruit de tampon sur une embauche RH — réglable dans les Paramètres.
+  - **Notifications Flash** : pop-up discrète en haut à droite dès qu'un collègue ou une IA réalise une action d'impact dans la banque.
+- **🕐 Fin de partie & classement général**, en 3 volets :
+  - **Journées de Bourse** : une session complète dure désormais 4 Journées de Bourse de 15 minutes réelles (1h de jeu total).
+  - **Cérémonie des Trophées** : à la clôture de la 4ᵉ journée, la partie se fige et une cérémonie récompense Banque de l'Année (P&L le plus élevé), Dealmaker of the Year (plus gros volume M&A géré), Star Trader (meilleur P&L de trading) et Meilleur Employeur (RH avec le plus d'actions positives).
+  - **Sauvegarde & Historique** : le Hall of Fame et le résultat de chaque Cérémonie des Trophées sont désormais enregistrés dans un fichier d'historique persistant, qui survit à une réinitialisation manuelle et à un redémarrage du serveur.
+- Règlement enrichi avec l'intégralité des mécaniques ci-dessus.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- `gameState.marketDay.deadline` n'était jamais re-primé après un `game:requestReset` (contrairement à `quarterDeadline`, qui l'était déjà) — la journée de marché, et donc la nouvelle structure de fin de partie en 4 jours, ne pouvait jamais avancer sur une partie relancée manuellement.
+
+### Notes techniques
+- `server/riskControl.js`, `server/rfq.js`, `server/negotiation.js`, `server/dataRoom.js` (nouveaux) : suivent la même convention spawn/sweep en boucles auto-reprogrammées indépendantes que le reste du jeu.
+- `computeVaR()` (`server/riskControl.js`) additionne le risque des positions marchés réelles ET l'exposition delta non couverte des produits structurés (`unhedgedDeltaTotal()` de `server/structuredProducts.js`) — un lien causal direct entre Delta Hedging et Margin Call, pas deux systèmes isolés.
+- `server/trophies.js` (nouveau) : les 4 trophées sont calculés à partir de données déjà suivies par le jeu (league table, workflows exécutés, journal de trading, compteurs d'actions RH) plutôt que d'ajouter un nouveau système de suivi dédié ; `endSession()` gèle la partie via le flag `paused` déjà respecté par toutes les boucles existantes.
+- `server/persistence.js` (nouveau) : pas de base de données managée configurée sur ce déploiement — implémenté en fichier JSON local (`data/history.json`), qui survit aux resets et redémarrages du serveur mais pas à un redéploiement Render (nouveau disque).
+- `server/gameState.js` : `seedDataRoom()` dupliqué en miniature depuis `server/dataRoom.js` pour éviter un cycle de dépendances (`dataRoom.js` importe déjà `gameState.js` pour `pushActivity`).
+- Régression complète menée en direct via `socket.io-client` sur les nouveaux flux (RFQ, Delta Hedging, Margin Call, Kill Switch, Audit impromptu, Data Room, Négociation, M&A Breakthrough) et sur le cycle complet des 4 Journées de Bourse jusqu'à la Cérémonie des Trophées.
+
+---
+
 ## Patch 17 — Refonte RH complète, Pitchbook, Produits Structurés, Illiquidité interbancaire & Workspace modulable (2026-07-28)
 
 ### Ajouts

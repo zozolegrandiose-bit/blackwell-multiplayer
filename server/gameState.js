@@ -47,9 +47,19 @@ function seedInstrumentHistory(currentPrice, volatility) {
   return history;
 }
 
+// Duplicated in miniature from server/dataRoom.js's generateDataRoom() -- kept
+// local rather than required, since dataRoom.js itself requires this file
+// (for pushActivity), which would close a require cycle.
+function seedDataRoom(valuation) {
+  const ebitda = Math.round((valuation / 8) * (0.85 + 0.15) * 10) / 10;
+  const detteNette = Math.round(valuation * 0.2 * 10) / 10;
+  const bilanFinancier = Math.round(valuation * 0.95 * 10) / 10;
+  return { bilanFinancier, ebitda, detteNette, analyzed: false, fairValue: null };
+}
+
 function createGameState() {
   const now = Date.now();
-  return {
+  const state = {
     createdAt: Date.now(),
     players: [],
     mail: [],
@@ -351,7 +361,13 @@ function createGameState() {
     pitchbookCompetitions: [],
     hedgingRequests: [],
     structuredProducts: [],
+    rfqRequests: [],
+    pendingHedges: [],
+    sessionEnded: false,
+    sessionHistory: [],
+    trophies: null,
     repoStatus: { blocked: false, blockedSince: null, emergencyFacilityUsed: 0 },
+    marginCall: { active: false, deadline: null, requiredAmount: 0 },
     ipo: null,
     // Terminal Chat -- distinct from Mail (formal, subject/body inbox): a casual
     // Bloomberg/Slack-style component. "News" reuses gameState.teamChat directly
@@ -362,6 +378,8 @@ function createGameState() {
     terminalDMs: [],
     terminalDealsFeed: []
   };
+  state.maDeals.forEach(d => { if (!d.dataRoom) d.dataRoom = seedDataRoom(d.valuation); });
+  return state;
 }
 
 const MAX_ACTIVITY_LOG = 200;
@@ -403,12 +421,14 @@ function recordBankPnl(gameState, bankName, pnlDelta, dealsClosedDelta) {
 function resetGame(gameState) {
   const preservedPlayers = gameState.players;
   const preservedHallOfFame = gameState.hallOfFame || [];
+  const preservedSessionHistory = gameState.sessionHistory || [];
   const fresh = createGameState();
   Object.keys(fresh).forEach(key => {
     gameState[key] = fresh[key];
   });
   gameState.players = preservedPlayers;
   gameState.hallOfFame = preservedHallOfFame;
+  gameState.sessionHistory = preservedSessionHistory;
   return gameState;
 }
 
@@ -433,7 +453,8 @@ function buildPublicRoster(gameState) {
     onSabbatical: p.onSabbatical,
     onSickLeave: p.onSickLeave,
     raiseRequested: p.raiseRequested,
-    onSuspension: p.onSuspension
+    onSuspension: p.onSuspension,
+    tradingFrozen: p.tradingFrozen
   }));
 }
 

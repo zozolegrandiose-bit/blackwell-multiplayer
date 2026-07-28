@@ -3,6 +3,8 @@ const { buildSnapshot } = require("./join");
 const { QUARTER_LENGTH_MS, CLUSTER_LABELS, OPERATIONAL_CLUSTERS } = require("../strategy");
 const { spawnRandomEvent } = require("../events");
 const { DIFFICULTY_LEVELS } = require("../difficulty");
+const { DAY_LENGTH_MS } = require("../marketDay");
+const { saveHistory } = require("../persistence");
 
 const HALL_OF_FAME_MAX = 10;
 
@@ -20,10 +22,19 @@ function registerGameHandlers(io, socket, gameState) {
       gameState.hallOfFame.push({ fullName: topScore.fullName, score: topScore.score, quarter: gameState.currentQuarter, ts: Date.now() });
       gameState.hallOfFame.sort((a, b) => b.score - a.score);
       gameState.hallOfFame.length = Math.min(gameState.hallOfFame.length, HALL_OF_FAME_MAX);
+      // Persist immediately on manual reset -- otherwise this Hall of Fame entry
+      // only reaches history.json at the next natural 4-day session end (trophies.js),
+      // and would be lost entirely if the server restarts before that.
+      saveHistory(gameState);
     }
 
     resetGame(gameState);
     gameState.quarterDeadline = Date.now() + QUARTER_LENGTH_MS;
+    // Same re-priming quarterDeadline already needed above: resetGame()'s fresh
+    // marketDay.deadline is null (createGameState()'s seed value, meant to be set
+    // once at server boot), so a new session's Journées de Bourse cycle -- and
+    // the 4-day Trophy Ceremony it leads to -- would otherwise never advance.
+    gameState.marketDay.deadline = Date.now() + DAY_LENGTH_MS;
 
     pushActivity(gameState, {
       actorPlayerId: player.id,

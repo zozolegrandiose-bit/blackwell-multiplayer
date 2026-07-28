@@ -7,6 +7,64 @@ function slaBadge(ts) {
   return `<span class="chip ${cls}">${days} j</span>`;
 }
 
+// Client-side mirror of server/riskControl.js's computeVaR() -- pure function of
+// the same markets.positions/instruments already shared with compliance-access
+// players (server/handlers/join.js), so no extra round trip is needed.
+const VAR_CONFIDENCE_MULTIPLIER_CLIENT = 1.65;
+const PLAYER_VAR_WARNING_CLIENT = 30;
+const PLAYER_VAR_CRITICAL_CLIENT = 60;
+
+function computeVaRClient() {
+  const markets = appState.markets || { positions: [], instruments: [] };
+  const perPlayer = {};
+  let bankTotal = 0;
+  markets.positions.forEach(pos => {
+    const instrument = markets.instruments.find(i => i.id === pos.instrumentId);
+    if (!instrument) return;
+    const posVaR = Math.round(Math.abs(pos.notional) * instrument.volatility * VAR_CONFIDENCE_MULTIPLIER_CLIENT * 100) / 100;
+    bankTotal = Math.round((bankTotal + posVaR) * 100) / 100;
+    const key = pos.openedByPlayerId || "unassigned";
+    if (!perPlayer[key]) perPlayer[key] = { playerId: pos.openedByPlayerId, playerName: pos.openedByName, var: 0, positionCount: 0 };
+    perPlayer[key].var = Math.round((perPlayer[key].var + posVaR) * 100) / 100;
+    perPlayer[key].positionCount += 1;
+  });
+  return { perPlayer: Object.values(perPlayer), bankTotal };
+}
+
+function varStatusClient(v) {
+  if (v >= PLAYER_VAR_CRITICAL_CLIENT) return "critical";
+  if (v >= PLAYER_VAR_WARNING_CLIENT) return "warning";
+  return "ok";
+}
+const VAR_STATUS_CHIP = { ok: "chip-good", warning: "chip-warning", critical: "chip-critical" };
+
+function varPanelHtml() {
+  if (!appState.markets) return "";
+  const { perPlayer, bankTotal } = computeVaRClient();
+  const killSwitched = (appState.players || []).filter(p => p.tradingFrozen);
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">📊 Matrice VaR (Value at Risk) — book total : ${fmtMoney(bankTotal)}</div>
+      ${perPlayer.length ? `
+        <table class="data-table">
+          <thead><tr><th>Trader</th><th>Positions</th><th>VaR</th><th></th></tr></thead>
+          <tbody>
+            ${perPlayer.map(p => `
+              <tr>
+                <td>${escapeHtml(p.playerName || "—")}</td>
+                <td class="tnum">${p.positionCount}</td>
+                <td><span class="chip ${VAR_STATUS_CHIP[varStatusClient(p.var)]}">${fmtMoney(p.var)}</span></td>
+                <td>${p.playerId ? `<button data-kill-switch="${p.playerId}" class="btn-sm" style="border-color:#ff5c7a; color:#ffb3c1;">🛑 Kill Switch</button>` : ""}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      ` : `<div class="empty-cell">Aucune position ouverte pour l'instant.</div>`}
+      ${killSwitched.length ? `<div style="font-size:11px; color:var(--series-red); margin-top:8px;">🛑 Trading interdit : ${killSwitched.map(p => escapeHtml(p.fullName)).join(", ")}</div>` : ""}
+    </div>
+  `;
+}
+
 // The Risk Manager's step of the Analyste → Risk Manager → Desk Trading workflow:
 // deals awaiting review show up here even though this player has no M&A page
 // access — server/handlers/join.js shares maDeals with any compliance-access
@@ -40,6 +98,22 @@ function riskQueueHtml() {
   `;
 }
 
+function dealKillSwitchPanelHtml() {
+  const active = (appState.maDeals || []).filter(d => d.workflow && ["pending_risk", "pending_execution", "syndicating"].includes(d.workflow.phase));
+  if (!active.length) return "";
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🛑 Geler un deal à risque</div>
+      ${active.map(d => `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 0; border-top:1px solid var(--border);">
+          <div style="font-size:12.5px;">${escapeHtml(d.name)} — ${fmtMoney(d.valuation)} ${d.frozen ? `<span class="chip chip-critical">Gelé</span>` : ""}</div>
+          ${d.frozen ? "" : `<button data-freeze-deal="${d.id}" class="btn-sm">Geler (2 min)</button>`}
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderCompliance() {
   const items = [...(appState.complianceItems || [])].sort((a, b) => b.ts - a.ts);
   const assignableplayers = appState.players || [];
@@ -47,6 +121,8 @@ function renderCompliance() {
     <div class="page-title">Conformité</div>
     <div class="page-sub">Alertes et suivi réglementaire.</div>
     ${taskPanelHtml("compliance")}
+    ${varPanelHtml()}
+    ${dealKillSwitchPanelHtml()}
     ${riskQueueHtml()}
     <div class="panel" style="margin-bottom:16px;">
       <div class="panel-title">Nouvelle alerte</div>
@@ -116,6 +192,12 @@ function bindCompliance() {
       const [playerId, action] = el.getAttribute("data-discipline").split("|");
       socket.emit("hr:disciplineEmployee", { playerId, action });
     });
+  });
+  document.querySelectorAll("[data-kill-switch]").forEach(el => {
+    el.addEventListener("click", () => socket.emit("compliance:killSwitchTrader", { playerId: el.getAttribute("data-kill-switch") }));
+  });
+  document.querySelectorAll("[data-freeze-deal]").forEach(el => {
+    el.addEventListener("click", () => socket.emit("compliance:freezeDeal", { dealId: el.getAttribute("data-freeze-deal") }));
   });
   document.querySelectorAll("[data-risk-approve]").forEach(el => {
     el.addEventListener("click", () => {

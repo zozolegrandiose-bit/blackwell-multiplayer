@@ -1,6 +1,7 @@
 const { pushActivity, postTeamChat, recordBankPnl } = require("../gameState");
 const { awardPoints, checkEventResolution, applyHealthDelta } = require("../scoring");
 const { applyDealRevenue } = require("./finance");
+const { generateDataRoom } = require("../dataRoom");
 const { getDifficultyPreset } = require("../difficulty");
 
 const MA_STAGES = ["Screening", "Due Diligence", "Négociation", "Signing", "Clôturé"];
@@ -55,7 +56,8 @@ function createBonusDeal(io, gameState, { name, valuation }) {
     createdByPlayerId: null,
     updatedAt: Date.now(),
     revenueBooked: false,
-    workflow: null
+    workflow: null,
+    dataRoom: generateDataRoom(valuation)
   };
   gameState.maDeals.push(deal);
   io.to("access:ma").emit("ma:update", gameState.maDeals);
@@ -154,7 +156,8 @@ function registerMaHandlers(io, socket, gameState) {
       createdByPlayerId: player.id,
       updatedAt: Date.now(),
       revenueBooked: false,
-      workflow: null
+      workflow: null,
+      dataRoom: generateDataRoom(Number(payload.valuation) || 0)
     };
     gameState.maDeals.push(deal);
 

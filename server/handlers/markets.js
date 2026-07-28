@@ -88,6 +88,10 @@ function registerMarketsHandlers(io, socket, gameState) {
       socket.emit("markets:buy:rejected", { reason: "Marché interbancaire fermé — les lignes de crédit Repo sont coupées, impossible d'ouvrir une nouvelle position." });
       return;
     }
+    if (player.tradingFrozen) {
+      socket.emit("markets:buy:rejected", { reason: "Kill Switch actif — le Risk Manager vous a interdit de trader temporairement." });
+      return;
+    }
     const instrument = findInstrument(gameState, payload.instrumentId);
     const notional = Number(payload.notional);
     if (!instrument || Number.isNaN(notional) || notional <= 0) return;
