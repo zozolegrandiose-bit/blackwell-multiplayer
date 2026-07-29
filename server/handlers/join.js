@@ -52,7 +52,8 @@ function buildSnapshot(gameState, player) {
     terminalDMs: ownDMs,
     terminalDealsFeed: gameState.terminalDealsFeed,
     globalBank: gameState.globalBank,
-    publicTicker: publicInstrumentTicker(gameState)
+    publicTicker: publicInstrumentTicker(gameState),
+    aiAgents: gameState.aiAgents
   };
   // Compliance (Risk Manager) and Markets (Desk Trading) both surface workflow
   // panels derived from maDeals even though neither has the M&A page itself —

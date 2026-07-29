@@ -652,6 +652,8 @@ input:focus, select:focus, textarea:focus {
 
 .team-chat-congrats { border-left: 3px solid var(--series-green); padding-left: 8px; }
 .team-chat-alert { border-left: 3px solid var(--series-red); padding-left: 8px; }
+.team-chat-player { border-left: 3px solid var(--accent); padding-left: 8px; }
+.team-chat-ai-reply { border-left: 3px solid var(--gold); padding-left: 8px; }
 
 /* ---------- Global Ticker Tape ---------- */
 #global-ticker:empty { display: none; }

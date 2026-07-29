@@ -47,45 +47,54 @@ function spawnRfq(io, gameState) {
   io.to("access:markets").emit("rfq:update", gameState.rfqRequests);
 }
 
+// Reusable: mutate + broadcast + log, callable from the socket handler (real
+// player) or from server/aiAgents.js's Trader IA heartbeat (Patch 20) — same
+// extraction convention as server/handlers/ma.js's advanceRandomDeal. Returns
+// the resolved rfq object (with .accepted set), or null if it couldn't resolve.
+function respondToRfq(io, gameState, rfq, quotedPrice, actor) {
+  if (!rfq || rfq.resolved || Date.now() >= rfq.deadline) return null;
+  if (!Number.isFinite(quotedPrice) || quotedPrice <= 0) return null;
+
+  rfq.resolved = true;
+  const spread = Math.abs(quotedPrice - rfq.referencePrice) / rfq.referencePrice;
+  const accepted = spread <= MAX_ACCEPTABLE_SPREAD;
+  rfq.quotedPrice = quotedPrice;
+  rfq.accepted = accepted;
+  rfq.byPlayerId = actor.id;
+  rfq.byName = actor.fullName;
+
+  if (accepted) {
+    const profit = round2(rfq.notional * spread * 2); // the captured spread, doubled as the immediate structuring margin on a block trade
+    gameState.markets.cash = round2(gameState.markets.cash + profit);
+    gameState.markets.realizedPnL = round2(gameState.markets.realizedPnL + profit);
+    gameState.markets.tradeLog.unshift({ instrumentName: "RFQ — " + rfq.instrumentName, notional: rfq.notional, pnl: profit, closedByName: actor.fullName, ts: Date.now() });
+    if (gameState.markets.tradeLog.length > 30) gameState.markets.tradeLog.length = 30;
+    recordBankPnl(gameState, PLAYER_BANK_NAME, profit, 0);
+    if (actor.id) awardPoints(io, gameState, actor, "markets_trade"); // synthetic AI actors (id: null) don't hold a score
+    pushActivity(gameState, { actorPlayerId: actor.id, page: "markets", text: actor.fullName + " remporte le RFQ de " + rfq.clientName + " à " + quotedPrice + " — +" + profit + " M$." });
+    io.to("game").emit("leagueTable:update", gameState.leagueTable);
+    if (profit >= 15) {
+      postTeamChat(gameState, { authorName: "IA — Salle des marchés", text: "📞 Beau RFQ exécuté par " + actor.fullName + " (+" + profit + " M$) !", tone: "congrats" });
+      io.to("game").emit("teamChat:update", gameState.teamChat[0]);
+    }
+  } else {
+    pushActivity(gameState, { actorPlayerId: actor.id, page: "markets", text: actor.fullName + " cote " + quotedPrice + " sur le RFQ de " + rfq.clientName + " — prix trop éloigné, client décline." });
+  }
+
+  io.to("game").emit("activity:update", gameState.activityLog[0]);
+  io.to("access:markets").emit("markets:update", gameState.markets);
+  io.to("access:markets").emit("rfq:update", gameState.rfqRequests);
+  return rfq;
+}
+
 function registerRfqHandlers(io, socket, gameState) {
   socket.on("markets:respondRfq", payload => {
     if (!requireAccess(socket, "markets")) return;
     const player = gameState.players.find(p => p.id === socket.data.playerId);
     if (!player) return;
     const rfq = gameState.rfqRequests.find(r => r.id === payload.rfqId && !r.resolved);
-    if (!rfq || Date.now() >= rfq.deadline) return;
-    const quotedPrice = Number(payload.quotedPrice);
-    if (!Number.isFinite(quotedPrice) || quotedPrice <= 0) return;
-
-    rfq.resolved = true;
-    const spread = Math.abs(quotedPrice - rfq.referencePrice) / rfq.referencePrice;
-    const accepted = spread <= MAX_ACCEPTABLE_SPREAD;
-    rfq.quotedPrice = quotedPrice;
-    rfq.accepted = accepted;
-    rfq.byPlayerId = player.id;
-    rfq.byName = player.fullName;
-
-    if (accepted) {
-      const profit = round2(rfq.notional * spread * 2); // the captured spread, doubled as the immediate structuring margin on a block trade
-      gameState.markets.cash = round2(gameState.markets.cash + profit);
-      gameState.markets.realizedPnL = round2(gameState.markets.realizedPnL + profit);
-      gameState.markets.tradeLog.unshift({ instrumentName: "RFQ — " + rfq.instrumentName, notional: rfq.notional, pnl: profit, closedByName: player.fullName, ts: Date.now() });
-      if (gameState.markets.tradeLog.length > 30) gameState.markets.tradeLog.length = 30;
-      recordBankPnl(gameState, PLAYER_BANK_NAME, profit, 0);
-      awardPoints(io, gameState, player, "markets_trade");
-      pushActivity(gameState, { actorPlayerId: player.id, page: "markets", text: player.fullName + " remporte le RFQ de " + rfq.clientName + " à " + quotedPrice + " — +" + profit + " M$." });
-      io.to("game").emit("leagueTable:update", gameState.leagueTable);
-      if (profit >= 15) {
-        postTeamChat(gameState, { authorName: "IA — Salle des marchés", text: "📞 Beau RFQ exécuté par " + player.fullName + " (+" + profit + " M$) !", tone: "congrats" });
-        io.to("game").emit("teamChat:update", gameState.teamChat[0]);
-      }
-    } else {
-      pushActivity(gameState, { actorPlayerId: player.id, page: "markets", text: player.fullName + " cote " + quotedPrice + " sur le RFQ de " + rfq.clientName + " — prix trop éloigné, client décline." });
-    }
-
-    io.to("game").emit("activity:update", gameState.activityLog[0]);
-    io.to("access:markets").emit("markets:update", gameState.markets);
-    io.to("access:markets").emit("rfq:update", gameState.rfqRequests);
+    if (!rfq) return;
+    respondToRfq(io, gameState, rfq, Number(payload.quotedPrice), player);
   });
 }
 
@@ -122,4 +131,4 @@ function startRfqLoop(io, gameState) {
   console.log("RFQ activé (clients institutionnels, cotation sous 15s).");
 }
 
-module.exports = { registerRfqHandlers, startRfqLoop, spawnRfq, sweepRfq, RFQ_WINDOW_MS, MAX_ACCEPTABLE_SPREAD };
+module.exports = { registerRfqHandlers, startRfqLoop, spawnRfq, sweepRfq, respondToRfq, RFQ_WINDOW_MS, MAX_ACCEPTABLE_SPREAD };

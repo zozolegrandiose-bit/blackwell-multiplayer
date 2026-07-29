@@ -22,6 +22,10 @@ function renderTerminal() {
         <div class="terminal-screen">
           ${terminalFeedHtml(news, m => `<span class="terminal-ts">${fmtTime(m.ts)}</span> <span class="terminal-tag">${escapeHtml(m.authorName)}</span> ${escapeHtml(m.text)}`)}
         </div>
+        <div style="display:flex; gap:6px; margin-top:8px;">
+          <input id="terminal-news-input" type="text" maxlength="240" placeholder="Écrire dans le News… (@trading, @ma, @risk)" style="flex:1; padding:6px 9px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
+          <button id="terminal-news-send" class="btn-sm">Envoyer</button>
+        </div>
       </div>
       <div class="panel terminal-panel">
         <div class="panel-title">📎 Deals en cours</div>
@@ -52,8 +56,7 @@ function renderTerminal() {
 
 function bindTerminal() {
   const sendBtn = document.getElementById("terminal-dm-send");
-  if (!sendBtn) return;
-  sendBtn.addEventListener("click", () => {
+  if (sendBtn) sendBtn.addEventListener("click", () => {
     const toPlayerId = document.getElementById("terminal-dm-to").value;
     const bodyEl = document.getElementById("terminal-dm-body");
     const body = bodyEl.value.trim();
@@ -63,6 +66,19 @@ function bindTerminal() {
     socket.emit("terminal:sendDM", { toPlayerId, body });
     bodyEl.value = "";
   });
+
+  const newsInput = document.getElementById("terminal-news-input");
+  const newsSendBtn = document.getElementById("terminal-news-send");
+  if (newsInput && newsSendBtn) {
+    const send = () => {
+      const body = newsInput.value.trim();
+      if (!body) return;
+      socket.emit("teamChat:post", { body });
+      newsInput.value = "";
+    };
+    newsSendBtn.addEventListener("click", send);
+    newsInput.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+  }
 }
 
 PAGE_RENDERERS.terminal = renderTerminal;

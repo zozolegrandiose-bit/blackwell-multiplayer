@@ -57,6 +57,17 @@ function seedDataRoom(valuation) {
   return { bilanFinancier, ebitda, detteNette, analyzed: false, fairValue: null };
 }
 
+// Duplicated in miniature from server/aiAgents.js's AI_AGENTS_SEED -- kept local
+// for the same require-cycle reason as seedDataRoom above (aiAgents.js requires
+// this file for pushActivity/postTeamChat).
+function seedAiAgents() {
+  return [
+    { id: "agent-trader-1", name: "Marcus Chen", role: "TRADING", roleLabel: "Trader IA", personality: "cowboy" },
+    { id: "agent-ma-1", name: "Julien Beaumont", role: "MA", roleLabel: "Analyste M&A IA", personality: "dealmaker" },
+    { id: "agent-risk-1", name: "Elena Kowalski", role: "RISK", roleLabel: "Risk Manager IA", personality: "institutional" }
+  ];
+}
+
 // Duplicated in miniature from server/globalBank.js's seedGlobalBank() -- kept
 // local for the same require-cycle reason as seedDataRoom above (globalBank.js
 // requires this file for pushActivity/postTeamChat).
@@ -396,7 +407,8 @@ function createGameState() {
     // already covers); terminalDMs are real-time private messages between players.
     terminalDMs: [],
     terminalDealsFeed: [],
-    globalBank: seedGlobalBank()
+    globalBank: seedGlobalBank(),
+    aiAgents: seedAiAgents()
   };
   state.maDeals.forEach(d => { if (!d.dataRoom) d.dataRoom = seedDataRoom(d.valuation); });
   return state;

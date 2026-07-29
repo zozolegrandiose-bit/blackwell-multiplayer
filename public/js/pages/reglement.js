@@ -209,6 +209,16 @@ function renderReglement() {
       <b>Transferts inter-entités :</b> les managers autorisés peuvent transférer du capital d'une entité à une autre (liquidité overnight). Si l'entité européenne ne dispose pas d'assez de fonds propres pour couvrir un gros deal M&amp;A en cours d'exécution, le siège de New York <b>injecte automatiquement</b> le capital manquant via une transaction intra-groupe.
     `)}
 
+    ${reglementSectionHtml("🤖 Collègues IA — Heartbeat, personnalités & chat", `
+      Trois collègues IA nommés travaillent en permanence à vos côtés, chacun avec son propre rythme indépendant (5 à 15 secondes) et son <b>archétype de personnalité</b>, visible sur l'Organigramme (page RH) :
+      <ul style="margin:8px 0 0 18px; padding:0;">
+        <li><b>🤠 Marcus Chen — Trader IA (The Cowboy)</b> : agressif, répond aux RFQ et prend des positions plus grosses, très rapide mais parfois hors de la fourchette de prix acceptable.</li>
+        <li><b>🤝 Julien Beaumont — Analyste M&amp;A IA (The Dealmaker)</b> : soumet des offres de Pitchbook et fait avancer les deals en cours, charismatique en origination.</li>
+        <li><b>🏛 Elena Kowalski — Risk Manager IA (The Institutional)</b> : conservatrice, revoit la VaR, relance un Risk Manager humain qui tarde à trancher un dossier (au-delà de 15s) et tranche elle-même au-delà de 30s si personne n'a agi.</li>
+      </ul>
+      Ces trois collègues postent leurs actions dans le <b>Chat d'équipe</b> (Vue d'ensemble et Terminal Chat) — succès, alertes urgentes (ex. VaR hors limite avec 30s pour couvrir), relances amicales. Le Chat d'équipe accepte désormais aussi vos propres messages : mentionnez <b>@trading</b>, <b>@ma</b>, <b>@risk</b> ou le prénom d'un agent pour obtenir une réponse rapide et réaliste.
+    `)}
+
     <div class="panel">
       <div class="panel-title">⚙️ Paramètres</div>
       <div class="form-row" style="align-items:center;">

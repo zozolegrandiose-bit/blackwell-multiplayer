@@ -1,5 +1,30 @@
 # Journal des mises à jour
 
+## Patch 20 — Heartbeat Loop, Personnalités & Chat IA (2026-07-29)
+
+### Ajouts
+- **🤖 Collègues IA nommés avec personnalité** : 3 agents IA travaillent désormais en parallèle des joueurs humains, chacun avec son propre rythme indépendant (5-15s) — Marcus Chen (Trader IA, 🤠 The Cowboy — agressif, rapide, parfois hors fourchette de prix), Julien Beaumont (Analyste M&A IA, 🤝 The Dealmaker — origination charismatique), Elena Kowalski (Risk Manager IA, 🏛 The Institutional — prudente). Visibles avec leur profil complet sur l'Organigramme (page RH).
+- **💓 Heartbeat Loop** : à chaque cycle, chaque agent agit selon son rôle — le Trader répond aux RFQ ou couvre une exposition delta non hedgée ou prend une petite position ambiante ; l'Analyste M&A soumet une offre de Pitchbook ou fait avancer un deal en cours ; le Risk Manager revoit la VaR de la banque, relance un Risk Manager humain qui tarde à trancher un dossier (au-delà de 15s), et tranche lui-même au-delà de 30s si personne n'a agi. Chaque action génère une entrée dans le fil d'activité.
+- **💬 Chat interne bidirectionnel** : le Chat d'équipe (Vue d'ensemble et Terminal Chat) accepte désormais les messages des joueurs, pas seulement les messages système/IA. Mentionner un agent (@trading, @ma, @risk, ou son prénom) déclenche une réponse rapide et réaliste sous 2 à 6 secondes.
+- **📢 Messages contextuels des IA** : succès (RFQ remporté, mandat M&A sécurisé avec le vrai P&L de la clôture), urgence (alerte VaR nommant le joueur et l'instrument concernés, délai de 30s avant liquidation), relance amicale (un dossier M&A qui traîne depuis 15s se voit rappelé par son nom).
+- Règlement enrichi avec l'intégralité des mécaniques ci-dessus.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- `server/aiAgents.js` (nouveau) : chaque agent a sa propre boucle auto-reprogrammée indépendante (pas un timer partagé), le délai de base étant modulé par le facteur de vitesse de sa personnalité.
+- Contrairement à `server/ai.js` (IA ambiante existante, qui n'agit que lorsqu'une page est totalement inoccupée), ces 3 agents agissent en continu, en parallèle des humains — un choix délibéré pour répondre au retour "les IA sont trop passives".
+- Le nudge/tranchage du Risk Manager IA (15s/30s) ne rentre jamais en conflit avec le fallback existant `aiReviewPendingRisk` de `server/handlers/dealWorkflow.js` (qui résout en ~2s mais seulement si personne n'est connecté à Conformité) : les deux systèmes se partagent naturellement selon la présence humaine, sans coordination explicite nécessaire.
+- Réutilise au maximum les fonctions déjà extraites d'autres patches plutôt que de redériver la logique : `respondToRfq()` (nouvellement extrait de `server/rfq.js`, même convention que `advanceRandomDeal`), `advanceRandomDeal()` (`server/handlers/ma.js`), `progressRandomComplianceItem()` (`server/handlers/compliance.js`), `computeVaR()`/`varStatus()` (`server/riskControl.js`).
+- Le message de succès M&A calcule le P&L réel de la clôture (delta du P&L de la league table avant/après l'action) plutôt que d'inventer un chiffre — aucune donnée fictive n'est affichée comme si elle provenait du jeu.
+- Régression complète menée en direct via `socket.io-client` : présence des 3 agents au snapshot, activité visible du Heartbeat Loop, envoi de message joueur, réponse à une mention par tag de rôle et par prénom, cycle complet nudge (15s) puis tranchage (30s) du Risk Manager IA.
+
+---
+
 ## Patch 19 — Design System Terminal Institutionnel & Global Footprint multi-entités (2026-07-29)
 
 ### Ajouts

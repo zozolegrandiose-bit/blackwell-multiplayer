@@ -290,22 +290,49 @@ function leagueTablePanelHtml() {
 // Proactive AI reactions (server/gameState.js's postTeamChat, triggered from
 // ma.js/dealWorkflow.js on a big deal closing and from scoring.js on a bank-health
 // crossing) — a lightweight team chat, distinct from the factual activity feed.
+// tone -> CSS class: "player" (human free-text, Patch 20) and "ai-reply" (an
+// AI agent replying to an @mention, Patch 20) get their own subtle treatment,
+// distinct from the existing congrats/alert system messages.
+function teamChatToneClass(tone) {
+  if (tone === "alert") return "team-chat-alert";
+  if (tone === "player") return "team-chat-player";
+  if (tone === "ai-reply") return "team-chat-ai-reply";
+  return "team-chat-congrats";
+}
+
 function teamChatHtml() {
   const messages = appState.teamChat || [];
-  if (!messages.length) return "";
   return `
     <div class="panel" style="margin-bottom:16px;">
       <div class="panel-title">💬 Chat d'équipe</div>
-      <div class="activity-feed">
-        ${messages.map(m => `
-          <div class="activity-row team-chat-${m.tone === "alert" ? "alert" : "congrats"}">
+      <div class="activity-feed" style="margin-bottom:10px;">
+        ${messages.length ? messages.map(m => `
+          <div class="activity-row ${teamChatToneClass(m.tone)}">
             <span class="activity-time">${fmtTime(m.ts)}</span>
             <span class="activity-text"><b>${escapeHtml(m.authorName)}</b> — ${escapeHtml(m.text)}</span>
           </div>
-        `).join("")}
+        `).join("") : `<div class="empty-cell">Aucun message — lancez la discussion.</div>`}
+      </div>
+      <div style="display:flex; gap:8px;">
+        <input id="teamchat-input" type="text" maxlength="240" placeholder="Écrire un message… (mentionnez @trading, @ma, @risk ou un prénom d'IA)" style="flex:1; padding:7px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12.5px;"/>
+        <button id="teamchat-send" class="btn-sm">Envoyer</button>
       </div>
     </div>
   `;
+}
+
+function bindTeamChatInput() {
+  const input = document.getElementById("teamchat-input");
+  const sendBtn = document.getElementById("teamchat-send");
+  if (!input || !sendBtn) return;
+  const send = () => {
+    const body = input.value.trim();
+    if (!body) return;
+    socket.emit("teamChat:post", { body });
+    input.value = "";
+  };
+  sendBtn.addEventListener("click", send);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
 }
 
 // The direct answer to "on ne sait pas quoi faire" — a live, always-accurate list
@@ -543,6 +570,7 @@ function bindOverview() {
     });
   });
   bindWorkspaceControls();
+  bindTeamChatInput();
 }
 
 PAGE_RENDERERS.overview = renderOverview;

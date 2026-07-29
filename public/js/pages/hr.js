@@ -52,6 +52,42 @@ function orgChartPanelHtml() {
   `;
 }
 
+// Collègues IA (Patch 20) -- the 3 named AI agents (Heartbeat Loop,
+// server/aiAgents.js) shown with their role and personality archetype, so HR
+// and managers know who they're working alongside, not just an anonymous
+// "IA — Surveillance automatique" line in the activity feed.
+const AI_PERSONALITY_META = {
+  cowboy: { label: "The Cowboy", emoji: "🤠", description: "Agressif — prend d'immenses risques, réclame de gros bonus, très rapide mais commet parfois des erreurs de risque." },
+  institutional: { label: "The Institutional", emoji: "🏛", description: "Conservateur — très prudent sur le risque, valide lentement mais évite les pertes majeures." },
+  dealmaker: { label: "The Dealmaker", emoji: "🤝", description: "Charismatique — excellent en origination M&A, mais exige un salaire élevé." }
+};
+
+function aiColleaguesPanelHtml() {
+  const agents = appState.aiAgents || [];
+  if (!agents.length) return "";
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🤖 Collègues IA</div>
+      <table class="data-table">
+        <thead><tr><th>Nom</th><th>Rôle</th><th>Personnalité</th><th>Profil</th></tr></thead>
+        <tbody>
+          ${agents.map(a => {
+            const meta = AI_PERSONALITY_META[a.personality] || {};
+            return `
+              <tr>
+                <td><div class="person-row">${avatarHtml(a.name, 20)}<span class="person-row-name">${escapeHtml(a.name)}</span></div></td>
+                <td>${escapeHtml(a.roleLabel)}</td>
+                <td><span class="chip chip-neutral">${meta.emoji || ""} ${escapeHtml(meta.label || a.personality)}</span></td>
+                <td style="font-size:11.5px; color:var(--text-muted);">${escapeHtml(meta.description || "")}</td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function bindOrgChartPanel() {
   document.querySelectorAll("[data-org-promote]").forEach(el => {
     el.addEventListener("click", () => socket.emit("hr:promotePlayer", { playerId: el.getAttribute("data-org-promote") }));
@@ -142,6 +178,7 @@ function renderHr() {
     <div class="page-sub">Effectif, recrutement, moral des équipes et primes.</div>
     ${taskPanelHtml("hr")}
     ${orgChartPanelHtml()}
+    ${aiColleaguesPanelHtml()}
     <div class="kpi-grid">
       <div class="kpi-card"><div class="kpi-label">Effectif joueurs</div><div class="kpi-value">${appState.players.length}</div></div>
       <div class="kpi-card"><div class="kpi-label">Recrues embauchées</div><div class="kpi-value">${hr.headcountNPC || 0}</div></div>

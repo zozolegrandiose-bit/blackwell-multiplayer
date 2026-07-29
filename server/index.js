@@ -39,6 +39,7 @@ const { registerRfqHandlers, startRfqLoop } = require("./rfq");
 const { registerDataRoomHandlers } = require("./dataRoom");
 const { registerNegotiationHandlers, startNegotiationLoop } = require("./negotiation");
 const { registerGlobalBankHandlers, startGlobalBankLoop } = require("./globalBank");
+const { registerAiAgentsHandlers, startAiAgentsHeartbeat } = require("./aiAgents");
 
 primeGameStateFromHistory(gameState);
 
@@ -82,6 +83,7 @@ io.on("connection", socket => {
   registerDataRoomHandlers(io, socket, gameState);
   registerNegotiationHandlers(io, socket, gameState);
   registerGlobalBankHandlers(io, socket, gameState);
+  registerAiAgentsHandlers(io, socket, gameState);
 });
 
 startAiLoop(io, gameState);
@@ -108,6 +110,7 @@ startRiskControlLoop(io, gameState);
 startRfqLoop(io, gameState);
 startNegotiationLoop(io, gameState);
 startGlobalBankLoop(io, gameState);
+startAiAgentsHeartbeat(io, gameState);
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
