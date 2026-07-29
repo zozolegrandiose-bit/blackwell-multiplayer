@@ -408,7 +408,8 @@ function createGameState() {
     terminalDMs: [],
     terminalDealsFeed: [],
     globalBank: seedGlobalBank(),
-    aiAgents: seedAiAgents()
+    aiAgents: seedAiAgents(),
+    poachingAttempts: []
   };
   state.maDeals.forEach(d => { if (!d.dataRoom) d.dataRoom = seedDataRoom(d.valuation); });
   return state;

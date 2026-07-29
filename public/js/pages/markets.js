@@ -240,7 +240,11 @@ function renderMarkets() {
             <div class="sparkline-wrap">${sparklineSvg(inst.history, 180, 32)}</div>
             <div style="display:flex; gap:6px; margin-top:8px;">
               <input data-mk-notional="${inst.id}" type="number" step="1" min="1" placeholder="M$" style="width:70px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
-              <button data-mk-buy="${inst.id}" class="btn-sm">Acheter</button>
+              <select data-mk-side="${inst.id}" style="padding:5px 4px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;">
+                <option value="long">Long</option>
+                <option value="short">Short</option>
+              </select>
+              <button data-mk-buy="${inst.id}" class="btn-sm">Ouvrir</button>
             </div>
           </div>
         `).join("")}
@@ -250,16 +254,18 @@ function renderMarkets() {
     <div class="panel" style="margin-bottom:16px;">
       <div class="panel-title">Positions ouvertes (${positions.length})</div>
       <table class="data-table">
-        <thead><tr><th>Instrument</th><th>Notionnel</th><th>Prix d'entrée</th><th>Prix actuel</th><th>P&amp;L latent</th><th>Ouverte par</th><th></th></tr></thead>
+        <thead><tr><th>Instrument</th><th>Sens</th><th>Notionnel</th><th>Prix d'entrée</th><th>Prix actuel</th><th>P&amp;L latent</th><th>Ouverte par</th><th></th></tr></thead>
         <tbody>
           ${positions.map(pos => {
             const inst = instruments.find(i => i.id === pos.instrumentId);
             const currentPrice = inst ? inst.price : pos.entryPrice;
-            const pnl = Math.round(pos.notional * (currentPrice / pos.entryPrice - 1) * 100) / 100;
+            const priceMove = currentPrice / pos.entryPrice - 1;
+            const pnl = Math.round(pos.notional * (pos.side === "short" ? -priceMove : priceMove) * 100) / 100;
             const cls = pnl >= 0 ? "chip-good" : "chip-critical";
             return `
             <tr>
               <td>${inst ? escapeHtml(inst.name) : "—"}</td>
+              <td><span class="chip ${pos.side === "short" ? "chip-warning" : "chip-neutral"}">${pos.side === "short" ? "Short" : "Long"}</span></td>
               <td class="tnum">${pos.notional} M$</td>
               <td class="tnum">${pos.entryPrice}</td>
               <td class="tnum">${currentPrice}</td>
@@ -268,7 +274,7 @@ function renderMarkets() {
               <td><button data-mk-sell="${pos.id}" class="btn-sm">Clôturer</button></td>
             </tr>
           `;
-          }).join("") || `<tr><td colspan="7" class="empty-cell">Aucune position ouverte.</td></tr>`}
+          }).join("") || `<tr><td colspan="8" class="empty-cell">Aucune position ouverte.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -291,9 +297,10 @@ function bindMarkets() {
     el.addEventListener("click", () => {
       const instrumentId = el.getAttribute("data-mk-buy");
       const input = document.querySelector(`[data-mk-notional="${instrumentId}"]`);
+      const sideSelect = document.querySelector(`[data-mk-side="${instrumentId}"]`);
       const notional = input.value;
       if (!notional) return;
-      socket.emit("markets:buy", { instrumentId, notional });
+      socket.emit("markets:buy", { instrumentId, notional, side: sideSelect ? sideSelect.value : "long" });
     });
   });
   document.querySelectorAll("[data-mk-sell]").forEach(el => {

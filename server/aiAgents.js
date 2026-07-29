@@ -60,17 +60,17 @@ const PERSONALITIES = {
   cowboy: {
     key: "cowboy", label: "The Cowboy", emoji: "🤠",
     description: "Agressif — prend d'immenses risques en trading, réclame de gros bonus, très rapide mais commet parfois des erreurs de risque.",
-    speedFactor: 0.65, spreadTolerance: 0.045, positionSizeRange: [50, 140]
+    speedFactor: 0.65, spreadTolerance: 0.045, positionSizeRange: [50, 140], shortBias: 0.4
   },
   institutional: {
     key: "institutional", label: "The Institutional", emoji: "🏛",
     description: "Conservateur — très prudent sur le risque, valide lentement mais évite les pertes majeures.",
-    speedFactor: 1.35, spreadTolerance: 0.018, positionSizeRange: [10, 35]
+    speedFactor: 1.35, spreadTolerance: 0.018, positionSizeRange: [10, 35], shortBias: 0.1
   },
   dealmaker: {
     key: "dealmaker", label: "The Dealmaker", emoji: "🤝",
     description: "Charismatique — excellent en origination M&A pour faire signer les clients, mais exige un salaire élevé.",
-    speedFactor: 0.9, spreadTolerance: 0.025, positionSizeRange: [20, 60]
+    speedFactor: 0.9, spreadTolerance: 0.025, positionSizeRange: [20, 60], shortBias: 0.2
   }
 };
 
@@ -144,13 +144,14 @@ function traderHeartbeatTick(io, gameState, agent) {
   const notional = Math.round((minSize + Math.random() * (maxSize - minSize)) / 5) * 5;
   if (notional > markets.cash) return;
   const instrument = markets.instruments[Math.floor(Math.random() * markets.instruments.length)];
+  const side = Math.random() < personality.shortBias ? "short" : "long";
   markets.cash = round2(markets.cash - notional);
   markets.positions.push({
     id: "pos-ai-" + Date.now() + Math.round(Math.random() * 1000),
-    instrumentId: instrument.id, notional, entryPrice: instrument.price,
+    instrumentId: instrument.id, notional, side, entryPrice: instrument.price,
     openedByPlayerId: null, openedByName: actor.fullName, openedAt: Date.now()
   });
-  pushActivity(gameState, { actorPlayerId: null, page: "markets", text: actor.fullName + " ouvre une position de " + notional + " M$ sur " + instrument.name + "." });
+  pushActivity(gameState, { actorPlayerId: null, page: "markets", text: actor.fullName + " ouvre une position " + (side === "short" ? "courte" : "longue") + " de " + notional + " M$ sur " + instrument.name + "." });
   io.to("game").emit("activity:update", gameState.activityLog[0]);
   io.to("access:markets").emit("markets:update", markets);
 }

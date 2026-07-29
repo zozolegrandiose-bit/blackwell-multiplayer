@@ -219,6 +219,19 @@ function renderReglement() {
       Ces trois collègues postent leurs actions dans le <b>Chat d'équipe</b> (Vue d'ensemble et Terminal Chat) — succès, alertes urgentes (ex. VaR hors limite avec 30s pour couvrir), relances amicales. Le Chat d'équipe accepte désormais aussi vos propres messages : mentionnez <b>@trading</b>, <b>@ma</b>, <b>@risk</b> ou le prénom d'un agent pour obtenir une réponse rapide et réaliste.
     `)}
 
+    ${reglementSectionHtml("🔻 Vente à découvert (Short)", `
+      Le Desk Marchés peut désormais ouvrir des positions <b>courtes</b> en plus des positions longues (choix « Long »/« Short » à l'ouverture) — une position courte gagne quand le cours baisse, et perd quand il monte.
+    `)}
+
+    ${reglementSectionHtml("🏦 Banques Concurrentes agressives", `
+      Les banques rivales ne se contentent plus d'un score au classement :
+      <ul style="margin:8px 0 0 18px; padding:0;">
+        <li><b>Guerre des Mandats</b> : sur chaque mandat M&amp;A ou émission obligataire mis en concurrence (Pitchbook), les banques rivales soumettent déjà leur offre dès l'ouverture du mandat — la concurrence est immédiate, pas une formalité de fin de fenêtre.</li>
+        <li><b>Chasse aux têtes (Poaching)</b> : si la satisfaction moyenne de vos équipes connectées chute trop bas, une banque rivale tente de débaucher un(e) employé(e) humain(e) ou un collègue IA. La RH a 60 secondes pour contre-offrir une revalorisation salariale (page RH) — sans réaction, un joueur humain garde son poste mais voit sa satisfaction chuter, tandis qu'un collègue IA est effectivement remplacé par un(e) nouvel(le) arrivant(e).</li>
+        <li><b>Short Squeeze</b> : si une position courte visible dépasse 150 M$, une banque rivale peut tenter de faire sauter les stops — le cours de l'instrument bondit brutalement et la position est liquidée d'office à perte.</li>
+      </ul>
+    `)}
+
     <div class="panel">
       <div class="panel-title">⚙️ Paramètres</div>
       <div class="form-row" style="align-items:center;">

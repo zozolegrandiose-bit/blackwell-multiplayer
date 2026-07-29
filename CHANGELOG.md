@@ -1,5 +1,28 @@
 # Journal des mises à jour
 
+## Patch 21 — Banques Concurrentes Agressives (2026-07-29)
+
+### Ajouts
+- **🔻 Vente à découvert (Short)** : le Desk Marchés peut désormais ouvrir des positions courtes en plus des positions longues (sélecteur Long/Short à l'ouverture) — une position courte gagne quand le cours baisse, perd quand il monte.
+- **🏦 Guerre des Mandats (confirmée + élargie)** : les banques rivales soumettaient déjà une offre dès l'ouverture d'un mandat Pitchbook (plus rapide que les 30-60s demandés) — élargi pour couvrir aussi les émissions obligataires, pas seulement les mandats M&A.
+- **🎯 Chasse aux têtes (Poaching)** : si la satisfaction moyenne des équipes connectées de Blackwell & Co chute trop bas, une banque rivale tente de débaucher un employé humain ou un collègue IA. La RH a 60 secondes pour contre-offrir une revalorisation salariale (nouveau panneau sur la page RH) ; sans réaction, un joueur humain garde son poste (mais sa satisfaction chute), tandis qu'un collègue IA est remplacé par un(e) nouvel(le) arrivant(e).
+- **🔥 Short Squeeze** : si une position courte visible dépasse 150 M$, une banque rivale peut tenter de faire sauter les stops — le cours de l'instrument bondit brutalement (+8 à +15%) et la position est liquidée d'office à perte réelle.
+- Règlement enrichi avec l'intégralité des mécaniques ci-dessus.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- `server/rivalAggression.js` (nouveau) : 3 boucles indépendantes auto-reprogrammées (spawn de tentatives de débauchage, balayage d'expiration, tentatives de short squeeze), même convention que le reste du jeu.
+- Un joueur humain n'est **jamais retiré de la partie** par le poaching — seule sa satisfaction est affectée en cas d'échec de rétention, contrairement à un collègue IA qui peut être effectivement remplacé (aucun risque de casser l'expérience d'un vrai joueur).
+- La vente à découvert réutilise directement la formule de P&L existante (`notional * (prix/entrée - 1)`), simplement inversée pour les positions courtes (`-priceMove` au lieu de `priceMove`) — aucune nouvelle mécanique de calcul, juste un signe.
+- Régression complète menée en direct via `socket.io-client` : déclenchement du poaching, rétention réussie via `hr:retainPoachingTarget`, expiration sans réaction (satisfaction pénalisée pour un humain, agent IA remplacé), ouverture d'une position courte et Short Squeeze de bout en bout (liquidation forcée + saut de cours observé).
+
+---
+
 ## Patch 20 — Heartbeat Loop, Personnalités & Chat IA (2026-07-29)
 
 ### Ajouts

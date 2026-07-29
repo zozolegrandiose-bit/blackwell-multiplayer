@@ -51,10 +51,17 @@ function scoreBid(bid) {
   return round1(bid.credibilityScore - bid.commissionRate * 15);
 }
 
+// "Guerre des Mandats" (Patch 21) -- rival banks already bid the instant a
+// mandate opens (seeded below, faster than any 30-60s window could enforce);
+// broadened here to also cover bond-issuance mandates, not just M&A, purely as
+// flavor text/framing -- the underlying deal-creation mechanic is unchanged.
+const DEAL_TYPES = ["M&A", "Émission Obligataire"];
+
 function spawnPitchbookCompetition(io, gameState) {
   if (gameState.pitchbookCompetitions.some(c => !c.resolved)) return; // one at a time
   const clientName = CLIENT_NAMES[Math.floor(Math.random() * CLIENT_NAMES.length)];
   const targetValuation = Math.round((150 + Math.random() * 450) / 10) * 10;
+  const dealType = DEAL_TYPES[Math.floor(Math.random() * DEAL_TYPES.length)];
 
   const rivalBanks = Object.keys(gameState.leagueTable).filter(name => name !== PLAYER_BANK_NAME);
   const rivalBidCount = RIVAL_BID_COUNT_MIN + Math.floor(Math.random() * (RIVAL_BID_COUNT_MAX - RIVAL_BID_COUNT_MIN + 1));
@@ -71,6 +78,7 @@ function spawnPitchbookCompetition(io, gameState) {
     id: "pb" + (nextCompetitionId++),
     clientName,
     targetValuation,
+    dealType,
     deadline: Date.now() + BID_WINDOW_MS,
     bids: rivalBids,
     resolved: false
@@ -78,7 +86,7 @@ function spawnPitchbookCompetition(io, gameState) {
   gameState.pitchbookCompetitions.unshift(competition);
   if (gameState.pitchbookCompetitions.length > 10) gameState.pitchbookCompetitions.length = 10;
 
-  pushActivity(gameState, { actorPlayerId: null, page: "ma", text: "📋 " + clientName + " lance un appel d'offres pour un mandat M&A (valorisation indicative " + targetValuation + " M$) — 3 minutes pour soumettre une offre." });
+  pushActivity(gameState, { actorPlayerId: null, page: "ma", text: "📋 " + clientName + " lance un appel d'offres pour un mandat " + dealType + " (valorisation indicative " + targetValuation + " M$) — 3 minutes pour soumettre une offre." });
   io.to("game").emit("activity:update", gameState.activityLog[0]);
   io.to("access:ma").emit("pitchbook:update", gameState.pitchbookCompetitions);
 }
@@ -128,13 +136,13 @@ function resolvePitchbookCompetition(io, gameState, competition) {
 
   if (winner.bankName === PLAYER_BANK_NAME) {
     const deal = createBonusDeal(io, gameState, { name: "Mandat " + competition.clientName, valuation: competition.targetValuation });
-    deal.description = "Mandat M&A remporté en pitchbook face à la concurrence (commission " + winner.commissionRate + "%).";
+    deal.description = "Mandat " + competition.dealType + " remporté en pitchbook face à la concurrence (commission " + winner.commissionRate + "%).";
     io.to("access:ma").emit("ma:update", gameState.maDeals);
     const winningPlayer = gameState.players.find(p => p.id === winner.byPlayerId);
     if (winningPlayer) awardPoints(io, gameState, winningPlayer, "ma_create");
-    pushActivity(gameState, { actorPlayerId: winner.byPlayerId, page: "ma", text: "🏆 Blackwell & Co remporte le mandat de " + competition.clientName + " (commission " + winner.commissionRate + "%) — nouveau deal créé." });
+    pushActivity(gameState, { actorPlayerId: winner.byPlayerId, page: "ma", text: "🏆 Blackwell & Co remporte le mandat " + competition.dealType + " de " + competition.clientName + " (commission " + winner.commissionRate + "%) — nouveau deal créé." });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
-    postTeamChat(gameState, { authorName: "IA — Salle des marchés", text: "🏆 Pitchbook gagné : " + competition.clientName + " nous confie son mandat M&A !", tone: "congrats" });
+    postTeamChat(gameState, { authorName: "IA — Salle des marchés", text: "🏆 Pitchbook gagné : " + competition.clientName + " nous confie son mandat " + competition.dealType + " !", tone: "congrats" });
     io.to("game").emit("teamChat:update", gameState.teamChat[0]);
   } else {
     recordBankPnl(gameState, winner.bankName, round1(competition.targetValuation * 0.01), 0);

@@ -184,7 +184,7 @@ function pitchbookPanelHtml() {
         const ourBid = c.bids.find(b => b.bankName === "Blackwell & Co Capital");
         return `
         <div style="border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:8px;">
-          <div style="font-weight:700; font-size:12.5px;">${escapeHtml(c.clientName)} — valorisation indicative ${fmtMoney(c.targetValuation)}</div>
+          <div style="font-weight:700; font-size:12.5px;">${escapeHtml(c.clientName)} <span class="chip chip-neutral">${escapeHtml(c.dealType || "M&A")}</span> — valorisation indicative ${fmtMoney(c.targetValuation)}</div>
           <div style="font-size:11px; color:var(--text-muted); margin:4px 0 8px;">⏱ ${Math.max(0, Math.round((c.deadline - Date.now()) / 1000))}s restantes · ${c.bids.length} offre(s) reçue(s)</div>
           ${ourBid ? `
             <div style="font-size:11.5px; color:var(--series-green);">✅ Votre offre : commission ${ourBid.commissionRate}%</div>

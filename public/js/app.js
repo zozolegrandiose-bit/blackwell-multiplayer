@@ -53,7 +53,8 @@ const appState = {
   terminalDealsFeed: [],
   globalBank: { bankName: "Blackwell & Co Capital", totalGlobalHeadcount: 0, globalPnL: 0, globalTier1CapitalRatio: 0, entities: [] },
   publicTicker: [],
-  aiAgents: []
+  aiAgents: [],
+  poachingAttempts: []
 };
 
 const PAGE_RENDERERS = {};

@@ -103,6 +103,7 @@ function registerMarketsHandlers(io, socket, gameState) {
     }
     const instrument = findInstrument(gameState, payload.instrumentId);
     const notional = Number(payload.notional);
+    const side = payload.side === "short" ? "short" : "long";
     if (!instrument || Number.isNaN(notional) || notional <= 0) return;
 
     const markets = gameState.markets;
@@ -116,6 +117,7 @@ function registerMarketsHandlers(io, socket, gameState) {
       id: "pos" + (nextPositionId++),
       instrumentId: instrument.id,
       notional,
+      side,
       entryPrice: instrument.price,
       openedByPlayerId: player.id,
       openedByName: player.fullName,
@@ -126,7 +128,7 @@ function registerMarketsHandlers(io, socket, gameState) {
     pushActivity(gameState, {
       actorPlayerId: player.id,
       page: "markets",
-      text: player.fullName + " a ouvert une position de " + notional + " M$ sur " + instrument.name + "."
+      text: player.fullName + " a ouvert une position " + (side === "short" ? "courte (vente à découvert)" : "longue") + " de " + notional + " M$ sur " + instrument.name + "."
     });
     io.to("game").emit("activity:update", gameState.activityLog[0]);
     io.to("access:markets").emit("markets:update", markets);
@@ -144,7 +146,8 @@ function registerMarketsHandlers(io, socket, gameState) {
     const instrument = findInstrument(gameState, position.instrumentId);
     if (!instrument) return;
 
-    const pnl = round2(position.notional * (instrument.price / position.entryPrice - 1));
+    const priceMove = instrument.price / position.entryPrice - 1;
+    const pnl = round2(position.notional * (position.side === "short" ? -priceMove : priceMove));
     const proceeds = round2(position.notional + pnl);
     markets.cash = round2(markets.cash + proceeds);
     markets.realizedPnL = round2(markets.realizedPnL + pnl);

@@ -88,6 +88,29 @@ function aiColleaguesPanelHtml() {
   `;
 }
 
+// Poaching (Patch 21) -- rival banks target Blackwell's own people (human or AI)
+// when average satisfaction drops too low. A live attempt is a 60s retention
+// window: counter with a raise via hr:retainPoachingTarget, or lose them (a
+// satisfaction hit for a human, a name/personality swap for an AI colleague).
+function poachingPanelHtml() {
+  const attempts = (appState.poachingAttempts || []).filter(a => !a.resolved);
+  if (!attempts.length) return "";
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🎯 Tentatives de débauchage rivales</div>
+      ${attempts.map(a => `
+        <div style="border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <div>
+            <div style="font-weight:700; font-size:12.5px;">${escapeHtml(a.targetName)}</div>
+            <div style="font-size:11px; color:var(--text-muted);">${escapeHtml(a.rivalBank)} tente de débaucher — ⏱ ${Math.max(0, Math.round((a.deadline - Date.now()) / 1000))}s pour contre-offrir</div>
+          </div>
+          <button data-poach-retain="${a.id}" class="btn-sm">Contre-offrir &amp; retenir</button>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function bindOrgChartPanel() {
   document.querySelectorAll("[data-org-promote]").forEach(el => {
     el.addEventListener("click", () => socket.emit("hr:promotePlayer", { playerId: el.getAttribute("data-org-promote") }));
@@ -100,6 +123,9 @@ function bindOrgChartPanel() {
   });
   document.querySelectorAll("[data-org-grant-raise]").forEach(el => {
     el.addEventListener("click", () => socket.emit("hr:grantRaise", { playerId: el.getAttribute("data-org-grant-raise"), raiseAmount: 2 }));
+  });
+  document.querySelectorAll("[data-poach-retain]").forEach(el => {
+    el.addEventListener("click", () => socket.emit("hr:retainPoachingTarget", { attemptId: el.getAttribute("data-poach-retain") }));
   });
 }
 
@@ -178,6 +204,7 @@ function renderHr() {
     <div class="page-sub">Effectif, recrutement, moral des équipes et primes.</div>
     ${taskPanelHtml("hr")}
     ${orgChartPanelHtml()}
+    ${poachingPanelHtml()}
     ${aiColleaguesPanelHtml()}
     <div class="kpi-grid">
       <div class="kpi-card"><div class="kpi-label">Effectif joueurs</div><div class="kpi-value">${appState.players.length}</div></div>
