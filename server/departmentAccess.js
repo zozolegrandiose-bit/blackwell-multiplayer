@@ -10,14 +10,14 @@ const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses", 
 const CLUSTER_PAGES = {
   A: [...UNIVERSAL_PAGES, "ma", "clients"],
   B: [...UNIVERSAL_PAGES, "clients", "markets"],
-  C: [...UNIVERSAL_PAGES, "clients"],
+  C: [...UNIVERSAL_PAGES, "clients", "privateBanking"],
   D: [...UNIVERSAL_PAGES, "compliance"],
   // Cluster E (Trésorerie de Groupe) gains "markets" access from Patch 22 on --
   // Central Bank & Monetary Policy explicitly asks for Trading AND Treasury desks
   // to arbitrage rate instruments (US 10Y, Euribor), not Trading alone.
   E: [...UNIVERSAL_PAGES, "finance", "markets"],
   F: [...UNIVERSAL_PAGES, "hr"],
-  G: [...UNIVERSAL_PAGES, "strategy", "ma", "clients", "compliance", "finance", "hr", "markets"]
+  G: [...UNIVERSAL_PAGES, "strategy", "ma", "clients", "compliance", "finance", "hr", "markets", "privateBanking"]
 };
 
 const DEPARTMENT_CLUSTER = {
@@ -45,6 +45,7 @@ const DEPARTMENT_CLUSTER = {
   "Recherche Crédit": "B",
   "Stratégie Quantitative & Data": "B",
 
+  "Private Banking & Wealth Management": "C",
   "Gestion de Fortune": "C",
   "Gestion d'Actifs": "C",
   "Relations Investisseurs": "C",

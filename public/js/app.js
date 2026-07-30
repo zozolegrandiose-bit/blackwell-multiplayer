@@ -56,7 +56,10 @@ const appState = {
   aiAgents: [],
   poachingAttempts: [],
   centralBank: { fedRateBps: 425, ecbRateBps: 350, lastInflationUS: 3.1, lastInflationEU: 2.6, lastDecisionAt: null, history: [] },
-  stressTest: { lastRunAt: null, lastResults: [], bonusRestrictedUntil: null }
+  stressTest: { lastRunAt: null, lastResults: [], bonusRestrictedUntil: null },
+  privateBanking: { familyOffices: [] },
+  algoBots: [],
+  algoInfrastructure: { latencyTier: 0, investedTotal: 0 }
 };
 
 const PAGE_RENDERERS = {};

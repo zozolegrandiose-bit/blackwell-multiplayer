@@ -229,6 +229,60 @@ function centralBankPanelHtml() {
   `;
 }
 
+// Algorithmic & HFT Trading (Patch 23) -- configurable bots (instrument,
+// stratégie, taille par trade) que le Trader lance puis laisse tourner en
+// autonomie ; l'infrastructure de latence (gated côté serveur à DRH/IT/Board)
+// accélère leur cadence d'exécution par paliers.
+const ALGO_LATENCY_LABELS = ["Standard", "Colocation", "Fibre dédiée", "Micro-ondes propriétaire"];
+const ALGO_LATENCY_COSTS = [0, 150, 400, 900];
+
+function algoTradingPanelHtml() {
+  const bots = appState.algoBots || [];
+  const infra = appState.algoInfrastructure || { latencyTier: 0, investedTotal: 0 };
+  const instruments = (appState.markets && appState.markets.instruments) || [];
+  const nextTier = infra.latencyTier + 1;
+  const canInvestMore = nextTier < ALGO_LATENCY_LABELS.length;
+  const canManageLatency = appState.player && (appState.player.dept === "Board Of Directors" || appState.player.dept === "Ressources Humaines" || appState.player.dept === "Sécurité Informatique");
+
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🤖 Algorithmic &amp; HFT Trading</div>
+      <div class="kpi-grid" style="margin-bottom:10px;">
+        <div class="kpi-card"><div class="kpi-label">Infrastructure latence</div><div class="kpi-value">${escapeHtml(ALGO_LATENCY_LABELS[infra.latencyTier])}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Investi au total</div><div class="kpi-value">${fmtMoney(infra.investedTotal)}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Bots actifs</div><div class="kpi-value">${bots.filter(b => b.active).length} / ${bots.length}</div></div>
+      </div>
+      ${canManageLatency && canInvestMore ? `<button id="algo-invest-latency" class="btn-sm" style="margin-bottom:10px;">Investir dans « ${ALGO_LATENCY_LABELS[nextTier]} » (${ALGO_LATENCY_COSTS[nextTier]} M$)</button><div id="algo-latency-error" class="join-error"></div>` : ""}
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+        <select id="algo-bot-instrument">${instruments.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join("")}</select>
+        <select id="algo-bot-strategy">
+          <option value="momentum">Momentum</option>
+          <option value="meanReversion">Retour à la moyenne</option>
+        </select>
+        <input id="algo-bot-size" type="number" min="10" max="200" step="5" placeholder="Taille/trade (M$)" style="width:140px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
+        <input id="algo-bot-name" type="text" placeholder="Nom du bot" style="width:140px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
+        <button id="algo-bot-create" class="btn-sm">Lancer le bot</button>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Bot</th><th>Instrument</th><th>Stratégie</th><th>Taille/trade</th><th>Trades exécutés</th><th>Statut</th><th></th></tr></thead>
+        <tbody>
+          ${bots.map(b => `
+            <tr>
+              <td>${escapeHtml(b.name)}</td>
+              <td>${escapeHtml(b.instrumentName)}</td>
+              <td>${b.strategy === "momentum" ? "Momentum" : "Retour à la moyenne"}</td>
+              <td class="tnum">${fmtMoney(b.sizePerTrade)}</td>
+              <td class="tnum">${b.tradeCount}</td>
+              <td><span class="chip ${b.active ? "chip-good" : "chip-neutral"}">${b.active ? "Actif" : "En pause"}</span></td>
+              <td><button data-algo-toggle="${b.id}" class="btn-sm">${b.active ? "Mettre en pause" : "Relancer"}</button></td>
+            </tr>
+          `).join("") || `<tr><td colspan="7" class="empty-cell">Aucun bot lancé.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function renderMarkets() {
   const markets = appState.markets || { instruments: [], positions: [], cash: 0, realizedPnL: 0, tradeLog: [] };
   const instruments = markets.instruments || [];
@@ -239,6 +293,7 @@ function renderMarkets() {
     <div class="page-sub">Desk de trading partagé — capital alloué, positions et résultat visibles par toute l'équipe Marchés.</div>
     ${taskPanelHtml("markets")}
     ${centralBankPanelHtml()}
+    ${algoTradingPanelHtml()}
     ${executionQueueHtml()}
     ${syndicatingDealsHtml()}
     ${rfqPanelHtml()}
@@ -331,6 +386,20 @@ function bindMarkets() {
       socket.emit("markets:sell", { positionId: el.getAttribute("data-mk-sell") });
     });
   });
+  const algoCreateBtn = document.getElementById("algo-bot-create");
+  if (algoCreateBtn) algoCreateBtn.addEventListener("click", () => {
+    const instrumentId = document.getElementById("algo-bot-instrument").value;
+    const strategy = document.getElementById("algo-bot-strategy").value;
+    const sizePerTrade = document.getElementById("algo-bot-size").value;
+    const name = document.getElementById("algo-bot-name").value;
+    if (!instrumentId || !sizePerTrade) return;
+    socket.emit("algo:createBot", { instrumentId, strategy, sizePerTrade, name });
+  });
+  document.querySelectorAll("[data-algo-toggle]").forEach(el => {
+    el.addEventListener("click", () => socket.emit("algo:toggleBot", { botId: el.getAttribute("data-algo-toggle") }));
+  });
+  const latencyBtn = document.getElementById("algo-invest-latency");
+  if (latencyBtn) latencyBtn.addEventListener("click", () => socket.emit("algo:investLatency"));
   document.querySelectorAll("[data-wf-execute]").forEach(el => {
     el.addEventListener("click", () => {
       const [dealId, method] = el.getAttribute("data-wf-execute").split("|");

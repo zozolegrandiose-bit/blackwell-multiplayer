@@ -1,5 +1,27 @@
 # Journal des mises à jour
 
+## Patch 23 — Private Banking & Wealth Management, Algorithmic & HFT Trading (2026-07-30)
+
+### Ajouts
+- **💎 Private Banking & Wealth Management** : nouveau département (cluster Gestion de Fortune) et nouvelle page dédiée. Des Family Offices ultra-fortunés (200 à 800 M$ de fortune nette) sollicitent périodiquement un mandat de gestion (Discrétionnaire ou Conseil), à signer sous 4 minutes. Signer un mandat crédite directement le dépôt à la liquidité (capital alloué) d'une entité régionale qui exploite réellement un desk Private Banking (Francfort ou Hong Kong, Global Footprint), en plus d'une commission immédiate sur le résultat net.
+- **🤖 Algorithmic & HFT Trading** : sur la page Marchés, un Trader configure et lance un bot de trading automatique (instrument, stratégie Momentum ou Retour à la moyenne, taille par trade) qui exécute ensuite ses décisions en autonomie, activable/désactivable à tout moment. La DRH, la Sécurité Informatique ou le Board Of Directors peuvent investir dans l'infrastructure de latence de la banque (Colocation, Fibre dédiée, Micro-ondes propriétaire) — chaque palier accélère réellement la cadence d'exécution de tous les bots actifs.
+- Règlement enrichi avec l'intégralité des mécaniques ci-dessus.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- `server/seedData.js`/`server/departmentAccess.js` : nouveau département "Private Banking & Wealth Management" mappé au cluster C (Gestion de Fortune), avec sa propre page "privateBanking" — accès universel côté navigation, mutation des mandats gérée par les mêmes rôles que le reste du cluster.
+- `server/privateBanking.js` (nouveau) : le lien "dépôts → liquidité d'entité" réutilise directement `activeDesks.includes("PRIVATE_BANKING")` (déjà présent sur Francfort et Hong Kong depuis le Global Footprint du Patch 19) plutôt que d'inventer un nouveau rattachement — un vrai lien causal entre patches, pas une coïncidence de nommage.
+- `server/algoTrading.js` (nouveau) : `decideBotAction()` est une fonction pure (instrument + stratégie → "long"/"short"/rien) testée unitairement indépendamment de toute boucle ou socket, même discipline que `computeVaR()` (Patch 18) et les décisions de `centralBank.js` (Patch 22).
+- Le geste "investir dans la latence" retire un vrai coût du résultat net (`financeKPIs.netIncome`) et est rejeté avec un motif explicite si les fonds sont insuffisants — testé en direct avec l'état de départ réel du jeu (108 M$ de résultat net, sous le coût de 150 M$ du premier palier), pas un état artificiellement gonflé.
+- Régression complète menée en direct via `socket.io-client` : accès à la nouvelle page pour le nouveau département, apparition d'un Family Office, signature de mandat créditant réellement une entité Private Banking, expiration d'un mandat non signé, création/pause/reprise d'un bot, et double vérification du contrôle d'accès à l'investissement latence (rejet pour fonds insuffisants côté Board Of Directors, rejet silencieux côté rôle non autorisé).
+
+---
+
 ## Patch 22 — Central Bank & Monetary Policy, Regulatory Stress Testing (2026-07-29)
 
 ### Ajouts

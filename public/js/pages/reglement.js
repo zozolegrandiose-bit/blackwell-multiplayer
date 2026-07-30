@@ -240,6 +240,14 @@ function renderReglement() {
       Un régulateur IA contrôle toutes les 90 à 150 secondes le ratio Tier 1 de chacune des 4 entités régionales (Global Footprint) face au minimum Basel (10,5%). Une entité non conforme subit immédiatement une <b>pénalité de fonds propres</b> (5% de son capital alloué) et déclenche une <b>restriction de distribution de bonus</b> pour toute la banque pendant quelques minutes — CIB Bonus Pool et primes RH inclus. Le ratio Tier 1 de chaque entité reste modifiable depuis la page Global Footprint : le meilleur levier pour éviter — ou sortir — d'un Stress Test raté.
     `)}
 
+    ${reglementSectionHtml("💎 Private Banking &amp; Wealth Management", `
+      Nouveau département (cluster Gestion de Fortune), nouvelle page dédiée. Des <b>Family Offices</b> ultra-fortunés (200 à 800 M$ de fortune nette) sollicitent périodiquement un mandat de gestion (Discrétionnaire ou Conseil), avec un dépôt proposé à signer sous 4 minutes. Signer un mandat crédite directement le dépôt à la <b>liquidité</b> (capital alloué) d'une entité régionale qui exploite effectivement un desk Private Banking (Francfort ou Hong Kong, Global Footprint) — un vrai lien entre le desk commercial et le bilan du groupe — en plus d'une commission immédiate sur le résultat net.
+    `)}
+
+    ${reglementSectionHtml("🤖 Algorithmic &amp; HFT Trading", `
+      Sur la page Marchés, un Trader peut configurer et lancer un <b>bot de trading automatique</b> (instrument, stratégie — Momentum ou Retour à la moyenne —, taille par trade) qui exécute ensuite ses décisions en autonomie, sans intervention humaine, et peut être mis en pause à tout moment. La DRH ou la Sécurité Informatique (ou le Board Of Directors) peut investir dans l'<b>infrastructure de latence</b> de la banque (Colocation, Fibre dédiée, Micro-ondes propriétaire) — chaque palier accélère réellement la cadence d'exécution de tous les bots actifs.
+    `)}
+
     <div class="panel">
       <div class="panel-title">⚙️ Paramètres</div>
       <div class="form-row" style="align-items:center;">

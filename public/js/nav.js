@@ -8,6 +8,7 @@ const NAV = [
   { id: "expenses", label: "Notes de frais", icon: "🧾" },
   { id: "ma", label: "M&A", icon: "🤝" },
   { id: "clients", label: "Clients", icon: "◐" },
+  { id: "privateBanking", label: "Private Banking", icon: "💎" },
   { id: "compliance", label: "Conformité", icon: "🛡" },
   { id: "hr", label: "RH", icon: "❖" },
   { id: "finance", label: "Finance", icon: "📊" },

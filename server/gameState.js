@@ -427,7 +427,10 @@ function createGameState() {
       lastRunAt: null,
       lastResults: [],
       bonusRestrictedUntil: null
-    }
+    },
+    privateBanking: { familyOffices: [] },
+    algoBots: [],
+    algoInfrastructure: { latencyTier: 0, investedTotal: 0 }
   };
   state.maDeals.forEach(d => { if (!d.dataRoom) d.dataRoom = seedDataRoom(d.valuation); });
   return state;

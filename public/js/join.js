@@ -464,6 +464,24 @@ socket.on("stressTest:update", data => {
   if (appState.currentPage === "global") renderApp();
 });
 
+socket.on("privateBanking:update", data => {
+  if (!window.currentPlayer) return;
+  appState.privateBanking = data;
+  if (appState.currentPage === "privateBanking") renderApp();
+});
+
+socket.on("algoTrading:update", data => {
+  if (!window.currentPlayer) return;
+  appState.algoBots = data.bots;
+  appState.algoInfrastructure = data.infrastructure;
+  if (appState.currentPage === "markets") renderApp();
+});
+
+socket.on("algo:investLatency:rejected", data => {
+  const errEl = document.getElementById("algo-latency-error");
+  if (errEl) errEl.textContent = data.reason;
+});
+
 socket.on("markets:buy:rejected", data => {
   // Shared rejection event: markets:buy and the insider-trading panel both use it
   // (both are capital-insufficiency checks) but render into different DOM nodes.

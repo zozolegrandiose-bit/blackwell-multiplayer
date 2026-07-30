@@ -91,6 +91,11 @@ function buildSnapshot(gameState, player) {
     snapshot.structuredProducts = gameState.structuredProducts;
     snapshot.rfqRequests = gameState.rfqRequests;
     snapshot.pendingHedges = gameState.pendingHedges;
+    snapshot.algoBots = gameState.algoBots;
+    snapshot.algoInfrastructure = gameState.algoInfrastructure;
+  }
+  if (player.access.includes("privateBanking")) {
+    snapshot.privateBanking = gameState.privateBanking;
   }
   return snapshot;
 }
