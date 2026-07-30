@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Portail Employé — Blackwell & Co Capital</title>
+<link rel="stylesheet" href="/site/site.css"/>
+</head>
+<body>
+<div class="site-header">
+  <div class="site-logo"><a href="/" style="color:inherit; text-decoration:none;">Blackwell &amp; Co Capital</a></div>
+  <div class="site-nav"><a href="/register">Créer un compte</a></div>
+</div>
+
+<div class="site-form-shell">
+  <h1>Portail Employé</h1>
+  <p class="sub">Connectez-vous avec votre compte approuvé pour accéder au Terminal.</p>
+  <div id="login-error" class="site-form-error"></div>
+  <div class="site-form-row"><label>Email</label><input id="login-email" type="email" autocomplete="username"/></div>
+  <div class="site-form-row"><label>Mot de passe</label><input id="login-password" type="password" autocomplete="current-password"/></div>
+  <button id="login-submit" class="site-btn">Se connecter</button>
+  <div class="site-form-footer">Pas encore de compte ? <a href="/register">Demander un accès</a></div>
+</div>
+
+<script>
+  document.getElementById("login-submit").addEventListener("click", async () => {
+    const errEl = document.getElementById("login-error");
+    errEl.textContent = "";
+    const email = document.getElementById("login-email").value;
+    const password = document.getElementById("login-password").value;
+    if (!email || !password) { errEl.textContent = "Email et mot de passe requis."; return; }
+    try {
+      const res = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!data.ok) { errEl.textContent = data.reason || "Connexion refusée."; return; }
+      window.location.href = "/app";
+    } catch (e) {
+      errEl.textContent = "Erreur réseau — réessayez.";
+    }
+  });
+</script>
+</body>
+</html>

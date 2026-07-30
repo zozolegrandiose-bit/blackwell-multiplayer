@@ -4,6 +4,9 @@ const { createServer } = require("http");
 const { Server } = require("socket.io");
 const { gameState } = require("./gameState");
 const { primeGameStateFromHistory } = require("./persistence");
+const { sessionMiddleware } = require("./sessionMiddleware");
+const { registerAuthRoutes, requireApproved } = require("./auth");
+const { loadDb, ensureSuperAdmin, findUserById } = require("./db");
 const { registerJoinHandlers } = require("./handlers/join");
 const { registerMailHandlers } = require("./handlers/mail");
 const { registerMaHandlers, scheduleDealRiskLoop } = require("./handlers/ma");
@@ -48,14 +51,41 @@ const { registerAlgoTradingHandlers, startAlgoTradingLoop } = require("./algoTra
 const { registerHostileTakeoverHandlers, startHostileTakeoverLoop } = require("./hostileTakeover");
 
 primeGameStateFromHistory(gameState);
+loadDb();
+ensureSuperAdmin();
 
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
 
-app.use(express.static(path.join(__dirname, "..", "public")));
+app.use(sessionMiddleware);
+registerAuthRoutes(app);
+
+// Public institutional site (Patch 25 placeholder -- full site in a later
+// patch): / , /login, /register are plain pages, no auth required.
+app.use("/site", express.static(path.join(__dirname, "..", "public", "site")));
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "site", "index.html")));
+app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "site", "login.html")));
+app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "site", "register.html")));
+
+// The game itself, strictly gated: only a logged-in, APPROVED account may
+// load /app or any of its static assets.
+app.use("/app", requireApproved, express.static(path.join(__dirname, "..", "public", "app")));
+
+// Share the same session with Socket.io's handshake (socket.io >= 4.6) so a
+// socket connection can be tied back to the same logged-in account as the
+// page that opened it.
+io.engine.use(sessionMiddleware);
 
 io.on("connection", socket => {
+  const sessionUserId = socket.request.session && socket.request.session.userId;
+  const accountUser = sessionUserId ? findUserById(sessionUserId) : null;
+  if (!accountUser || accountUser.status !== "APPROVED") {
+    socket.disconnect(true);
+    return;
+  }
+  socket.data.accountUser = accountUser;
+
   socket.on("ping", () => socket.emit("pong"));
   registerJoinHandlers(io, socket, gameState);
   registerMailHandlers(io, socket, gameState);

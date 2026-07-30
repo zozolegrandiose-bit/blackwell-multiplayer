@@ -1,5 +1,31 @@
 # Journal des mises à jour
 
+## Patch 25 — Fondations Comptes & Authentification (1/4) (2026-07-30)
+
+Premier volet d'une restructuration en 4 patches transformant le point d'entrée du site : d'un accès multijoueur instantané (n'importe qui rejoint librement) vers des comptes persistants approuvés par un Super-Admin unique. Ce patch pose les fondations techniques (base de comptes, authentification, séparation des routes) ; le panel Admin (Patch 26), le site vitrine complet (Patch 27) et l'intégration DRH/gameplay (Patch 28) suivent.
+
+### Ajouts
+- **Comptes persistants** : inscription (`/register`) avec Prénom, Nom, Email, Mot de passe, Département et Grade visés — statut par défaut `PENDING_APPROVAL`, bloqué tant qu'un administrateur ne l'a pas approuvé.
+- **Authentification** : connexion (`/login`) par email/mot de passe, mots de passe hashés (bcrypt), session persistante (30 jours).
+- **Séparation stricte des routes** : le jeu (anciennement à la racine) déménage sous `/app/*`, désormais protégé — seul un compte connecté ET approuvé peut charger le Terminal ou établir une connexion de jeu en temps réel. `/`, `/login`, `/register` restent publics (page d'accueil institutionnelle minimale en attendant le site vitrine complet du Patch 27).
+- Page d'accueil publique minimale avec chiffres clés ($3.8T d'actifs, 300 000+ collaborateurs, 100+ pays) et lien vers le Portail Employé.
+
+### Retraits
+- **L'ancien accès multijoueur instantané (n'importe qui rejoint librement en choisissant un poste) est retiré.** Tout nouveau joueur doit désormais créer un compte et attendre l'approbation de l'administrateur avant de pouvoir jouer — un changement de comportement volontaire et assumé, demandé explicitement, mais qui mérite d'être noté clairement : la spontanéité "on se connecte et on joue tout de suite" n'existe plus tant qu'un compte n'a pas été approuvé.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- `server/db.js` (nouveau) : comptes et candidatures stockés dans un fichier JSON local (`data/accounts.json`), même compromis honnête déjà assumé pour l'historique de partie (`server/persistence.js`, Patch 18) — survit aux redémarrages dans le même déploiement Render, mais pas à un redéploiement complet (nouveau disque éphémère). Une vraie base de données managée nécessiterait un service payant que l'utilisateur devrait provisionner lui-même.
+- `server/auth.js` (nouveau) : routes Express classiques (`POST /register`, `POST /login`, `POST /logout`, `GET /api/me`), pas des événements Socket.io — ce sont des actions ponctuelles, pas de l'état de partie en temps réel. `requireApproved`/`requireSuperAdmin` sont des middlewares réutilisables pour toute route protégée à venir (panel Admin du Patch 26 notamment).
+- `server/sessionMiddleware.js` (nouveau) : une seule instance d'`express-session` partagée à la fois par Express (`app.use`) et par la connexion Socket.io (`io.engine.use`, technique standard pour lier une socket à la session HTTP qui l'a ouverte) — une connexion de jeu sans session valide et approuvée est immédiatement déconnectée (`socket.disconnect(true)`).
+- **Action requise côté utilisateur (une seule fois)** : définir `SUPERADMIN_EMAIL` et `SUPERADMIN_PASSWORD` dans les variables d'environnement Render (Dashboard → Environment) avant le premier déploiement de ce patch — le compte Super-Admin (statut `APPROVED`, accès complet) est créé automatiquement au démarrage du serveur si ces deux variables sont présentes et qu'aucun Super-Admin n'existe encore. Sans elles, aucun compte n'a accès tant que le panel Admin (Patch 26) n'existe pas.
+- `public/index.html`/`public/js/*`/`public/css/*` déplacés vers `public/app/` (chemins d'assets rendus relatifs plutôt qu'absolus, pour rester corrects sous n'importe quel point de montage) ; `public/site/*` (nouveau) héberge la page d'accueil, `/login` et `/register` en attendant le site vitrine complet.
+- Régression complète menée en direct (HTTP + `socket.io-client`) : `/`, `/login`, `/register` publics (200), `/app` sans session (redirection 302), inscription réussie avec mot de passe hashé, connexion refusée tant que `PENDING_APPROVAL` (403), approbation, connexion réussie, connexion Socket.io authentifiée fonctionnelle, et connexion Socket.io sans session correctement rejetée.
+
+---
+
 ## Patch 24 — Hostile Takeover & M&A Defense, Interface Outlook & Teams (2026-07-30)
 
 ### Ajouts
