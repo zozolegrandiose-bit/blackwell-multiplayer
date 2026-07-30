@@ -1,5 +1,30 @@
 # Journal des mises à jour
 
+## Patch 26 — Panel Administrateur (2/4) (2026-07-31)
+
+Deuxième volet de la restructuration comptes/accès entamée au Patch 25. Le Super-Admin dispose désormais d'une interface dédiée pour traiter les demandes de compte, affecter les joueurs et gérer les accès dans le temps — jusqu'ici, un compte approuvé côté base de données n'avait encore aucun moyen d'être approuvé depuis l'application elle-même.
+
+### Ajouts
+- **Panel Admin (`/admin`)** : accessible uniquement au compte Super-Admin (redirection `/login` sinon, 403 sur les appels API). Trois sections : demandes en attente, ensemble des comptes, candidatures Carrières (lecture seule pour l'instant — la conversion en employé arrive au Patch 28 avec le module DRH).
+- **Approuver & Assigner** : depuis une demande en attente, l'admin choisit le Département, le Grade, l'Entité géographique et le Salaire de départ avant validation — le compte passe alors `APPROVED` et peut se connecter.
+- **Rejeter** une demande en attente.
+- **Modifier / Transférer** : promotion ou changement d'affectation (département, grade, entité, salaire) à tout moment pour un compte déjà approuvé, sans repasser par le circuit d'approbation.
+- **Révoquer** l'accès d'un compte à tout moment (bloque immédiatement toute nouvelle connexion). Le compte Super-Admin ne peut jamais être révoqué.
+- **Entités géographiques** : le menu d'affectation reprend les 4 entités régionales réelles du Global Footprint (New York, Francfort/Blackwell SE, Hong Kong, Londres — Patch 19), plutôt que la liste plus large de villes prévue pour les offres d'emploi du site vitrine (Patch 27), afin qu'une affectation corresponde toujours à une entité effectivement pilotable dans le jeu.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- `server/admin.js` (nouveau) : routes Express classiques sous `/api/admin/*` (`overview`, `approve`, `reject`, `revoke`, `update-assignment`), toutes gardées par `requireSuperAdmin` (Patch 25) — même logique que `server/auth.js`, pas d'événements Socket.io pour des actions ponctuelles.
+- `public/site/admin.html` (nouveau) : page autonome (script inline, appels `fetch`), même style que `login.html`/`register.html`.
+- Régression complète en direct contre le serveur réel (19 assertions HTTP) : connexion Super-Admin, inscription puis apparition dans les demandes en attente, refus d'approbation sans affectation complète, approbation puis connexion réussie, accès admin refusé à un compte non-admin (403), promotion/transfert, révocation puis connexion bloquée, refus de révoquer le Super-Admin, rejet puis connexion bloquée, page `/admin` protégée.
+
+---
+
 ## Patch 25 — Fondations Comptes & Authentification (1/4) (2026-07-30)
 
 Premier volet d'une restructuration en 4 patches transformant le point d'entrée du site : d'un accès multijoueur instantané (n'importe qui rejoint librement) vers des comptes persistants approuvés par un Super-Admin unique. Ce patch pose les fondations techniques (base de comptes, authentification, séparation des routes) ; le panel Admin (Patch 26), le site vitrine complet (Patch 27) et l'intégration DRH/gameplay (Patch 28) suivent.

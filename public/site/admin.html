@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Panel Administrateur — Blackwell & Co Capital</title>
+<link rel="stylesheet" href="/site/site.css"/>
+</head>
+<body>
+<div class="site-header">
+  <div class="site-logo"><a href="/" style="color:inherit; text-decoration:none;">Blackwell &amp; Co Capital</a></div>
+  <div class="site-nav"><a href="/app">Terminal</a></div>
+</div>
+
+<div class="site-admin-shell">
+  <h1>Panel Administrateur</h1>
+  <p class="sub">Gestion des comptes, des affectations et des candidatures. Réservé au Super-Admin.</p>
+
+  <div class="site-admin-section">
+    <h2>Demandes en attente</h2>
+    <div id="pending-empty" class="site-admin-empty" style="display:none;">Aucune demande en attente.</div>
+    <table class="site-admin-table" id="pending-table" style="display:none;">
+      <thead><tr>
+        <th>Nom</th><th>Email</th><th>Souhaité</th><th>Département</th><th>Grade</th><th>Entité</th><th>Salaire</th><th></th>
+      </tr></thead>
+      <tbody id="pending-body"></tbody>
+    </table>
+  </div>
+
+  <div class="site-admin-section">
+    <h2>Tous les comptes</h2>
+    <table class="site-admin-table" id="users-table">
+      <thead><tr>
+        <th>Nom</th><th>Email</th><th>Statut</th><th>Département</th><th>Grade</th><th>Entité</th><th>Salaire</th><th></th>
+      </tr></thead>
+      <tbody id="users-body"></tbody>
+    </table>
+  </div>
+
+  <div class="site-admin-section">
+    <h2>Candidatures Carrières</h2>
+    <div id="candidates-empty" class="site-admin-empty" style="display:none;">Aucune candidature reçue.</div>
+    <table class="site-admin-table" id="candidates-table" style="display:none;">
+      <thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Niveau</th><th>Statut</th></tr></thead>
+      <tbody id="candidates-body"></tbody>
+    </table>
+    <p class="sub" style="margin-top:14px; margin-bottom:0;">La conversion candidat &rarr; employé se fait depuis le module DRH du Terminal.</p>
+  </div>
+</div>
+
+<script>
+let OPTIONS = { departments: [], grades: [], entities: [] };
+
+function optionList(values, selected) {
+  return values.map(v => `<option value="${v}" ${v === selected ? "selected" : ""}>${v}</option>`).join("");
+}
+function entityOptions(selected) {
+  return OPTIONS.entities.map(e => `<option value="${e.id}" ${e.id === selected ? "selected" : ""}>${e.label}</option>`).join("");
+}
+function statusChip(status) {
+  const labels = { PENDING_APPROVAL: "En attente", APPROVED: "Approuvé", REJECTED: "Rejeté", REVOKED: "Révoqué" };
+  return `<span class="site-status-chip site-status-${status}">${labels[status] || status}</span>`;
+}
+
+async function api(path, body) {
+  const res = await fetch(path, body ? {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  } : undefined);
+  if (res.status === 401 || res.status === 403) {
+    window.location.href = "/login";
+    throw new Error("non autorisé");
+  }
+  return res.json();
+}
+
+function renderPending(users) {
+  const empty = document.getElementById("pending-empty");
+  const table = document.getElementById("pending-table");
+  if (!users.length) { empty.style.display = "block"; table.style.display = "none"; return; }
+  empty.style.display = "none";
+  table.style.display = "table";
+  document.getElementById("pending-body").innerHTML = users.map(u => `
+    <tr data-id="${u.id}">
+      <td>${u.firstName} ${u.lastName}</td>
+      <td>${u.email}</td>
+      <td>${u.deptRequested || "-"} / ${u.gradeRequested || "-"}</td>
+      <td><select class="f-dept">${optionList(OPTIONS.departments, u.deptRequested)}</select></td>
+      <td><select class="f-grade">${optionList(OPTIONS.grades, u.gradeRequested)}</select></td>
+      <td><select class="f-entity">${entityOptions("ny")}</select></td>
+      <td><input class="f-salary" type="number" value="120000"/></td>
+      <td>
+        <button class="site-btn-inline site-btn-approve" data-action="approve">Approuver</button>
+        <button class="site-btn-inline site-btn-reject" data-action="reject">Rejeter</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function renderUsers(users) {
+  document.getElementById("users-body").innerHTML = users.map(u => `
+    <tr data-id="${u.id}">
+      <td>${u.firstName} ${u.lastName}${u.isSuperAdmin ? " 👑" : ""}</td>
+      <td>${u.email}</td>
+      <td>${statusChip(u.status)}</td>
+      <td><select class="f-dept" ${u.isSuperAdmin ? "disabled" : ""}>${optionList(OPTIONS.departments, u.assignedDept)}</select></td>
+      <td><select class="f-grade" ${u.isSuperAdmin ? "disabled" : ""}>${optionList(OPTIONS.grades, u.assignedGrade)}</select></td>
+      <td><select class="f-entity" ${u.isSuperAdmin ? "disabled" : ""}>${entityOptions(u.assignedEntity)}</select></td>
+      <td><input class="f-salary" type="number" value="${u.assignedSalary || 0}" ${u.isSuperAdmin ? "disabled" : ""}/></td>
+      <td>
+        ${u.isSuperAdmin ? "" : `
+          <button class="site-btn-inline site-btn-save" data-action="save">Enregistrer</button>
+          <button class="site-btn-inline site-btn-revoke" data-action="revoke" ${u.status === "REVOKED" ? "disabled" : ""}>Révoquer</button>
+        `}
+      </td>
+    </tr>
+  `).join("");
+}
+
+function renderCandidates(candidates) {
+  const empty = document.getElementById("candidates-empty");
+  const table = document.getElementById("candidates-table");
+  if (!candidates.length) { empty.style.display = "block"; table.style.display = "none"; return; }
+  empty.style.display = "none";
+  table.style.display = "table";
+  document.getElementById("candidates-body").innerHTML = candidates.map(c => `
+    <tr>
+      <td>${c.firstName} ${c.lastName}</td>
+      <td>${c.email}</td>
+      <td>${c.phone || "-"}</td>
+      <td>${c.educationLevel || "-"}</td>
+      <td>${c.convertedToUserId ? "Converti" : "Nouveau"}</td>
+    </tr>
+  `).join("");
+}
+
+async function refresh() {
+  const data = await api("/api/admin/overview");
+  OPTIONS = data.options;
+  renderPending(data.pendingUsers);
+  renderUsers(data.allUsers);
+  renderCandidates(data.candidates);
+}
+
+document.getElementById("pending-body").addEventListener("click", async e => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const row = btn.closest("tr");
+  const userId = row.dataset.id;
+  if (btn.dataset.action === "approve") {
+    const result = await api("/api/admin/approve", {
+      userId,
+      assignedDept: row.querySelector(".f-dept").value,
+      assignedGrade: row.querySelector(".f-grade").value,
+      assignedEntity: row.querySelector(".f-entity").value,
+      assignedSalary: row.querySelector(".f-salary").value
+    });
+    if (!result.ok) { alert(result.reason || "Échec de l'approbation."); return; }
+  } else if (btn.dataset.action === "reject") {
+    await api("/api/admin/reject", { userId });
+  }
+  refresh();
+});
+
+document.getElementById("users-body").addEventListener("click", async e => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  const row = btn.closest("tr");
+  const userId = row.dataset.id;
+  if (btn.dataset.action === "save") {
+    const result = await api("/api/admin/update-assignment", {
+      userId,
+      assignedDept: row.querySelector(".f-dept").value,
+      assignedGrade: row.querySelector(".f-grade").value,
+      assignedEntity: row.querySelector(".f-entity").value,
+      assignedSalary: row.querySelector(".f-salary").value
+    });
+    if (!result.ok) { alert(result.reason || "Échec de la mise à jour."); return; }
+  } else if (btn.dataset.action === "revoke") {
+    if (!confirm("Révoquer l'accès de ce compte ?")) return;
+    const result = await api("/api/admin/revoke", { userId });
+    if (!result.ok) { alert(result.reason || "Échec de la révocation."); return; }
+  }
+  refresh();
+});
+
+refresh();
+</script>
+</body>
+</html>

@@ -39,6 +39,11 @@ function renderReglement() {
       Les pages Vue d'ensemble, Mail, Agenda, Documents, Notes de frais et ce Règlement sont accessibles à tout le monde. <b>Le Comité de Direction (Stratégie) est réservé</b> : il faut être Director ou grade supérieur dans son département, ou appartenir au Board Of Directors.
     `)}
 
+    ${reglementSectionHtml("🔐 Accès &amp; Comptes", `
+      L'accès au Terminal n'est plus instantané : il faut créer un compte (page publique <code>/register</code>), puis attendre qu'un <b>Super-Admin</b> l'approuve depuis son panel dédié (<code>/admin</code>). Une fois approuvé, le compte se connecte via <code>/login</code> et retrouve le Terminal.<br/>
+      Le Super-Admin peut à tout moment <b>promouvoir</b>, <b>transférer</b> vers une autre entité, ou <b>révoquer</b> l'accès de n'importe quel compte depuis son panel — indépendamment du choix libre de département/grade encore effectué à la connexion aujourd'hui dans le jeu lui-même.
+    `)}
+
     ${reglementSectionHtml("🏛 Comité de Direction (décisions trimestrielles)", `
       La partie avance par trimestres. Chaque département opérationnel (clusters A à F) verrouille <b>une décision à compromis</b> par trimestre (ex : pipeline agressif vs défensif). Sans personne d'assez senior connecté, l'option neutre s'applique par défaut — rien ne bloque.<br/>
       Le <b>Board Of Directors</b> voit les choix déjà verrouillés des autres avant de fixer son propre multiplicateur trimestriel (Croissance, Stabilité, Réduction des coûts) — un vrai levier qui amplifie ou atténue l'effet cumulé du trimestre.

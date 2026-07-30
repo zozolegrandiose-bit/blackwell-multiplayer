@@ -5,7 +5,8 @@ const { Server } = require("socket.io");
 const { gameState } = require("./gameState");
 const { primeGameStateFromHistory } = require("./persistence");
 const { sessionMiddleware } = require("./sessionMiddleware");
-const { registerAuthRoutes, requireApproved } = require("./auth");
+const { registerAuthRoutes, requireApproved, requireSuperAdmin } = require("./auth");
+const { registerAdminRoutes } = require("./admin");
 const { loadDb, ensureSuperAdmin, findUserById } = require("./db");
 const { registerJoinHandlers } = require("./handlers/join");
 const { registerMailHandlers } = require("./handlers/mail");
@@ -60,6 +61,7 @@ const io = new Server(httpServer);
 
 app.use(sessionMiddleware);
 registerAuthRoutes(app);
+registerAdminRoutes(app);
 
 // Public institutional site (Patch 25 placeholder -- full site in a later
 // patch): / , /login, /register are plain pages, no auth required.
@@ -67,6 +69,7 @@ app.use("/site", express.static(path.join(__dirname, "..", "public", "site")));
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "site", "index.html")));
 app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "site", "login.html")));
 app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "..", "public", "site", "register.html")));
+app.get("/admin", requireSuperAdmin, (req, res) => res.sendFile(path.join(__dirname, "..", "public", "site", "admin.html")));
 
 // The game itself, strictly gated: only a logged-in, APPROVED account may
 // load /app or any of its static assets.
