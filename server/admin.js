@@ -30,7 +30,7 @@ function registerAdminRoutes(app) {
   router.use(express.json());
   router.use(requireSuperAdmin);
 
-  router.get("/api/admin/overview", (req, res) => {
+  router.get("/overview", (req, res) => {
     res.json({
       pendingUsers: listPendingUsers().map(toPublicUser),
       allUsers: listAllUsers().map(toPublicUser),
@@ -39,7 +39,7 @@ function registerAdminRoutes(app) {
     });
   });
 
-  router.post("/api/admin/approve", (req, res) => {
+  router.post("/approve", (req, res) => {
     const { userId, assignedDept, assignedGrade, assignedEntity, assignedSalary } = req.body || {};
     if (!userId || !assignedDept || !assignedGrade || !assignedEntity) {
       res.status(400).json({ ok: false, reason: "Rôle, grade et entité sont requis pour approuver un compte." });
@@ -49,23 +49,23 @@ function registerAdminRoutes(app) {
     res.status(result.ok ? 200 : 400).json(result.ok ? { ok: true, user: toPublicUser(result.user) } : result);
   });
 
-  router.post("/api/admin/reject", (req, res) => {
+  router.post("/reject", (req, res) => {
     const result = rejectUser((req.body || {}).userId);
     res.status(result.ok ? 200 : 400).json(result.ok ? { ok: true, user: toPublicUser(result.user) } : result);
   });
 
-  router.post("/api/admin/revoke", (req, res) => {
+  router.post("/revoke", (req, res) => {
     const result = revokeUser((req.body || {}).userId);
     res.status(result.ok ? 200 : 400).json(result.ok ? { ok: true, user: toPublicUser(result.user) } : result);
   });
 
-  router.post("/api/admin/update-assignment", (req, res) => {
+  router.post("/update-assignment", (req, res) => {
     const { userId, assignedDept, assignedGrade, assignedEntity, assignedSalary } = req.body || {};
     const result = updateUserAssignment(userId, { assignedDept, assignedGrade, assignedEntity, assignedSalary });
     res.status(result.ok ? 200 : 400).json(result.ok ? { ok: true, user: toPublicUser(result.user) } : result);
   });
 
-  app.use(router);
+  app.use("/api/admin", router);
 }
 
 module.exports = { registerAdminRoutes, ADMIN_ENTITIES };

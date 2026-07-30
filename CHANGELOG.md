@@ -16,7 +16,7 @@ Deuxième volet de la restructuration comptes/accès entamée au Patch 25. Le Su
 - Aucun.
 
 ### Correctifs
-- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+- **Bug critique corrigé en urgence après le premier déploiement de ce patch** : le routeur admin (`server/admin.js`) appliquait sa garde `requireSuperAdmin` à **toutes** les requêtes de l'application (pas seulement `/api/admin/*`), car il était monté sans préfixe de chemin. Conséquence en production : `/`, `/login`, `/register` et les fichiers statiques du site redirigeaient tous vers `/login`, bloquant entièrement les nouvelles inscriptions et connexions. Corrigé en montant le routeur sous `/api/admin` avec des chemins de route relatifs, plus un correctif connexe dans `server/auth.js` (`requireApproved` utilisait `req.path`, qui perd son préfixe une fois dans un sous-routeur monté — remplacé par `req.originalUrl`). Régression complète rejouée après coup (site public + panel admin) avant redéploiement.
 
 ### Notes techniques
 - `server/admin.js` (nouveau) : routes Express classiques sous `/api/admin/*` (`overview`, `approve`, `reject`, `revoke`, `update-assignment`), toutes gardées par `requireSuperAdmin` (Patch 25) — même logique que `server/auth.js`, pas d'événements Socket.io pour des actions ponctuelles.

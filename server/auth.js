@@ -69,7 +69,10 @@ function registerAuthRoutes(app) {
 function requireApproved(req, res, next) {
   const user = req.session.userId ? findUserById(req.session.userId) : null;
   if (!user || user.status !== "APPROVED") {
-    if (req.accepts("html") && !req.path.startsWith("/api")) {
+    // req.originalUrl (not req.path) because this middleware also runs
+    // inside sub-routers (e.g. mounted at /api/admin), where req.path is
+    // rewritten relative to the mount point and would lose the /api prefix.
+    if (req.accepts("html") && !req.originalUrl.startsWith("/api")) {
       res.redirect("/login");
       return;
     }
