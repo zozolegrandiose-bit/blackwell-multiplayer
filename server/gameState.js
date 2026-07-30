@@ -32,7 +32,12 @@ const MARKET_INSTRUMENTS_SEED = [
   { id: "bond-sov", name: "Obligations Souveraines", category: "Obligations", price: 101.2, volatility: 0.005 },
   { id: "cmd-oil", name: "Pétrole Brent", category: "Matières Premières", price: 76.4, volatility: 0.025 },
   { id: "fx-eurusd", name: "EUR/USD (indice)", category: "Devises", price: 108.7, volatility: 0.008 },
-  { id: "crypto", name: "Actifs numériques", category: "Crypto", price: 124.6, volatility: 0.04 }
+  { id: "crypto", name: "Actifs numériques", category: "Crypto", price: 124.6, volatility: 0.04 },
+  // Taux (Patch 22) -- prices are basis points (425 = 4.25%), tradeable like any
+  // other instrument via markets:buy so the Central Bank & Monetary Policy
+  // module (server/centralBank.js) can move them with real, arbitrage-able P&L.
+  { id: "rate-us10y", name: "US 10Y", category: "Taux", price: 425, volatility: 0.01 },
+  { id: "rate-euribor", name: "Euribor 3M", category: "Taux", price: 350, volatility: 0.01 }
 ];
 
 function seedInstrumentHistory(currentPrice, volatility) {
@@ -409,7 +414,20 @@ function createGameState() {
     terminalDealsFeed: [],
     globalBank: seedGlobalBank(),
     aiAgents: seedAiAgents(),
-    poachingAttempts: []
+    poachingAttempts: [],
+    centralBank: {
+      fedRateBps: 425,
+      ecbRateBps: 350,
+      lastInflationUS: 3.1,
+      lastInflationEU: 2.6,
+      lastDecisionAt: null,
+      history: []
+    },
+    stressTest: {
+      lastRunAt: null,
+      lastResults: [],
+      bonusRestrictedUntil: null
+    }
   };
   state.maDeals.forEach(d => { if (!d.dataRoom) d.dataRoom = seedDataRoom(d.valuation); });
   return state;

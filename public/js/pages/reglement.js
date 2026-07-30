@@ -232,6 +232,14 @@ function renderReglement() {
       </ul>
     `)}
 
+    ${reglementSectionHtml("🏛 Banque Centrale &amp; Politique Monétaire", `
+      Une IA Fed et une IA BCE annoncent périodiquement (toutes les 3 à 5 minutes) une décision de taux directeur et une lecture d'inflation. Ces décisions déplacent directement deux instruments réellement négociables — <b>US 10Y</b> et <b>Euribor 3M</b> — sur lesquels le Desk Trading <b>et</b> la Trésorerie de Groupe (accès Marchés élargi) peuvent ouvrir des positions pour en tirer parti. Chaque décision crée aussi une onde de choc sur le reste du marché (obligations, actions, cryptoactifs) proportionnelle à son ampleur.
+    `)}
+
+    ${reglementSectionHtml("📐 Regulatory Stress Testing &amp; Basel Ratios", `
+      Un régulateur IA contrôle toutes les 90 à 150 secondes le ratio Tier 1 de chacune des 4 entités régionales (Global Footprint) face au minimum Basel (10,5%). Une entité non conforme subit immédiatement une <b>pénalité de fonds propres</b> (5% de son capital alloué) et déclenche une <b>restriction de distribution de bonus</b> pour toute la banque pendant quelques minutes — CIB Bonus Pool et primes RH inclus. Le ratio Tier 1 de chaque entité reste modifiable depuis la page Global Footprint : le meilleur levier pour éviter — ou sortir — d'un Stress Test raté.
+    `)}
+
     <div class="panel">
       <div class="panel-title">⚙️ Paramètres</div>
       <div class="form-row" style="align-items:center;">

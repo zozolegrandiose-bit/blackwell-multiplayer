@@ -3,7 +3,8 @@ const MARKET_CATEGORY_COLOR = {
   "Obligations": "var(--accent)",
   "Matières Premières": "var(--gold)",
   "Devises": "#5ee0e0",
-  "Crypto": "#b58cff"
+  "Crypto": "#b58cff",
+  "Taux": "var(--gold-dim)"
 };
 
 // Desk Structuration/Trading's step of the Analyste → Risk Manager → Desk Trading
@@ -207,6 +208,27 @@ function darkPoolPanelHtml() {
   `;
 }
 
+// Central Bank & Monetary Policy (Patch 22) -- Fed/ECB rate decisions move the
+// tradeable "US 10Y"/"Euribor 3M" instruments directly (see server/centralBank.js);
+// this panel just surfaces the current policy stance so Trading/Treasury know
+// what they're arbitraging against.
+function centralBankPanelHtml() {
+  const cb = appState.centralBank;
+  if (!cb) return "";
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🏛 Banque Centrale &amp; Politique Monétaire</div>
+      <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">Taux Fed</div><div class="kpi-value tnum">${cb.fedRateBps} bps</div></div>
+        <div class="kpi-card"><div class="kpi-label">Inflation US</div><div class="kpi-value tnum">${cb.lastInflationUS}%</div></div>
+        <div class="kpi-card"><div class="kpi-label">Taux BCE</div><div class="kpi-value tnum">${cb.ecbRateBps} bps</div></div>
+        <div class="kpi-card"><div class="kpi-label">Inflation zone euro</div><div class="kpi-value tnum">${cb.lastInflationEU}%</div></div>
+      </div>
+      ${cb.lastDecisionAt ? `<div style="font-size:11px; color:var(--text-muted); margin-top:6px;">Dernière décision : ${fmtTime(cb.lastDecisionAt)}</div>` : ""}
+    </div>
+  `;
+}
+
 function renderMarkets() {
   const markets = appState.markets || { instruments: [], positions: [], cash: 0, realizedPnL: 0, tradeLog: [] };
   const instruments = markets.instruments || [];
@@ -216,6 +238,7 @@ function renderMarkets() {
     <div class="page-title">Marchés</div>
     <div class="page-sub">Desk de trading partagé — capital alloué, positions et résultat visibles par toute l'équipe Marchés.</div>
     ${taskPanelHtml("markets")}
+    ${centralBankPanelHtml()}
     ${executionQueueHtml()}
     ${syndicatingDealsHtml()}
     ${rfqPanelHtml()}

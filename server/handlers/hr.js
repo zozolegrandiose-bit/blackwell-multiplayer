@@ -5,6 +5,7 @@ const { adjustSatisfaction } = require("../satisfaction");
 const { GRADES, DEPARTMENTS } = require("../seedData");
 const { isHeadOfCIB } = require("../cibBonus");
 const { isDrhGlobal } = require("../globalBank");
+const { isBonusDistributionRestricted } = require("../regulatoryStressTest");
 
 const LEAVE_TYPES = ["Congés payés", "RTT", "Arrêt maladie", "Congé sans solde"];
 const ONBOARDING_ITEMS = ["Contrat signé", "Poste de travail", "Compte IT", "Badge d'accès", "Formation d'intégration"];
@@ -240,6 +241,10 @@ function registerHrHandlers(io, socket, gameState) {
     if (!requireAccess(socket, "hr")) return;
     const actor = gameState.players.find(p => p.id === socket.data.playerId);
     if (!actor) return;
+    if (isBonusDistributionRestricted(gameState)) {
+      socket.emit("hr:distributeBonus:rejected", { reason: "Distribution de bonus restreinte — un Stress Test réglementaire récent a échoué (ratio Tier 1 sous le seuil Basel)." });
+      return;
+    }
     const allocations = payload.allocations || {};
     const pool = round1(gameState.financeKPIs.netIncome * BONUS_POOL_RATE);
 
@@ -287,6 +292,10 @@ function registerHrHandlers(io, socket, gameState) {
     if (!requireAccess(socket, "hr")) return;
     const actor = gameState.players.find(p => p.id === socket.data.playerId);
     if (!actor) return;
+    if (isBonusDistributionRestricted(gameState)) {
+      socket.emit("hr:distributeBonus:rejected", { reason: "Distribution de bonus restreinte — un Stress Test réglementaire récent a échoué (ratio Tier 1 sous le seuil Basel)." });
+      return;
+    }
     const pool = round1(gameState.financeKPIs.netIncome * BONUS_POOL_RATE);
     if (pool <= 0) {
       socket.emit("hr:distributeBonus:rejected", { reason: "Aucune enveloppe disponible (résultat net non positif)." });

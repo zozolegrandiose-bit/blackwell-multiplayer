@@ -452,6 +452,18 @@ socket.on("aiAgents:update", data => {
   if (appState.currentPage === "hr") renderApp();
 });
 
+socket.on("centralBank:update", data => {
+  if (!window.currentPlayer) return;
+  appState.centralBank = data;
+  if (appState.currentPage === "markets") renderApp();
+});
+
+socket.on("stressTest:update", data => {
+  if (!window.currentPlayer) return;
+  appState.stressTest = data;
+  if (appState.currentPage === "global") renderApp();
+});
+
 socket.on("markets:buy:rejected", data => {
   // Shared rejection event: markets:buy and the insider-trading panel both use it
   // (both are capital-insufficiency checks) but render into different DOM nodes.

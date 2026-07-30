@@ -12,7 +12,10 @@ const CLUSTER_PAGES = {
   B: [...UNIVERSAL_PAGES, "clients", "markets"],
   C: [...UNIVERSAL_PAGES, "clients"],
   D: [...UNIVERSAL_PAGES, "compliance"],
-  E: [...UNIVERSAL_PAGES, "finance"],
+  // Cluster E (Trésorerie de Groupe) gains "markets" access from Patch 22 on --
+  // Central Bank & Monetary Policy explicitly asks for Trading AND Treasury desks
+  // to arbitrage rate instruments (US 10Y, Euribor), not Trading alone.
+  E: [...UNIVERSAL_PAGES, "finance", "markets"],
   F: [...UNIVERSAL_PAGES, "hr"],
   G: [...UNIVERSAL_PAGES, "strategy", "ma", "clients", "compliance", "finance", "hr", "markets"]
 };

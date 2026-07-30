@@ -41,6 +41,8 @@ const { registerNegotiationHandlers, startNegotiationLoop } = require("./negotia
 const { registerGlobalBankHandlers, startGlobalBankLoop } = require("./globalBank");
 const { registerAiAgentsHandlers, startAiAgentsHeartbeat } = require("./aiAgents");
 const { registerRivalAggressionHandlers, startRivalAggressionLoops } = require("./rivalAggression");
+const { startCentralBankLoop } = require("./centralBank");
+const { startRegulatoryStressTestLoop } = require("./regulatoryStressTest");
 
 primeGameStateFromHistory(gameState);
 
@@ -114,6 +116,8 @@ startNegotiationLoop(io, gameState);
 startGlobalBankLoop(io, gameState);
 startAiAgentsHeartbeat(io, gameState);
 startRivalAggressionLoops(io, gameState);
+startCentralBankLoop(io, gameState);
+startRegulatoryStressTestLoop(io, gameState);
 
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {

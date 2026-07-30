@@ -10,6 +10,7 @@ const { pushActivity } = require("./gameState");
 const { awardCustomPoints } = require("./scoring");
 const { adjustSatisfaction } = require("./satisfaction");
 const { GRADES } = require("./seedData");
+const { isBonusDistributionRestricted } = require("./regulatoryStressTest");
 
 const CIB_BONUS_POOL_PCT = 0.06;
 const DIRECTOR_INDEX = GRADES.indexOf("Director");
@@ -40,6 +41,10 @@ function registerCibBonusHandlers(io, socket, gameState) {
     if (!requireAccess(socket, "ma")) return;
     const actor = gameState.players.find(p => p.id === socket.data.playerId);
     if (!isHeadOfCIB(actor)) return;
+    if (isBonusDistributionRestricted(gameState)) {
+      socket.emit("cib:distributeBonus:rejected", { reason: "Distribution de bonus restreinte — un Stress Test réglementaire récent a échoué (ratio Tier 1 sous le seuil Basel)." });
+      return;
+    }
 
     const allocations = payload.allocations || {};
     const pool = gameState.cibBonusPool.available;

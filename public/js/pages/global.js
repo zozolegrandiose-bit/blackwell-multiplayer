@@ -126,6 +126,35 @@ function globalTransferFormHtml(entities, canManage) {
   `;
 }
 
+// Regulatory Stress Testing & Basel Ratios (Patch 22) -- server/
+// regulatoryStressTest.js checks each entity's capitalRatioPct (editable above)
+// against a Basel minimum every 90-150s; a failure penalizes that entity's
+// allocatedCapital AND restricts bonus distribution bank-wide for a few minutes.
+function stressTestPanelHtml() {
+  const st = appState.stressTest;
+  if (!st || !st.lastResults || !st.lastResults.length) return "";
+  const restricted = st.bonusRestrictedUntil && st.bonusRestrictedUntil > Date.now();
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">📐 Stress Test réglementaire — Ratios Basel</div>
+      ${restricted ? `<div class="event-banner" style="margin-bottom:10px;">🚨 <b>Distribution de bonus restreinte</b> — un Stress Test récent a échoué. Reprise dans ${Math.max(0, Math.round((st.bonusRestrictedUntil - Date.now()) / 1000))}s.</div>` : ""}
+      <table class="data-table">
+        <thead><tr><th>Entité</th><th>Ratio Tier 1</th><th>Statut</th></tr></thead>
+        <tbody>
+          ${st.lastResults.map(r => `
+            <tr>
+              <td>${escapeHtml(r.name)}</td>
+              <td class="tnum">${r.capitalRatioPct}%</td>
+              <td><span class="chip ${r.compliant ? "chip-good" : "chip-critical"}">${r.compliant ? "Conforme" : "Non conforme"}</span></td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+      ${st.lastRunAt ? `<div style="font-size:11px; color:var(--text-muted); margin-top:6px;">Dernier contrôle : ${fmtTime(st.lastRunAt)}</div>` : ""}
+    </div>
+  `;
+}
+
 function renderGlobal() {
   const gb = appState.globalBank || { bankName: "—", totalGlobalHeadcount: 0, globalPnL: 0, globalTier1CapitalRatio: 0, entities: [] };
   const canManage = globalCanManage(appState.player);
@@ -151,6 +180,8 @@ function renderGlobal() {
       <div class="panel-title">🗺 World Map Operations</div>
       ${globalWorldMapHtml(entities)}
     </div>
+
+    ${stressTestPanelHtml()}
 
     ${globalTransferFormHtml(entities, canManage)}
 

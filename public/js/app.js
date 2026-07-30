@@ -54,7 +54,9 @@ const appState = {
   globalBank: { bankName: "Blackwell & Co Capital", totalGlobalHeadcount: 0, globalPnL: 0, globalTier1CapitalRatio: 0, entities: [] },
   publicTicker: [],
   aiAgents: [],
-  poachingAttempts: []
+  poachingAttempts: [],
+  centralBank: { fedRateBps: 425, ecbRateBps: 350, lastInflationUS: 3.1, lastInflationEU: 2.6, lastDecisionAt: null, history: [] },
+  stressTest: { lastRunAt: null, lastResults: [], bonusRestrictedUntil: null }
 };
 
 const PAGE_RENDERERS = {};

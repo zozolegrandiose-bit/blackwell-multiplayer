@@ -1,5 +1,27 @@
 # Journal des mises à jour
 
+## Patch 22 — Central Bank & Monetary Policy, Regulatory Stress Testing (2026-07-29)
+
+### Ajouts
+- **🏛 Central Bank & Monetary Policy** : une IA Fed et une IA BCE annoncent périodiquement (toutes les 3 à 5 minutes) une décision de taux directeur et une lecture d'inflation. Deux nouveaux instruments réellement négociables — **US 10Y** et **Euribor 3M** — bougent directement avec ces décisions ; le Desk Trading et désormais la **Trésorerie de Groupe** (accès Marchés élargi) peuvent ouvrir des positions dessus pour en tirer parti. Chaque décision crée aussi une onde de choc sur le reste du marché (obligations, actions, cryptoactifs), proportionnelle à son ampleur.
+- **📐 Regulatory Stress Testing & Basel Ratios** : un régulateur IA contrôle toutes les 90 à 150 secondes le ratio Tier 1 de chacune des 4 entités régionales (Global Footprint, Patch 19) face au minimum Basel (10,5%). Une entité non conforme subit une pénalité de fonds propres réelle (5% de son capital alloué) et déclenche une restriction de distribution de bonus pour toute la banque (CIB Bonus Pool et primes RH) pendant plusieurs minutes.
+- Règlement enrichi avec l'intégralité des mécaniques ci-dessus.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- `server/gameState.js` : 2 nouveaux instruments de marché ("US 10Y", "Euribor 3M", catégorie "Taux", prix exprimé en points de base) ajoutés à `MARKET_INSTRUMENTS_SEED` — tradables via `markets:buy` exactement comme n'importe quel autre instrument, sans changement de mécanique.
+- `server/departmentAccess.js` : le cluster E (Trésorerie de Groupe) gagne l'accès à la page Marchés — demande explicite du brief ("desks Trading ET Trésorerie").
+- `server/centralBank.js` (nouveau) et `server/regulatoryStressTest.js` (nouveau) : suivent la même convention de boucle auto-reprogrammée que le reste du jeu ; leurs fonctions de décision/contrôle sont volontairement pures (ne touchent que `gameState`, jamais `io` directement) pour rester unitairement testables, comme `computeVaR()` (Patch 18).
+- La restriction de distribution de bonus d'un Stress Test raté n'est pas cosmétique : `isBonusDistributionRestricted()` est appelée directement dans les handlers déjà testés `cib:distributeBonus` (`server/cibBonus.js`) et `hr:distributeBonus`/`hr:autoDistributeBonus` (`server/handlers/hr.js`), qui rejettent la distribution avec un motif explicite tant que la restriction est active.
+- Régression complète menée en direct via `socket.io-client` : accès Marchés de la Trésorerie, snapshot avec les 2 nouveaux instruments + états `centralBank`/`stressTest`, décision de politique monétaire déplaçant réellement US 10Y, déclenchement d'un Stress Test raté (ratio Tier 1 abaissé via la page Global Footprint) avec pénalité de capital + restriction de bonus, et rejet effectif d'une tentative de distribution de bonus pendant la restriction.
+
+---
+
 ## Patch 21 — Banques Concurrentes Agressives (2026-07-29)
 
 ### Ajouts
