@@ -67,6 +67,7 @@ function buildSnapshot(gameState, player) {
   if (player.access.includes("ma")) {
     snapshot.cibBonusPool = gameState.cibBonusPool;
     snapshot.pitchbookCompetitions = gameState.pitchbookCompetitions;
+    snapshot.hostileTakeovers = gameState.hostileTakeovers;
   }
   snapshot.cibLeadership = gameState.cibLeadership;
   if (player.access.includes("clients")) snapshot.clients = gameState.clients;

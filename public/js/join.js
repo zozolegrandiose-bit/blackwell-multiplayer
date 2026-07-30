@@ -482,6 +482,17 @@ socket.on("algo:investLatency:rejected", data => {
   if (errEl) errEl.textContent = data.reason;
 });
 
+socket.on("hostileTakeover:update", data => {
+  if (!window.currentPlayer) return;
+  appState.hostileTakeovers = data;
+  if (appState.currentPage === "ma") renderApp();
+});
+
+socket.on("ma:deployDefense:rejected", data => {
+  const errEl = document.getElementById("ht-defense-error");
+  if (errEl) errEl.textContent = data.reason;
+});
+
 socket.on("markets:buy:rejected", data => {
   // Shared rejection event: markets:buy and the insider-trading panel both use it
   // (both are capital-insufficiency checks) but render into different DOM nodes.

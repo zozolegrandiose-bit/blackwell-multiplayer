@@ -248,6 +248,18 @@ function renderReglement() {
       Sur la page Marchés, un Trader peut configurer et lancer un <b>bot de trading automatique</b> (instrument, stratégie — Momentum ou Retour à la moyenne —, taille par trade) qui exécute ensuite ses décisions en autonomie, sans intervention humaine, et peut être mis en pause à tout moment. La DRH ou la Sécurité Informatique (ou le Board Of Directors) peut investir dans l'<b>infrastructure de latence</b> de la banque (Colocation, Fibre dédiée, Micro-ondes propriétaire) — chaque palier accélère réellement la cadence d'exécution de tous les bots actifs.
     `)}
 
+    ${reglementSectionHtml("⚔️ Hostile Takeover &amp; M&amp;A Defense", `
+      Une banque prédatrice peut périodiquement lancer une OPA hostile sur un deal actif de votre pipeline M&amp;A — 90 secondes pour déployer une défense sur la page M&amp;A, sous peine de perdre le client (le deal disparaît du pipeline, un rival est crédité de l'opération, la santé de la banque encaisse le choc) :
+      <ul style="margin:8px 0 0 18px; padding:0;">
+        <li><b>🧪 Poison Pill</b> : réussit à tout moment, mais dilue la valorisation du deal de 5%.</li>
+        <li><b>🐎 Chevalier Blanc</b> : ne coûte rien, mais devient indisponible dans les 30 dernières secondes — trop tard pour trouver un repreneur ami.</li>
+      </ul>
+    `)}
+
+    ${reglementSectionHtml("🖥️ Interface Outlook &amp; Teams", `
+      Le Mail adopte une mise en page à 3 volets façon Outlook (dossiers, liste de messages, volet de lecture). L'Agenda affiche désormais un vrai calendrier mensuel façon Outlook, avec navigation mois par mois. Le Terminal Chat se présente en rail de canaux façon Teams (News, Deals, et un fil de discussion dédié par collègue pour les messages privés) plutôt qu'en panneaux empilés.
+    `)}
+
     <div class="panel">
       <div class="panel-title">⚙️ Paramètres</div>
       <div class="form-row" style="align-items:center;">

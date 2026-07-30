@@ -202,6 +202,35 @@ function pitchbookPanelHtml() {
   `;
 }
 
+// Hostile Takeover & M&A Defense (Patch 24) -- a predator bank threatens an
+// active deal in the pipeline; deploy Poison Pill (instant, dilutes the deal's
+// valuation) or Chevalier Blanc (no cost, but unavailable in the final 30s)
+// before the 90s countdown runs out or the client is lost outright.
+function hostileTakeoverPanelHtml() {
+  const takeovers = (appState.hostileTakeovers || []).filter(t => t.status === "Active");
+  if (!takeovers.length) return "";
+  return `
+    <div class="panel" style="margin-bottom:16px; border-color:rgba(239,68,68,0.4);">
+      <div class="panel-title">⚔️ OPA Hostile — Défense M&amp;A requise</div>
+      ${takeovers.map(t => {
+        const secondsLeft = Math.max(0, Math.round((t.deadline - Date.now()) / 1000));
+        const whiteKnightAvailable = (t.deadline - Date.now()) >= 30000;
+        return `
+        <div style="border:1px solid var(--series-red); border-radius:8px; padding:10px 12px; margin-bottom:8px;">
+          <div style="font-weight:700; font-size:12.5px;">« ${escapeHtml(t.dealName)} » attaqué par ${escapeHtml(t.predatorName)}</div>
+          <div class="event-banner-deadline" style="margin:4px 0 8px;">⏱ ${secondsLeft}s pour défendre</div>
+          <div style="display:flex; gap:8px;">
+            <button data-ht-defend="${t.id}|poisonPill" class="btn-sm">🧪 Poison Pill</button>
+            <button data-ht-defend="${t.id}|whiteKnight" class="btn-sm" ${whiteKnightAvailable ? "" : "disabled"}>🐎 Chevalier Blanc${whiteKnightAvailable ? "" : " (trop tard)"}</button>
+          </div>
+        </div>
+      `;
+      }).join("")}
+      <div id="ht-defense-error" class="join-error"></div>
+    </div>
+  `;
+}
+
 function cibBonusPanelHtml() {
   if (!appState.player.isHeadOfCIB) return "";
   const pool = appState.cibBonusPool || { available: 0, distributedLog: [] };
@@ -242,6 +271,7 @@ function renderMa() {
     <div class="page-title">M&amp;A</div>
     <div class="page-sub">Pipeline d'opérations — visible par le Board Of Directors et les métiers de dealmaking.</div>
     ${taskPanelHtml("ma")}
+    ${hostileTakeoverPanelHtml()}
     ${boardOfDirectorsStatusHtml()}
     ${pitchbookPanelHtml()}
     ${ipoPanelHtml()}
@@ -340,6 +370,14 @@ function bindMa() {
   document.querySelectorAll("[data-ma-stage]").forEach(el => {
     el.addEventListener("change", () => {
       socket.emit("ma:updateStage", { dealId: el.getAttribute("data-ma-stage"), stage: el.value });
+    });
+  });
+  document.querySelectorAll("[data-ht-defend]").forEach(el => {
+    el.addEventListener("click", () => {
+      const [takeoverId, strategy] = el.getAttribute("data-ht-defend").split("|");
+      const errEl = document.getElementById("ht-defense-error");
+      if (errEl) errEl.textContent = "";
+      socket.emit("ma:deployDefense", { takeoverId, strategy });
     });
   });
   document.querySelectorAll("[data-ma-checklist]").forEach(el => {

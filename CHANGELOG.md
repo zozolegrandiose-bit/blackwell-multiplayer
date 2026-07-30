@@ -1,5 +1,26 @@
 # Journal des mises à jour
 
+## Patch 24 — Hostile Takeover & M&A Defense, Interface Outlook & Teams (2026-07-30)
+
+### Ajouts
+- **⚔️ Hostile Takeover & M&A Defense** : une banque prédatrice peut périodiquement lancer une OPA hostile sur un deal actif du pipeline M&A — 90 secondes pour déployer une défense sur la page M&A, sous peine de perdre le client (le deal disparaît du pipeline, un rival encaisse l'opération, la santé de la banque en pâtit). Deux défenses : Poison Pill (réussit à tout moment, dilue la valorisation du deal de 5%) et Chevalier Blanc (ne coûte rien, mais indisponible dans les 30 dernières secondes).
+- **🖥️ Interface Outlook & Teams** : le Mail adopte une mise en page à 3 volets façon Outlook (dossiers, liste de messages, volet de lecture). L'Agenda affiche un vrai calendrier mensuel façon Outlook, navigable mois par mois. Le Terminal Chat se présente en rail de canaux façon Teams (News, Deals, et un fil dédié par collègue pour les messages privés) plutôt qu'en panneaux empilés.
+- Règlement enrichi avec l'intégralité des mécaniques ci-dessus.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- `server/hostileTakeover.js` (nouveau) : réutilise directement `gameState.maDeals` (le pipeline M&A existant) comme réservoir de cibles plutôt que d'inventer une notion parallèle d'entreprise cible — le deal menacé EST le client à sauver.
+- La refonte Outlook/Teams est intégralement côté présentation : aucune donnée ni handler serveur n'a changé (même `mail:send`, `agenda:create`, `terminal:sendDM`, `teamChat:post`) — vérifié explicitement en régression pour confirmer qu'aucun câblage n'a été cassé par le remaniement visuel.
+- L'état d'affichage (dossier Mail sélectionné, mois de l'Agenda affiché, canal Terminal actif) est un état d'interface transitoire (variables de module côté client), pas un état de partie — il n'est ni partagé entre joueurs ni persisté.
+- Régression complète menée en direct via `socket.io-client` : apparition d'une OPA hostile, défense Poison Pill réussie avec dilution réelle de la valorisation, perte effective d'un client faute de défense à temps, rejet du Chevalier Blanc sous 30 secondes, et vérification que les 4 handlers Mail/Agenda/Terminal fonctionnent toujours après la refonte visuelle.
+
+---
+
 ## Patch 23 — Private Banking & Wealth Management, Algorithmic & HFT Trading (2026-07-30)
 
 ### Ajouts

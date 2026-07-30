@@ -1,84 +1,101 @@
-// Terminal Chat -- Bloomberg/Slack-style component. Three feeds: News (reuses
-// appState.teamChat, already fed by every system in this game), Deals (ambient AI
-// commentary on in-progress deals, server/terminal.js), and private real-time DMs.
-function terminalFeedHtml(entries, textFn) {
-  if (!entries.length) return `<div class="terminal-empty">— aucune entrée —</div>`;
-  return entries.slice(0, 20).map(e => `<div class="terminal-line">${textFn(e)}</div>`).join("");
+// Terminal Chat -- Teams-style layout (Patch 24): a channel rail (News, Deals,
+// one-on-one DM threads) on the left, a single conversation pane on the right
+// with its own composer, instead of three stacked panels. Same underlying
+// events (teamChat:post, terminal:sendDM) and gameState shape as before --
+// only the client-side rendering changed.
+let terminalChannel = "news"; // "news" | "deals" | "dm:<playerId>"
+
+function terminalMessageHtml(authorLabel, text, ts, outgoing) {
+  return `
+    <div class="activity-row" style="${outgoing ? "border-left:3px solid var(--accent); padding-left:8px;" : ""}">
+      <span class="activity-time">${fmtTime(ts)}</span>
+      <span class="activity-text"><b>${escapeHtml(authorLabel)}</b> — ${escapeHtml(text)}</span>
+    </div>
+  `;
+}
+
+function terminalConversationHtml(myId) {
+  if (terminalChannel === "news") {
+    const news = appState.teamChat || [];
+    return news.slice(0, 40).map(m => terminalMessageHtml(m.authorName, m.text, m.ts, false)).join("") || `<div class="terminal-empty">— aucune entrée —</div>`;
+  }
+  if (terminalChannel === "deals") {
+    const dealsFeed = appState.terminalDealsFeed || [];
+    return dealsFeed.slice(0, 40).map(e => terminalMessageHtml("Deals", e.text, e.ts, false)).join("") || `<div class="terminal-empty">— aucune entrée —</div>`;
+  }
+  const peerId = terminalChannel.slice(3);
+  const dms = (appState.terminalDMs || []).filter(m => m.fromPlayerId === peerId || m.toPlayerId === peerId).sort((a, b) => a.ts - b.ts);
+  return dms.map(m => {
+    const outgoing = m.fromPlayerId === myId;
+    return terminalMessageHtml(outgoing ? "Vous" : m.fromName, m.body, m.ts, outgoing);
+  }).join("") || `<div class="terminal-empty">— aucun message —</div>`;
+}
+
+function terminalChannelLabel(peers) {
+  if (terminalChannel === "news") return "📡 News";
+  if (terminalChannel === "deals") return "📎 Deals en cours";
+  const peer = peers.find(p => "dm:" + p.id === terminalChannel);
+  return peer ? "💬 " + peer.fullName : "💬 Messages privés";
 }
 
 function renderTerminal() {
   const myId = appState.player.id;
-  const news = appState.teamChat || [];
-  const dealsFeed = appState.terminalDealsFeed || [];
-  const dms = [...(appState.terminalDMs || [])].sort((a, b) => b.ts - a.ts);
-  const recipients = (appState.players || []).filter(p => p.id !== myId);
+  const peers = (appState.players || []).filter(p => p.id !== myId);
+  const showComposer = terminalChannel !== "deals";
 
   return `
     <div class="page-title">Terminal Chat</div>
     <div class="page-sub">News en direct, suivi des deals en cours et messagerie privée instantanée entre joueurs.</div>
-    <div class="panel-row" style="margin-bottom:16px;">
-      <div class="panel terminal-panel">
-        <div class="panel-title">📡 News</div>
-        <div class="terminal-screen">
-          ${terminalFeedHtml(news, m => `<span class="terminal-ts">${fmtTime(m.ts)}</span> <span class="terminal-tag">${escapeHtml(m.authorName)}</span> ${escapeHtml(m.text)}`)}
-        </div>
-        <div style="display:flex; gap:6px; margin-top:8px;">
-          <input id="terminal-news-input" type="text" maxlength="240" placeholder="Écrire dans le News… (@trading, @ma, @risk)" style="flex:1; padding:6px 9px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
-          <button id="terminal-news-send" class="btn-sm">Envoyer</button>
-        </div>
+    <div class="teams-shell">
+      <div class="teams-rail">
+        <div class="teams-rail-section">Canaux</div>
+        <div class="teams-rail-item ${terminalChannel === "news" ? "active" : ""}" data-terminal-channel="news">📡 News</div>
+        <div class="teams-rail-item ${terminalChannel === "deals" ? "active" : ""}" data-terminal-channel="deals">📎 Deals en cours</div>
+        <div class="teams-rail-section">Messages privés</div>
+        ${peers.map(p => `<div class="teams-rail-item ${terminalChannel === "dm:" + p.id ? "active" : ""}" data-terminal-channel="dm:${p.id}">${avatarHtml(p.fullName, 18)} ${escapeHtml(p.fullName)}</div>`).join("") || `<div style="font-size:11px; color:var(--text-muted); padding:6px 8px;">Aucun autre joueur connecté.</div>`}
       </div>
-      <div class="panel terminal-panel">
-        <div class="panel-title">📎 Deals en cours</div>
-        <div class="terminal-screen">
-          ${terminalFeedHtml(dealsFeed, e => `<span class="terminal-ts">${fmtTime(e.ts)}</span> ${escapeHtml(e.text)}`)}
-        </div>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">💬 Messages privés</div>
-      <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
-        <select id="terminal-dm-to">
-          ${recipients.map(p => `<option value="${p.id}">${escapeHtml(p.fullName)} — ${escapeHtml(p.grade)}, ${escapeHtml(p.dept)}</option>`).join("") || `<option value="">Aucun autre joueur connecté</option>`}
-        </select>
-        <input id="terminal-dm-body" type="text" placeholder="Votre message…" style="flex:1; min-width:200px; padding:7px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12.5px;"/>
-        <button id="terminal-dm-send" class="btn-sm" ${recipients.length === 0 ? "disabled" : ""}>Envoyer</button>
-      </div>
-      <div id="terminal-dm-error" class="join-error"></div>
-      <div class="terminal-screen">
-        ${terminalFeedHtml(dms, m => {
-          const outgoing = m.fromPlayerId === myId;
-          return `<span class="terminal-ts">${fmtTime(m.ts)}</span> <span class="terminal-tag">${outgoing ? "→ " + escapeHtml(m.toName) : escapeHtml(m.fromName) + " →"}</span> ${escapeHtml(m.body)}`;
-        })}
+      <div class="teams-main">
+        <div class="teams-header">${terminalChannelLabel(peers)}</div>
+        <div class="teams-conversation">${terminalConversationHtml(myId)}</div>
+        ${showComposer ? `
+          <div id="terminal-dm-error" class="join-error" style="padding:0 18px;"></div>
+          <div class="teams-composer">
+            <input id="terminal-composer-input" type="text" maxlength="240" placeholder="${terminalChannel === "news" ? "Écrire dans le News… (@trading, @ma, @risk)" : "Votre message…"}" style="flex:1; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12.5px;"/>
+            <button id="terminal-composer-send" class="btn-sm" ${terminalChannel.startsWith("dm:") && peers.length === 0 ? "disabled" : ""}>Envoyer</button>
+          </div>
+        ` : ""}
       </div>
     </div>
   `;
 }
 
 function bindTerminal() {
-  const sendBtn = document.getElementById("terminal-dm-send");
-  if (sendBtn) sendBtn.addEventListener("click", () => {
-    const toPlayerId = document.getElementById("terminal-dm-to").value;
-    const bodyEl = document.getElementById("terminal-dm-body");
-    const body = bodyEl.value.trim();
-    const errEl = document.getElementById("terminal-dm-error");
-    if (errEl) errEl.textContent = "";
-    if (!toPlayerId || !body) return;
-    socket.emit("terminal:sendDM", { toPlayerId, body });
-    bodyEl.value = "";
+  document.querySelectorAll("[data-terminal-channel]").forEach(el => {
+    el.addEventListener("click", () => {
+      terminalChannel = el.getAttribute("data-terminal-channel");
+      renderApp();
+    });
   });
 
-  const newsInput = document.getElementById("terminal-news-input");
-  const newsSendBtn = document.getElementById("terminal-news-send");
-  if (newsInput && newsSendBtn) {
-    const send = () => {
-      const body = newsInput.value.trim();
-      if (!body) return;
+  const input = document.getElementById("terminal-composer-input");
+  const sendBtn = document.getElementById("terminal-composer-send");
+  if (!input || !sendBtn) return;
+
+  const send = () => {
+    const body = input.value.trim();
+    if (!body) return;
+    if (terminalChannel === "news") {
       socket.emit("teamChat:post", { body });
-      newsInput.value = "";
-    };
-    newsSendBtn.addEventListener("click", send);
-    newsInput.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
-  }
+    } else if (terminalChannel.startsWith("dm:")) {
+      const toPlayerId = terminalChannel.slice(3);
+      const errEl = document.getElementById("terminal-dm-error");
+      if (errEl) errEl.textContent = "";
+      socket.emit("terminal:sendDM", { toPlayerId, body });
+    }
+    input.value = "";
+  };
+  sendBtn.addEventListener("click", send);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
 }
 
 PAGE_RENDERERS.terminal = renderTerminal;

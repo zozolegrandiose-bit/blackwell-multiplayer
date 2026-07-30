@@ -59,7 +59,8 @@ const appState = {
   stressTest: { lastRunAt: null, lastResults: [], bonusRestrictedUntil: null },
   privateBanking: { familyOffices: [] },
   algoBots: [],
-  algoInfrastructure: { latencyTier: 0, investedTotal: 0 }
+  algoInfrastructure: { latencyTier: 0, investedTotal: 0 },
+  hostileTakeovers: []
 };
 
 const PAGE_RENDERERS = {};

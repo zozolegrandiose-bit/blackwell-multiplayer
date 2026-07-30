@@ -430,7 +430,8 @@ function createGameState() {
     },
     privateBanking: { familyOffices: [] },
     algoBots: [],
-    algoInfrastructure: { latencyTier: 0, investedTotal: 0 }
+    algoInfrastructure: { latencyTier: 0, investedTotal: 0 },
+    hostileTakeovers: []
   };
   state.maDeals.forEach(d => { if (!d.dataRoom) d.dataRoom = seedDataRoom(d.valuation); });
   return state;
