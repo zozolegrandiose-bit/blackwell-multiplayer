@@ -1,5 +1,27 @@
 # Journal des mises à jour
 
+## Patch 27 — Site Vitrine Institutionnel & Carrières (3/4) (2026-07-31)
+
+Troisième volet de la restructuration entamée aux Patchs 25-26. Le site public à `/` n'était jusqu'ici qu'un placeholder ; il devient une véritable vitrine institutionnelle inspirée des grandes banques mondiales, avec un moteur de recherche d'offres et un formulaire de candidature réellement connecté au Panel Admin.
+
+### Ajouts
+- **Navigation complète** : À Propos, Nos Métiers, RSE & Impact, Carrières, Presse & Insights, plus le bouton "Accès Intranet / Portail Employé" — partagée sur toutes les pages du site public via un chrome commun (`public/site/site.js`).
+- **Page d'accueil enrichie** : ticker boursier décoratif (indices mondiaux + action Blackwell, simulé côté client, sans dépendance serveur), section "Nos Piliers" (CIB, Markets & Execution, Asset & Wealth Management, Commercial Banking), section "Actualités & Insights".
+- **Nouvelles pages** : À Propos (`/about`), Nos Métiers (`/solutions` — Conseil M&A, Levée de Capitaux, Sales & Trading, Produits Structurés, Restructuration de dette), RSE & Impact (`/csr`), Presse & Insights (`/press`).
+- **Carrières (`/careers`)** : présentation de la culture d'entreprise et des programmes Graduate/Summer Analyst, moteur de recherche d'offres (filtres filiale/département/niveau + recherche texte) sur un catalogue de 34 offres fictives réparties dans 7 villes (New York, Londres, Paris/Francfort, Hong Kong, Singapour, Tokyo, São Paulo), formulaire de candidature dynamique en modal.
+- **`server/jobs.js`** (nouveau) : catalogue d'offres statique + routes publiques `GET /api/jobs`, `GET /api/jobs/:id`, `POST /apply` — une candidature crée immédiatement une entrée visible dans la section "Candidatures" du Panel Admin (Patch 26), confirmée par test de bout en bout.
+
+### Retraits
+- Le texte "site institutionnel à venir" du placeholder du Patch 25.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- Les 7 villes des offres d'emploi restent volontairement distinctes des 4 entités réelles du Global Footprint utilisées par le Panel Admin (Patch 26) : une offre d'emploi est un texte d'ambiance, pas une entité de jeu pilotable — voir la note technique du Patch 26 à ce sujet.
+- `server/jobs.js` est monté sans garde d'authentification (routes publiques), à l'inverse de `server/admin.js` : leçon tirée du bug de routage corrigé en urgence au Patch 26 (`router.use(middleware)` sans préfixe de chemin s'applique à toutes les requêtes qui transitent par ce routeur, pas seulement à ses routes définies).
+- Régression complète rejouée : les 8 pages publiques, l'API `/api/jobs`, le flux de candidature (`POST /apply`), le rejet d'une candidature incomplète, et la visibilité de la nouvelle candidature dans `/api/admin/overview` après connexion Super-Admin.
+
 ## Patch 26 — Panel Administrateur (2/4) (2026-07-31)
 
 Deuxième volet de la restructuration comptes/accès entamée au Patch 25. Le Super-Admin dispose désormais d'une interface dédiée pour traiter les demandes de compte, affecter les joueurs et gérer les accès dans le temps — jusqu'ici, un compte approuvé côté base de données n'avait encore aucun moyen d'être approuvé depuis l'application elle-même.

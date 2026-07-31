@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Carrières — Blackwell & Co Capital</title>
+<link rel="stylesheet" href="/site/site.css"/>
+</head>
+<body>
+<div class="site-header" id="site-header"></div>
+
+<div class="site-page-hero">
+  <h1>Carrières chez Blackwell &amp; Co Capital</h1>
+  <p>Rejoignez une équipe internationale de plus de 300 000 collaborateurs. Nos programmes Graduate &amp; Summer Analyst ouvrent la voie à des carrières mondiales dans la finance.</p>
+</div>
+
+<div class="site-section" style="padding-top:20px;">
+  <div class="site-grid-2" style="margin-bottom:50px;">
+    <div class="site-card"><span class="tag">Culture</span><h3>Une culture d'excellence et de collaboration</h3><p>Nous formons nos équipes au contact des meilleurs experts du secteur, dans un environnement exigeant qui valorise l'initiative et la rigueur analytique.</p></div>
+    <div class="site-card"><span class="tag">Programmes</span><h3>Graduates &amp; Summer Analysts</h3><p>Des programmes structurés de formation et de rotation entre nos métiers, ouverts chaque année dans nos principaux centres mondiaux.</p></div>
+  </div>
+
+  <h2>Offres d'emploi</h2>
+  <p class="lead">Filtrez par filiale, département ou niveau d'expérience pour trouver votre prochaine opportunité.</p>
+
+  <div class="careers-filters">
+    <select id="filter-city"><option value="">Toutes les filiales</option></select>
+    <select id="filter-dept"><option value="">Tous les départements</option></select>
+    <select id="filter-level"><option value="">Tous les niveaux</option></select>
+    <input id="filter-search" type="text" placeholder="Rechercher un intitulé..." style="flex:1; min-width:180px;"/>
+  </div>
+
+  <div id="job-count" style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px;"></div>
+  <div id="job-list" class="job-list"></div>
+</div>
+
+<div id="job-modal-root"></div>
+
+<div class="site-footer" id="site-footer"></div>
+<script src="/site/site.js"></script>
+<script>renderSiteHeader("/careers");</script>
+<script>
+  let ALL_JOBS = [];
+  let OPTIONS = { cities: [], levels: [], departments: [] };
+
+  async function loadJobs() {
+    const res = await fetch("/api/jobs");
+    const data = await res.json();
+    ALL_JOBS = data.jobs;
+    OPTIONS = data.options;
+    populateFilters();
+    renderJobs();
+  }
+
+  function populateFilters() {
+    const citySel = document.getElementById("filter-city");
+    const deptSel = document.getElementById("filter-dept");
+    const levelSel = document.getElementById("filter-level");
+    OPTIONS.cities.forEach(c => citySel.appendChild(new Option(c, c)));
+    OPTIONS.departments.forEach(d => deptSel.appendChild(new Option(d, d)));
+    OPTIONS.levels.forEach(l => levelSel.appendChild(new Option(l, l)));
+  }
+
+  function currentFilters() {
+    return {
+      city: document.getElementById("filter-city").value,
+      dept: document.getElementById("filter-dept").value,
+      level: document.getElementById("filter-level").value,
+      search: document.getElementById("filter-search").value.trim().toLowerCase()
+    };
+  }
+
+  function renderJobs() {
+    const f = currentFilters();
+    const filtered = ALL_JOBS.filter(j =>
+      (!f.city || j.city === f.city) &&
+      (!f.dept || j.department === f.dept) &&
+      (!f.level || j.level === f.level) &&
+      (!f.search || j.title.toLowerCase().includes(f.search))
+    );
+    document.getElementById("job-count").textContent = filtered.length + " offre(s) trouvée(s) sur " + ALL_JOBS.length;
+    const listEl = document.getElementById("job-list");
+    if (filtered.length === 0) {
+      listEl.innerHTML = '<div class="job-empty">Aucune offre ne correspond à ces critères.</div>';
+      return;
+    }
+    listEl.innerHTML = filtered.map(j => `
+      <div class="job-row" data-job-id="${j.id}">
+        <div>
+          <div class="job-title">${j.title}</div>
+          <div class="job-meta">${j.department} · ${j.city} · ${j.level}</div>
+        </div>
+        <div class="job-cta">Postuler →</div>
+      </div>
+    `).join("");
+    listEl.querySelectorAll(".job-row").forEach(row => {
+      row.addEventListener("click", () => openJobModal(row.getAttribute("data-job-id")));
+    });
+  }
+
+  ["filter-city", "filter-dept", "filter-level"].forEach(id => document.getElementById(id).addEventListener("change", renderJobs));
+  document.getElementById("filter-search").addEventListener("input", renderJobs);
+
+  function openJobModal(jobId) {
+    const job = ALL_JOBS.find(j => j.id === jobId);
+    if (!job) return;
+    const root = document.getElementById("job-modal-root");
+    root.innerHTML = `
+      <div class="job-modal-backdrop" id="job-modal-backdrop">
+        <div class="job-modal">
+          <button class="job-modal-close" id="job-modal-close">&times;</button>
+          <h2>${job.title}</h2>
+          <div class="job-modal-meta">${job.department} · ${job.city} · ${job.level}</div>
+          <p class="desc">${job.description}</p>
+          <div id="apply-error" class="site-form-error"></div>
+          <div id="apply-success" class="site-form-success"></div>
+          <div id="apply-form">
+            <div class="site-form-row"><label>Prénom</label><input id="apply-firstname" type="text"/></div>
+            <div class="site-form-row"><label>Nom</label><input id="apply-lastname" type="text"/></div>
+            <div class="site-form-row"><label>Email</label><input id="apply-email" type="email"/></div>
+            <div class="site-form-row"><label>Téléphone</label><input id="apply-phone" type="tel"/></div>
+            <div class="site-form-row"><label>Niveau d'études</label><input id="apply-education" type="text" placeholder="ex: Master Finance, HEC Paris"/></div>
+            <div class="site-form-row"><label>Lettre de motivation</label><textarea id="apply-cover" class="site-form-textarea"></textarea></div>
+            <button id="apply-submit" class="site-btn">Envoyer ma candidature</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById("job-modal-close").addEventListener("click", closeJobModal);
+    document.getElementById("job-modal-backdrop").addEventListener("click", e => {
+      if (e.target.id === "job-modal-backdrop") closeJobModal();
+    });
+    document.getElementById("apply-submit").addEventListener("click", () => submitApplication(job.id));
+  }
+
+  function closeJobModal() {
+    document.getElementById("job-modal-root").innerHTML = "";
+  }
+
+  async function submitApplication(jobId) {
+    const errEl = document.getElementById("apply-error");
+    const successEl = document.getElementById("apply-success");
+    errEl.textContent = "";
+    successEl.textContent = "";
+    const payload = {
+      jobId,
+      firstName: document.getElementById("apply-firstname").value,
+      lastName: document.getElementById("apply-lastname").value,
+      email: document.getElementById("apply-email").value,
+      phone: document.getElementById("apply-phone").value,
+      educationLevel: document.getElementById("apply-education").value,
+      coverLetter: document.getElementById("apply-cover").value
+    };
+    if (!payload.firstName || !payload.lastName || !payload.email) {
+      errEl.textContent = "Nom, prénom et email sont requis.";
+      return;
+    }
+    try {
+      const res = await fetch("/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!data.ok) { errEl.textContent = data.reason || "Candidature refusée."; return; }
+      successEl.textContent = "Candidature envoyée avec succès ! Notre équipe RH vous recontactera prochainement.";
+      document.getElementById("apply-form").style.display = "none";
+    } catch (e) {
+      errEl.textContent = "Erreur réseau — réessayez.";
+    }
+  }
+
+  loadJobs();
+</script>
+</body>
+</html>

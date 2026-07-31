@@ -7,10 +7,7 @@
 <link rel="stylesheet" href="/site/site.css"/>
 </head>
 <body>
-<div class="site-header">
-  <div class="site-logo"><a href="/" style="color:inherit; text-decoration:none;">Blackwell &amp; Co Capital</a></div>
-  <div class="site-nav"><a href="/login">Se connecter</a></div>
-</div>
+<div class="site-header" id="site-header"></div>
 
 <div class="site-form-shell">
   <h1>Demande de création de compte</h1>
@@ -72,5 +69,8 @@
     }
   });
 </script>
+<div class="site-footer" id="site-footer"></div>
+<script src="/site/site.js"></script>
+<script>renderSiteHeader("/register");</script>
 </body>
 </html>
