@@ -1,6 +1,24 @@
 const CLIENT_STATUSES = ["Prospect", "Actif", "En revue", "Inactif"];
 const CLIENT_FEE_RATE = 0.015;
 
+function trustColor(trust) {
+  if (trust >= 70) return "var(--series-green)";
+  if (trust >= 40) return "#f5b942";
+  return "var(--series-red)";
+}
+
+function trustGaugeHtml(trust) {
+  const value = trust == null ? 70 : trust;
+  return `
+    <div style="display:flex; align-items:center; gap:6px; min-width:110px;" title="Confiance client">
+      <div style="width:64px; height:6px; background:var(--border); border-radius:3px; overflow:hidden;">
+        <div style="width:${value}%; height:100%; background:${trustColor(value)};"></div>
+      </div>
+      <span style="font-size:10.5px; color:${trustColor(value)}; font-weight:700;">${value}%</span>
+    </div>
+  `;
+}
+
 function renderClients() {
   const clients = appState.clients || [];
   return `
@@ -26,8 +44,9 @@ function renderClients() {
         const feeEstimate = c.aum * CLIENT_FEE_RATE;
         return `
         <div class="activity-row" style="display:block; padding:10px 0;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
             <div style="font-weight:700; font-size:13px;">${escapeHtml(c.name)}</div>
+            ${trustGaugeHtml(c.trust)}
             <select data-cl-status="${c.id}" class="btn-sm">
               ${CLIENT_STATUSES.map(s => `<option value="${s}" ${c.status === s ? "selected" : ""}>${s}</option>`).join("")}
             </select>

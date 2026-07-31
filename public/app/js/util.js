@@ -71,10 +71,13 @@ function deptBadgeHtml(dept) {
 }
 
 const PROGRESSION_TIERS = [
-  { min: 500, label: "Légende", icon: "💎" },
-  { min: 200, label: "Senior", icon: "🥇" },
-  { min: 50, label: "Confirmé", icon: "🥈" },
-  { min: 0, label: "Stagiaire", icon: "🥉" }
+  { min: 1800, label: "Wall Street Legend", icon: "💎" },
+  { min: 1100, label: "Managing Director", icon: "🏆" },
+  { min: 700, label: "Director", icon: "🏅" },
+  { min: 400, label: "Vice President", icon: "🎖️" },
+  { min: 200, label: "Associate", icon: "🥇" },
+  { min: 75, label: "Analyst", icon: "🥈" },
+  { min: 0, label: "Rookie Analyst", icon: "🥉" }
 ];
 
 function getProgressionTier(score) {

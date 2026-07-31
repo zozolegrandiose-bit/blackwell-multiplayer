@@ -1,5 +1,24 @@
 # Journal des mises à jour
 
+## Patch 30 — Carrière RPG & Confiance Client (2/5, mega-update V2.0 ULTRA) (2026-07-31)
+
+Deuxième volet de la mega-update. Le système de score/badges du Patch 3 existait déjà (4 paliers : Stagiaire/Confirmé/Senior/Légende) — plutôt que de construire un système d'XP séparé, il devient la vraie progression de carrière demandée : 7 rangs allant de Rookie Analyst à Wall Street Legend, avec un vrai enjeu mécanique (accès aux méga-deals).
+
+### Ajouts
+- **Progression de carrière à 7 rangs** : Rookie Analyst (0 pt) → Analyst (75) → Associate (200) → Vice President (400) → Director (700) → Managing Director (1100) → Wall Street Legend (1800). Remplace les 4 paliers précédents (même mécanisme de score, plus de rangs pour une vraie progression).
+- **Méga-deals réservés par réputation** : un mandat M&A ≥ 50 Md$ (50 000 M$) exige d'être au rang Director ou supérieur — en dessous, la création est refusée avec un message explicite. Les deals ordinaires ne sont pas concernés.
+- **Jauge de confiance client (Trust)** : chaque client a désormais un niveau de confiance 0-100, affiché en jauge sur la page Clients. Une note ajoutée ou une réactivation la fait monter ; un passage en revue ou une négligence prolongée la fait baisser. À confiance nulle, le client n'est pas simplement mis en pause — il est perdu définitivement au profit d'une banque rivale (tirée parmi les banques du classement), avec une pénalité de santé bancaire plus lourde qu'un simple passage en inactif.
+
+### Retraits
+- Les libellés de paliers "Stagiaire/Confirmé/Senior/Légende" (remplacés par la progression en 7 rangs ci-dessus — mêmes seuils de score réutilisés à la base, mais renommés et densifiés).
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- Le classement League Tables (Wall Street) et le système de score individuel existaient déjà en profondeur (Patchs 3 et suivants) — non reconstruits, seule la couche de paliers a été étendue.
+- Testé : 13 assertions unitaires sur la grille des rangs et la porte des méga-deals (bornes exactes autour de 699/700 points), 6 assertions unitaires sur la mécanique de confiance client (dégradation, perte au rival, préservation du client à confiance suffisante) via appel direct de `sweepChurnRisk`, 6 assertions DOM sur le rendu des jauges/badges, régression live (refus d'un méga-deal par un Rookie Analyst, deal ordinaire toujours fonctionnel, confiance client qui monte après une note).
+
 ## Patch 29 — Marchés Macro Multi-Actifs (1/5, mega-update V2.0 ULTRA) (2026-07-31)
 
 Premier volet d'une mega-update en 5 patches (29-33) couvrant les nouveaux systèmes demandés qui n'existaient pas encore (moteur macro multi-actifs, rang/réputation RPG, Private Equity/LBO, God Mode admin, cybersécurité). Plusieurs des 10 piliers demandés étaient déjà couverts en profondeur par des patchs précédents (négociation M&A/War Room, Wealth Management, Bâle/régulateur, délits d'initiés, IA collègues/guerre inter-banques, League Tables) — pas retravaillés ici pour éviter de dupliquer l'existant.
