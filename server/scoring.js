@@ -64,13 +64,25 @@ const HEALTH_DELTAS = {
   event_resolved: 5
 };
 
+// RPG Financial Career (Patch 30) -- a full Rookie-to-Legend ladder rather than
+// the original 4 coarse badges, so there's real ground to cover between them,
+// and so MEGA_DEAL_MIN_TIER_INDEX below has enough rungs to gate against.
 // Ordered richest-first so getTier() can return the first match.
 const TIERS = [
-  { min: 500, label: "Légende", icon: "💎" },
-  { min: 200, label: "Senior", icon: "🥇" },
-  { min: 50, label: "Confirmé", icon: "🥈" },
-  { min: 0, label: "Stagiaire", icon: "🥉" }
+  { min: 1800, label: "Wall Street Legend", icon: "💎" },
+  { min: 1100, label: "Managing Director", icon: "🏆" },
+  { min: 700, label: "Director", icon: "🏅" },
+  { min: 400, label: "Vice President", icon: "🎖️" },
+  { min: 200, label: "Associate", icon: "🥇" },
+  { min: 75, label: "Analyst", icon: "🥈" },
+  { min: 0, label: "Rookie Analyst", icon: "🥉" }
 ];
+
+// Mega-Deals ($50B+, see server/handlers/ma.js) require at least this tier
+// (index into TIERS, richest-first) -- "Director" per the request's framing
+// of reputation gating "les mandats géants".
+const MEGA_DEAL_MIN_TIER_INDEX = TIERS.findIndex(t => t.label === "Director");
+const MEGA_DEAL_THRESHOLD = 50000; // M$ = $50B
 
 function playerKey(player) {
   return (player.firstName + "|" + player.lastName).trim().toLowerCase();
@@ -78,6 +90,14 @@ function playerKey(player) {
 
 function getTier(score) {
   return TIERS.find(t => score >= t.min) || TIERS[TIERS.length - 1];
+}
+
+// TIERS is ordered richest-first, so a LOWER index is a HIGHER tier -- a player
+// qualifies for mega-deals once their tier index reaches at least as high
+// (numerically as low) as MEGA_DEAL_MIN_TIER_INDEX ("Director").
+function canAccessMegaDeals(score) {
+  const idx = TIERS.findIndex(t => score >= t.min);
+  return idx !== -1 && idx <= MEGA_DEAL_MIN_TIER_INDEX;
 }
 
 function applyHealthDelta(io, gameState, delta) {
@@ -186,4 +206,4 @@ function awardCustomPoints(io, gameState, player, amount, bonusEarned) {
   io.to("game").emit("scoring:update", { playerScores: gameState.playerScores, bankHealth: gameState.bankHealth });
 }
 
-module.exports = { awardPoints, awardCustomPoints, applyHealthDelta, checkEventResolution, checkVictory, playerKey, getTier, TIERS, POINT_VALUES, ACHIEVEMENTS, getBadges };
+module.exports = { awardPoints, awardCustomPoints, applyHealthDelta, checkEventResolution, checkVictory, playerKey, getTier, TIERS, POINT_VALUES, ACHIEVEMENTS, getBadges, canAccessMegaDeals, MEGA_DEAL_THRESHOLD };

@@ -1,5 +1,5 @@
 const { pushActivity, postTeamChat, recordBankPnl } = require("../gameState");
-const { awardPoints, checkEventResolution, applyHealthDelta } = require("../scoring");
+const { awardPoints, checkEventResolution, applyHealthDelta, canAccessMegaDeals, MEGA_DEAL_THRESHOLD, playerKey } = require("../scoring");
 const { applyDealRevenue } = require("./finance");
 const { generateDataRoom } = require("../dataRoom");
 const { getDifficultyPreset } = require("../difficulty");
@@ -139,11 +139,20 @@ function registerMaHandlers(io, socket, gameState) {
       return;
     }
 
+    const valuation = Number(payload.valuation) || 0;
+    if (valuation >= MEGA_DEAL_THRESHOLD) {
+      const score = (gameState.playerScores[playerKey(player)] || {}).score || 0;
+      if (!canAccessMegaDeals(score)) {
+        socket.emit("ma:create:rejected", { reason: "Mandat de plus de 50 Md$ réservé aux banquiers de rang Director ou supérieur (réputation insuffisante)." });
+        return;
+      }
+    }
+
     const deal = {
       id: "deal" + (nextDealId++),
       name,
       stage: "Screening",
-      valuation: Number(payload.valuation) || 0,
+      valuation,
       synergies: Number(payload.synergies) || 0,
       leadBankerPlayerId: player.id,
       leadBankerName: player.fullName,
@@ -157,7 +166,7 @@ function registerMaHandlers(io, socket, gameState) {
       updatedAt: Date.now(),
       revenueBooked: false,
       workflow: null,
-      dataRoom: generateDataRoom(Number(payload.valuation) || 0)
+      dataRoom: generateDataRoom(valuation)
     };
     gameState.maDeals.push(deal);
 

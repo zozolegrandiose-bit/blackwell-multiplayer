@@ -11,6 +11,19 @@ const CHURN_SWEEP_MAX_MS = 90 * 1000;
 const CHURN_THRESHOLD_MS = 4 * 60 * 1000;
 const CHURN_PROBABILITY = 0.2;
 
+// AI Client Trust gauge (Patch 30) -- a client isn't just "Actif/Inactif", it has
+// a 0-100 confidence level that erodes with neglect and recovers with genuine
+// service (a note, a successful re-engagement). At 0, the client doesn't just go
+// quiet -- it's lost outright to a rival bank, same "guerre inter-banques" flavor
+// already established by server/rivalAggression.js's poaching of players.
+const PLAYER_BANK_NAME = "Blackwell & Co Capital";
+const DEFAULT_TRUST = 70;
+const TRUST_CHURN_PENALTY = 25;
+const TRUST_LOST_HEALTH_PENALTY = 6;
+const TRUST_NOTE_GAIN = 3;
+const TRUST_REACTIVATION_GAIN = 10;
+const TRUST_REVIEW_PENALTY = 12;
+
 const CLIENT_STATUSES = ["Prospect", "Actif", "En revue", "Inactif"];
 const CLIENT_RISKS = ["Low", "Medium", "High"];
 const KYC_ITEMS = ["Vérification d'identité", "Origine des fonds", "Sanctions & PEP", "Validation Conformité"];
@@ -51,19 +64,39 @@ function sweepChurnRisk(io, gameState) {
   const now = Date.now();
   const atRisk = gameState.clients.filter(c => c.status === "Actif" && now - (c.lastTouchedAt || 0) >= CHURN_THRESHOLD_MS);
   let aumChanged = false;
+  let healthPenalty = 0;
+  const lostClientIds = [];
+
   atRisk.forEach(client => {
     if (Math.random() >= CHURN_PROBABILITY) return;
+    client.trust = Math.max(0, (client.trust == null ? DEFAULT_TRUST : client.trust) - TRUST_CHURN_PENALTY);
+    aumChanged = true;
+
+    if (client.trust <= 0) {
+      const rivalBanks = Object.keys(gameState.leagueTable).filter(name => name !== PLAYER_BANK_NAME);
+      const rival = rivalBanks[Math.floor(Math.random() * rivalBanks.length)];
+      lostClientIds.push(client.id);
+      healthPenalty += TRUST_LOST_HEALTH_PENALTY;
+      pushActivity(gameState, { actorPlayerId: null, page: "clients", text: "🚪 « " + client.name + " » a perdu toute confiance et est parti chez " + rival + " — mandat de " + client.aum + " M$ perdu définitivement." });
+      return;
+    }
+
     client.status = "Inactif";
     client.aum = Math.round(client.aum * 0.85);
     client.lastTouchedAt = now;
-    aumChanged = true;
-    pushActivity(gameState, { actorPlayerId: null, page: "clients", text: "📉 « " + client.name + " » est passé inactif, faute de suivi." });
+    healthPenalty += 2;
+    pushActivity(gameState, { actorPlayerId: null, page: "clients", text: "📉 « " + client.name + " » est passé inactif, faute de suivi (confiance : " + client.trust + "%)." });
   });
+
+  if (lostClientIds.length) {
+    gameState.clients = gameState.clients.filter(c => !lostClientIds.includes(c.id));
+  }
   if (!atRisk.length) return;
+
   io.to("access:clients").emit("clients:update", gameState.clients);
   io.to("game").emit("activity:update", gameState.activityLog[0]);
   if (aumChanged) {
-    applyHealthDelta(io, gameState, -2);
+    applyHealthDelta(io, gameState, -healthPenalty);
     recomputeAum(gameState);
     io.to("access:finance").emit("finance:update", gameState.financeKPIs);
     io.to("game").emit("overview:kpis", gameState.financeKPIs);
@@ -117,6 +150,7 @@ function registerClientsHandlers(io, socket, gameState) {
       rmName: player.fullName,
       risk: CLIENT_RISKS.includes(payload.risk) ? payload.risk : "Medium",
       status: "Prospect",
+      trust: 70,
       notes: [],
       kycChecklist: KYC_ITEMS.map(item => ({ item, done: false })),
       lastTouchedAt: Date.now()
@@ -141,6 +175,9 @@ function registerClientsHandlers(io, socket, gameState) {
     const wasActive = client.status === "Actif";
     client.status = payload.status;
     client.lastTouchedAt = Date.now();
+    client.trust = client.trust == null ? DEFAULT_TRUST : client.trust;
+    if (!wasActive && client.status === "Actif") client.trust = Math.min(100, client.trust + TRUST_REACTIVATION_GAIN);
+    else if (client.status === "En revue") client.trust = Math.max(0, client.trust - TRUST_REVIEW_PENALTY);
     io.to("access:clients").emit("clients:update", gameState.clients);
     if (wasActive !== (client.status === "Actif")) {
       recomputeAum(gameState);
@@ -160,6 +197,7 @@ function registerClientsHandlers(io, socket, gameState) {
 
     client.notes.push({ authorPlayerId: player.id, authorName: player.fullName, ts: Date.now(), text });
     client.lastTouchedAt = Date.now();
+    client.trust = Math.min(100, (client.trust == null ? DEFAULT_TRUST : client.trust) + TRUST_NOTE_GAIN);
     io.to("access:clients").emit("clients:update", gameState.clients);
     awardPoints(io, gameState, player, "clients_note");
     checkEventResolution(io, gameState, client.id, player);
@@ -178,4 +216,7 @@ function registerClientsHandlers(io, socket, gameState) {
   });
 }
 
-module.exports = { registerClientsHandlers, CLIENT_STATUSES, CLIENT_RISKS, KYC_ITEMS, addRandomClientNote, scheduleChurnRiskLoop, sweepChurnRisk, maybeSpawnCrossSellDeal, CHURN_THRESHOLD_MS, CROSS_SELL_AUM_THRESHOLD };
+module.exports = {
+  registerClientsHandlers, CLIENT_STATUSES, CLIENT_RISKS, KYC_ITEMS, addRandomClientNote, scheduleChurnRiskLoop, sweepChurnRisk, maybeSpawnCrossSellDeal, CHURN_THRESHOLD_MS, CROSS_SELL_AUM_THRESHOLD,
+  DEFAULT_TRUST, TRUST_CHURN_PENALTY, TRUST_NOTE_GAIN, TRUST_REACTIVATION_GAIN, TRUST_REVIEW_PENALTY
+};

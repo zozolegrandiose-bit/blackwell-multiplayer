@@ -170,13 +170,13 @@ function createGameState() {
     ],
     clients: [
       {
-        id: "cl-seed-1", name: "Kestrel Infrastructure Partners", industry: "Fonds d'infrastructure", aum: 3800, rmPlayerId: null, rmName: "Poste vacant", risk: "Medium", status: "Prospect",
+        id: "cl-seed-1", name: "Kestrel Infrastructure Partners", industry: "Fonds d'infrastructure", aum: 3800, rmPlayerId: null, rmName: "Poste vacant", risk: "Medium", status: "Prospect", trust: 65,
         notes: [{ authorPlayerId: null, authorName: "Équipe historique", ts: now - 12 * 86400000, text: "Premier contact établi lors de la conférence infrastructures de mars." }],
         kycChecklist: [{ item: "Vérification d'identité", done: true }, { item: "Origine des fonds", done: false }, { item: "Sanctions & PEP", done: false }, { item: "Validation Conformité", done: false }],
         lastTouchedAt: now - 12 * 86400000
       },
       {
-        id: "cl-seed-2", name: "Meridian Family Office", industry: "Gestion de fortune", aum: 1200, rmPlayerId: null, rmName: "Poste vacant", risk: "Low", status: "Actif",
+        id: "cl-seed-2", name: "Meridian Family Office", industry: "Gestion de fortune", aum: 1200, rmPlayerId: null, rmName: "Poste vacant", risk: "Low", status: "Actif", trust: 88,
         notes: [
           { authorPlayerId: null, authorName: "Équipe historique", ts: now - 90 * 86400000, text: "Client historique depuis 4 ans, relation de confiance établie." },
           { authorPlayerId: null, authorName: "Équipe historique", ts: now - 20 * 86400000, text: "Revue annuelle du portefeuille effectuée, allocation inchangée." }
@@ -185,13 +185,13 @@ function createGameState() {
         lastTouchedAt: now - 20 * 86400000
       },
       {
-        id: "cl-seed-3", name: "Halcyon Digital Assets Fund", industry: "Actifs numériques", aum: 850, rmPlayerId: null, rmName: "Poste vacant", risk: "High", status: "En revue",
+        id: "cl-seed-3", name: "Halcyon Digital Assets Fund", industry: "Actifs numériques", aum: 850, rmPlayerId: null, rmName: "Poste vacant", risk: "High", status: "En revue", trust: 45,
         notes: [{ authorPlayerId: null, authorName: "Surveillance automatique", ts: now - 5 * 86400000, text: "Basculé en revue suite à une activité inhabituelle sur le compte." }],
         kycChecklist: [{ item: "Vérification d'identité", done: true }, { item: "Origine des fonds", done: false }, { item: "Sanctions & PEP", done: false }, { item: "Validation Conformité", done: false }],
         lastTouchedAt: now - 5 * 86400000
       },
       {
-        id: "cl-seed-4", name: "Vantage Industrial Holdings", industry: "Industrie manufacturière", aum: 6200, rmPlayerId: null, rmName: "Poste vacant", risk: "Medium", status: "Actif",
+        id: "cl-seed-4", name: "Vantage Industrial Holdings", industry: "Industrie manufacturière", aum: 6200, rmPlayerId: null, rmName: "Poste vacant", risk: "Medium", status: "Actif", trust: 78,
         notes: [
           { authorPlayerId: null, authorName: "Équipe historique", ts: now - 200 * 86400000, text: "Un des plus gros mandats du portefeuille, relation depuis l'introduction en bourse du groupe." },
           { authorPlayerId: null, authorName: "Équipe historique", ts: now - 45 * 86400000, text: "Discussion sur un refinancement en cours (voir Projet Meridian Bridge en M&A)." }
@@ -200,37 +200,37 @@ function createGameState() {
         lastTouchedAt: now - 8 * 86400000
       },
       {
-        id: "cl-seed-5", name: "Solstice Pension Trust", industry: "Fonds de pension", aum: 9400, rmPlayerId: null, rmName: "Poste vacant", risk: "Low", status: "Actif",
+        id: "cl-seed-5", name: "Solstice Pension Trust", industry: "Fonds de pension", aum: 9400, rmPlayerId: null, rmName: "Poste vacant", risk: "Low", status: "Actif", trust: 92,
         notes: [{ authorPlayerId: null, authorName: "Équipe historique", ts: now - 300 * 86400000, text: "Le plus important mandat institutionnel de la banque — à traiter en priorité." }],
         kycChecklist: [{ item: "Vérification d'identité", done: true }, { item: "Origine des fonds", done: true }, { item: "Sanctions & PEP", done: true }, { item: "Validation Conformité", done: true }],
         lastTouchedAt: now - 18 * 86400000
       },
       {
-        id: "cl-seed-6", name: "Northbridge Retail Group", industry: "Distribution", aum: 2100, rmPlayerId: null, rmName: "Poste vacant", risk: "Medium", status: "Inactif",
+        id: "cl-seed-6", name: "Northbridge Retail Group", industry: "Distribution", aum: 2100, rmPlayerId: null, rmName: "Poste vacant", risk: "Medium", status: "Inactif", trust: 40,
         notes: [{ authorPlayerId: null, authorName: "Équipe historique", ts: now - 150 * 86400000, text: "Relation mise en veille après l'introduction en bourse (voir Projet Compass, clôturé)." }],
         kycChecklist: [{ item: "Vérification d'identité", done: true }, { item: "Origine des fonds", done: true }, { item: "Sanctions & PEP", done: true }, { item: "Validation Conformité", done: false }],
         lastTouchedAt: now - 150 * 86400000
       },
       {
-        id: "cl-seed-7", name: "Aurora Biotech Ventures", industry: "Santé / Biotechnologies", aum: 1750, rmPlayerId: null, rmName: "Poste vacant", risk: "High", status: "Actif",
+        id: "cl-seed-7", name: "Aurora Biotech Ventures", industry: "Santé / Biotechnologies", aum: 1750, rmPlayerId: null, rmName: "Poste vacant", risk: "High", status: "Actif", trust: 70,
         notes: [{ authorPlayerId: null, authorName: "Équipe historique", ts: now - 30 * 86400000, text: "Discussion en cours sur une levée de série C (voir Projet Nimbus en M&A)." }],
         kycChecklist: [{ item: "Vérification d'identité", done: true }, { item: "Origine des fonds", done: true }, { item: "Sanctions & PEP", done: false }, { item: "Validation Conformité", done: false }],
         lastTouchedAt: now - 6 * 86400000
       },
       {
-        id: "cl-seed-8", name: "Cascade Energy Partners", industry: "Énergie", aum: 4300, rmPlayerId: null, rmName: "Poste vacant", risk: "Medium", status: "Actif",
+        id: "cl-seed-8", name: "Cascade Energy Partners", industry: "Énergie", aum: 4300, rmPlayerId: null, rmName: "Poste vacant", risk: "Medium", status: "Actif", trust: 80,
         notes: [{ authorPlayerId: null, authorName: "Équipe historique", ts: now - 60 * 86400000, text: "Cession d'une branche d'activité en cours (voir Projet Zenith en M&A)." }],
         kycChecklist: [{ item: "Vérification d'identité", done: true }, { item: "Origine des fonds", done: true }, { item: "Sanctions & PEP", done: true }, { item: "Validation Conformité", done: true }],
         lastTouchedAt: now - 22 * 86400000
       },
       {
-        id: "cl-seed-9", name: "Ledger & Vine Capital", industry: "Capital-investissement", aum: 2600, rmPlayerId: null, rmName: "Poste vacant", risk: "Low", status: "Prospect",
+        id: "cl-seed-9", name: "Ledger & Vine Capital", industry: "Capital-investissement", aum: 2600, rmPlayerId: null, rmName: "Poste vacant", risk: "Low", status: "Prospect", trust: 60,
         notes: [{ authorPlayerId: null, authorName: "Équipe historique", ts: now - 3 * 86400000, text: "Prise de contact récente, dossier de présentation envoyé." }],
         kycChecklist: [{ item: "Vérification d'identité", done: false }, { item: "Origine des fonds", done: false }, { item: "Sanctions & PEP", done: false }, { item: "Validation Conformité", done: false }],
         lastTouchedAt: now - 3 * 86400000
       },
       {
-        id: "cl-seed-10", name: "Whitmore Shipping Co.", industry: "Transport maritime", aum: 1450, rmPlayerId: null, rmName: "Poste vacant", risk: "High", status: "En revue",
+        id: "cl-seed-10", name: "Whitmore Shipping Co.", industry: "Transport maritime", aum: 1450, rmPlayerId: null, rmName: "Poste vacant", risk: "High", status: "En revue", trust: 50,
         notes: [{ authorPlayerId: null, authorName: "Équipe historique", ts: now - 8 * 86400000, text: "Vérification PEP en cours suite à un changement d'actionnariat." }],
         kycChecklist: [{ item: "Vérification d'identité", done: true }, { item: "Origine des fonds", done: false }, { item: "Sanctions & PEP", done: false }, { item: "Validation Conformité", done: false }],
         lastTouchedAt: now - 8 * 86400000
