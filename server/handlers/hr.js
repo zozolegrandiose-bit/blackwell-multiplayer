@@ -6,6 +6,7 @@ const { GRADES, DEPARTMENTS } = require("../seedData");
 const { isHeadOfCIB } = require("../cibBonus");
 const { isDrhGlobal } = require("../globalBank");
 const { isBonusDistributionRestricted } = require("../regulatoryStressTest");
+const { updateUserAssignment } = require("../db");
 
 const LEAVE_TYPES = ["Congés payés", "RTT", "Arrêt maladie", "Congé sans solde"];
 const ONBOARDING_ITEMS = ["Contrat signé", "Poste de travail", "Compte IT", "Badge d'accès", "Formation d'intégration"];
@@ -360,6 +361,10 @@ function registerHrHandlers(io, socket, gameState) {
     target.isDrhGlobal = isDrhGlobal(target);
     resyncPlayerAccessRooms(io, target, oldAccess);
     adjustSatisfaction(io, gameState, target, 15);
+    // Write through to the account record (server/db.js) -- it's the source of
+    // truth a reconnect re-derives grade/dept/salary from (Patch 28), so an
+    // in-game promotion must persist there too, not just on the live object.
+    if (target.userId) updateUserAssignment(target.userId, { assignedGrade: target.grade, assignedSalary: target.baseSalary });
 
     pushActivity(gameState, {
       actorPlayerId: actor.id,
@@ -391,6 +396,7 @@ function registerHrHandlers(io, socket, gameState) {
     target.isHeadOfCIB = isHeadOfCIB(target);
     target.isDrhGlobal = isDrhGlobal(target);
     resyncPlayerAccessRooms(io, target, oldAccess);
+    if (target.userId) updateUserAssignment(target.userId, { assignedDept: target.dept });
 
     pushActivity(gameState, {
       actorPlayerId: actor.id,

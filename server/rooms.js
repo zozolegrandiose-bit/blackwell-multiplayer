@@ -1,86 +1,69 @@
 const { GRADES, DEPARTMENTS } = require("./seedData");
 const { getAccessForPosition, hasFullAccess, getClusterForPosition } = require("./departmentAccess");
 const { ONBOARDING_ITEMS, computeBaseSalary } = require("./handlers/hr");
-const { playerKey } = require("./scoring");
 const { isHeadOfCIB } = require("./cibBonus");
 const { isDrhGlobal } = require("./globalBank");
-
-function slotKey(grade, dept) {
-  return grade + "|||" + dept;
-}
+const { getPlayerRecord } = require("./playerRecords");
 
 function isValidPosition(grade, dept) {
   return GRADES.includes(grade) && DEPARTMENTS.includes(dept);
 }
 
-function isSlotTaken(gameState, grade, dept) {
-  const key = slotKey(grade, dept);
-  return gameState.players.some(p => slotKey(p.grade, p.dept) === key);
-}
-
-// Independent of the grade/dept slot system: guarantees playerScores keys
-// (keyed by firstName+lastName, see scoring.js) stay unique among live players.
-function isNameTaken(gameState, firstName, lastName) {
-  const key = playerKey({ firstName, lastName });
-  return gameState.players.some(p => playerKey(p) === key);
-}
-
-function getTakenSlots(gameState) {
-  return gameState.players.map(p => ({ grade: p.grade, dept: p.dept }));
-}
-
-let nextPlayerId = 1;
-
-// Synchronous: must not await anything before writing to gameState.players,
-// otherwise two near-simultaneous claims for the same slot could both succeed.
-function claimSlot(gameState, { socketId, firstName, lastName, grade, dept }) {
-  firstName = (firstName || "").trim();
-  lastName = (lastName || "").trim();
-  if (!firstName || !lastName) {
-    return { ok: false, reason: "Prénom et nom requis." };
+// Patch 28: seats are assigned by the Super-Admin (department/grade/salary on
+// the account, server/db.js), not freely picked by the player -- replaces the
+// old claimSlot() grade+dept free-for-all. Keyed by userId rather than name,
+// so an account always resumes the SAME player record instead of creating a
+// new one each time it connects.
+function autoSeatAccount(gameState, { socketId, accountUser }) {
+  const existing = gameState.players.find(p => p.userId === accountUser.id);
+  if (existing) {
+    // A newer socket for the same account (reconnect/refresh, or a second tab)
+    // takes over delivery; the stale socket's eventual "disconnect" won't match
+    // this socketId anymore and so won't free the seat out from under it.
+    existing.socketId = socketId;
+    return { ok: true, player: existing, isNewSession: false };
   }
+
+  const dept = accountUser.assignedDept;
+  const grade = accountUser.assignedGrade;
   if (!isValidPosition(grade, dept)) {
-    return { ok: false, reason: "Grade ou département invalide." };
-  }
-  if (isSlotTaken(gameState, grade, dept)) {
-    return { ok: false, reason: "Ce poste est déjà occupé." };
-  }
-  if (isNameTaken(gameState, firstName, lastName)) {
-    return { ok: false, reason: "Ce nom est déjà utilisé par un joueur connecté." };
+    return { ok: false, reason: "Poste non configuré pour ce compte — contactez un administrateur." };
   }
 
+  const persisted = getPlayerRecord(accountUser.id);
   const player = {
-    id: "p" + (nextPlayerId++),
+    id: "acct" + accountUser.id,
+    userId: accountUser.id,
     socketId,
-    firstName,
-    lastName,
-    fullName: firstName + " " + lastName,
+    firstName: accountUser.firstName,
+    lastName: accountUser.lastName,
+    fullName: accountUser.firstName + " " + accountUser.lastName,
     grade,
     dept,
     access: getAccessForPosition(dept, grade),
     hasFullAccess: hasFullAccess(dept, grade),
     cluster: getClusterForPosition(dept, grade),
-    joinedAt: Date.now(),
-    satisfaction: 70,
-    stress: 0,
-    loyalty: 60,
-    skillRating: 50,
-    onSabbatical: false,
-    sabbaticalUntil: null,
-    onSickLeave: false,
-    sickLeaveUntil: null,
-    raiseRequested: false,
-    onSuspension: false,
-    suspensionUntil: null,
-    tradingFrozen: false,
-    tradingFrozenUntil: null,
-    baseSalary: computeBaseSalary(grade),
-    onboarding: ONBOARDING_ITEMS.map(item => ({ item, done: false }))
+    joinedAt: persisted ? persisted.joinedAt : Date.now(),
+    satisfaction: persisted ? persisted.satisfaction : 70,
+    stress: persisted ? persisted.stress : 0,
+    loyalty: persisted ? persisted.loyalty : 60,
+    skillRating: persisted ? persisted.skillRating : 50,
+    onSabbatical: persisted ? persisted.onSabbatical : false,
+    sabbaticalUntil: persisted ? persisted.sabbaticalUntil : null,
+    onSickLeave: persisted ? persisted.onSickLeave : false,
+    sickLeaveUntil: persisted ? persisted.sickLeaveUntil : null,
+    raiseRequested: persisted ? persisted.raiseRequested : false,
+    onSuspension: persisted ? persisted.onSuspension : false,
+    suspensionUntil: persisted ? persisted.suspensionUntil : null,
+    tradingFrozen: persisted ? persisted.tradingFrozen : false,
+    tradingFrozenUntil: persisted ? persisted.tradingFrozenUntil : null,
+    baseSalary: accountUser.assignedSalary || computeBaseSalary(grade),
+    onboarding: persisted && persisted.onboarding ? persisted.onboarding : ONBOARDING_ITEMS.map(item => ({ item, done: false }))
   };
   player.isHeadOfCIB = isHeadOfCIB(player);
   player.isDrhGlobal = isDrhGlobal(player);
   gameState.players.push(player);
-  return { ok: true, player };
+  return { ok: true, player, isNewSession: true };
 }
 
 function releaseSlotBySocketId(gameState, socketId) {
@@ -90,4 +73,4 @@ function releaseSlotBySocketId(gameState, socketId) {
   return removed;
 }
 
-module.exports = { slotKey, isValidPosition, isSlotTaken, isNameTaken, getTakenSlots, claimSlot, releaseSlotBySocketId };
+module.exports = { isValidPosition, autoSeatAccount, releaseSlotBySocketId };

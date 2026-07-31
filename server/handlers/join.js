@@ -1,10 +1,12 @@
-const { GRADES, DEPARTMENTS } = require("../seedData");
-const { claimSlot, releaseSlotBySocketId, getTakenSlots } = require("../rooms");
+const { autoSeatAccount, releaseSlotBySocketId } = require("../rooms");
+const { savePlayerRecord } = require("../playerRecords");
 const { pushActivity, buildPublicRoster } = require("../gameState");
 const { hrRosterView } = require("./hr");
 const { buildDecisionsView } = require("../strategy");
 const { summarizeTasks } = require("../tasks");
 const { publicInstrumentTicker } = require("./markets");
+const { listCandidates } = require("../db");
+const { candidateStats } = require("./hrRecruiting");
 
 function publicRoster(gameState) {
   return buildPublicRoster(gameState);
@@ -98,48 +100,53 @@ function buildSnapshot(gameState, player) {
   if (player.access.includes("privateBanking")) {
     snapshot.privateBanking = gameState.privateBanking;
   }
+  if (player.access.includes("hr")) {
+    snapshot.candidates = listCandidates();
+    snapshot.candidateStats = candidateStats();
+  }
   return snapshot;
 }
 
-function registerJoinHandlers(io, socket, gameState) {
-  socket.on("join:request", () => {
-    socket.emit("join:roster", {
-      grades: GRADES,
-      departments: DEPARTMENTS,
-      takenSlots: getTakenSlots(gameState),
-      players: publicRoster(gameState)
-    });
-  });
+// Patch 28: seats are assigned by the Super-Admin (department/grade/salary on
+// the account), so a connecting socket is auto-seated immediately -- no more
+// free-pick round trip. "join:request" is kept as the wire event so the
+// existing resignation/termination flows (which re-emit it client-side to
+// get back into the game) work unchanged: it now just re-seats the same
+// account into its still-current assignment instead of showing a picker.
+function seatAndEmit(io, socket, gameState) {
+  const accountUser = socket.data.accountUser;
+  const result = autoSeatAccount(gameState, { socketId: socket.id, accountUser });
+  if (!result.ok) {
+    socket.emit("join:claim:rejected", { reason: result.reason });
+    return;
+  }
 
-  socket.on("join:claim", payload => {
-    const result = claimSlot(gameState, { socketId: socket.id, ...payload });
-    if (!result.ok) {
-      socket.emit("join:claim:rejected", {
-        reason: result.reason,
-        takenSlots: getTakenSlots(gameState)
-      });
-      return;
-    }
+  const player = result.player;
+  socket.data.playerId = player.id;
+  socket.join("game");
+  player.access.forEach(page => socket.join("access:" + page));
 
-    const player = result.player;
-    socket.data.playerId = player.id;
-    socket.join("game");
-    player.access.forEach(page => socket.join("access:" + page));
-
+  if (result.isNewSession) {
     pushActivity(gameState, {
       actorPlayerId: player.id,
       page: "overview",
       text: player.fullName + " a rejoint la partie en tant que " + player.grade + ", " + player.dept + "."
     });
+  }
 
-    socket.emit("join:success", { player, snapshot: buildSnapshot(gameState, player) });
-    io.to("game").emit("roster:update", { players: publicRoster(gameState) });
-    io.to("game").emit("activity:update", gameState.activityLog[0]);
-  });
+  socket.emit("join:success", { player, snapshot: buildSnapshot(gameState, player) });
+  io.to("game").emit("roster:update", { players: publicRoster(gameState) });
+  if (result.isNewSession) io.to("game").emit("activity:update", gameState.activityLog[0]);
+}
+
+function registerJoinHandlers(io, socket, gameState) {
+  socket.on("join:request", () => seatAndEmit(io, socket, gameState));
+  seatAndEmit(io, socket, gameState);
 
   socket.on("disconnect", () => {
     const removed = releaseSlotBySocketId(gameState, socket.id);
     if (!removed) return;
+    savePlayerRecord(removed);
     pushActivity(gameState, {
       actorPlayerId: removed.id,
       page: "overview",

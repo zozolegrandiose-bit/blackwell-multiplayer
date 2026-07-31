@@ -6,6 +6,7 @@
 // temporary incapacitation, structurally the negative mirror of a sabbatical).
 const { pushActivity, postTeamChat, buildPublicRoster } = require("./gameState");
 const { adjustSatisfaction } = require("./satisfaction");
+const { updateUserAssignment } = require("./db");
 
 const RAISE_REQUEST_SATISFACTION_THRESHOLD = 30;
 const BURNOUT_STRESS_THRESHOLD = 85;
@@ -74,6 +75,7 @@ function registerSocialClimatHandlers(io, socket, gameState) {
     target.baseSalary = round1(target.baseSalary + raise);
     target.raiseRequested = false;
     adjustSatisfaction(io, gameState, target, 20);
+    if (target.userId) updateUserAssignment(target.userId, { assignedSalary: target.baseSalary });
 
     pushActivity(gameState, { actorPlayerId: actor.id, page: "hr", text: actor.fullName + " a accordé une augmentation de " + raise + " M$/an à " + target.fullName + "." });
     io.to("game").emit("activity:update", gameState.activityLog[0]);

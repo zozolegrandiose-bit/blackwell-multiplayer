@@ -9,12 +9,14 @@ const { registerAuthRoutes, requireApproved, requireSuperAdmin } = require("./au
 const { registerAdminRoutes } = require("./admin");
 const { registerCareersRoutes } = require("./jobs");
 const { loadDb, ensureSuperAdmin, findUserById } = require("./db");
+const { loadPlayerRecords } = require("./playerRecords");
 const { registerJoinHandlers } = require("./handlers/join");
 const { registerMailHandlers } = require("./handlers/mail");
 const { registerMaHandlers, scheduleDealRiskLoop } = require("./handlers/ma");
 const { registerClientsHandlers, scheduleChurnRiskLoop } = require("./handlers/clients");
 const { registerComplianceHandlers } = require("./handlers/compliance");
 const { registerHrHandlers } = require("./handlers/hr");
+const { registerHrRecruitingHandlers } = require("./handlers/hrRecruiting");
 const { registerFinanceHandlers } = require("./handlers/finance");
 const { startAiLoop } = require("./ai");
 const { startEventLoops } = require("./events");
@@ -55,6 +57,7 @@ const { registerHostileTakeoverHandlers, startHostileTakeoverLoop } = require(".
 primeGameStateFromHistory(gameState);
 loadDb();
 ensureSuperAdmin();
+loadPlayerRecords();
 
 const app = express();
 const httpServer = createServer(app);
@@ -108,6 +111,7 @@ io.on("connection", socket => {
   registerClientsHandlers(io, socket, gameState);
   registerComplianceHandlers(io, socket, gameState);
   registerHrHandlers(io, socket, gameState);
+  registerHrRecruitingHandlers(io, socket, gameState);
   registerFinanceHandlers(io, socket, gameState);
   registerAgendaHandlers(io, socket, gameState);
   registerDocumentsHandlers(io, socket, gameState);
