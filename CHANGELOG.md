@@ -1,5 +1,26 @@
 # Journal des mises à jour
 
+## Patch 28 — Recrutement DRH & Sièges Assignés (4/4) (2026-07-31)
+
+Dernier volet de la restructuration entamée aux Patchs 25-27. Jusqu'ici, un compte approuvé se retrouvait quand même face à l'ancien écran de création de personnage (prénom/nom/grade/département libres, à choisir soi-même). Ce patch termine le raccordement : le poste vient désormais du compte (assigné par le Super-Admin ou par la DRH), et le joueur retrouve le même personnage à chaque connexion au lieu d'en recréer un.
+
+### Ajouts
+- **Sièges auto-assignés** : à la connexion, le joueur est placé directement à son poste (département/grade/salaire tels qu'approuvés) — plus d'écran "créez votre personnage". La contrainte "un seul joueur par couple grade+département" a été retirée : dans une banque de 300 000 collaborateurs, plusieurs personnes peuvent légitimement porter le même titre.
+- **Personnage persistant** : chaque compte a désormais une identité de joueur stable (liée à son compte, plus à un identifiant temporaire régénéré à chaque connexion). Une reconnexion (rafraîchissement de page, perte de réseau, nouvel onglet) retrouve exactement le même personnage — mails, historique d'activité, humeur, stress, fidélité, compétence et intégration compris — au lieu de repartir de zéro. Deux onglets ouverts simultanément sur le même compte partagent le même personnage sans le dupliquer.
+- **Onglet "Recrutement International" (module DRH)** : affiche le nombre de candidatures reçues (site Carrières, Patch 27) par département et par filiale, avec un bouton **Convertir en Employé** par candidature — la DRH choisit département/grade/entité/salaire, un compte est créé et immédiatement approuvé, un mot de passe temporaire est généré et affiché une fois à l'écran RH pour être transmis au candidat.
+
+### Retraits
+- L'écran de création de personnage libre (prénom/nom/grade/département au choix) — remplacé par l'assignation de poste.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts/retraits ce patch.
+
+### Notes techniques
+- Le compte (`server/db.js`, département/grade/salaire assignés) reste la source de vérité pour le poste d'un joueur : une promotion ou réaffectation faite en jeu (Organigramme RH, augmentation) écrit désormais aussi dans le compte, pour qu'une reconnexion ne revienne pas en arrière sur une promotion déjà accordée en jeu.
+- Le reste de l'état de jeu d'un joueur (satisfaction, stress, fidélité, compétence, intégration, statuts temporaires) est sauvegardé dans un nouveau fichier `data/playerRecords.json`, même compromis honnête déjà assumé pour `data/accounts.json` et `data/history.json` : survit aux redémarrages du même déploiement, pas à un redéploiement Render (nouveau disque).
+- Comme pour les transferts/promotions faits depuis le Panel Admin (Patch 26), un changement d'affectation par la DRH ou l'admin prend effet à la prochaine reconnexion du joueur concerné, pas instantanément sur une session déjà ouverte — cohérent avec le comportement déjà en place pour une révocation de compte.
+- Régression complète rejouée : siège auto-assigné avec le bon grade/département/salaire, reconnexion qui restaure le même identifiant de joueur et l'historique de mails, promotion en jeu qui survit à une reconnexion (au lieu d'être écrasée par l'affectation d'origine), flux complet candidature → conversion en employé → connexion immédiate avec le mot de passe temporaire, rejets (candidature déjà convertie / introuvable), et un second onglet qui réutilise le même personnage sans le dupliquer.
+
 ## Patch 27 — Site Vitrine Institutionnel & Carrières (3/4) (2026-07-31)
 
 Troisième volet de la restructuration entamée aux Patchs 25-26. Le site public à `/` n'était jusqu'ici qu'un placeholder ; il devient une véritable vitrine institutionnelle inspirée des grandes banques mondiales, avec un moteur de recherche d'offres et un formulaire de candidature réellement connecté au Panel Admin.

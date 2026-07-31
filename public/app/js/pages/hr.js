@@ -111,6 +111,99 @@ function poachingPanelHtml() {
   `;
 }
 
+// Recrutement International (Patch 28) -- candidates from the public Careers
+// page (server/jobs.js, Patch 27) land here. "Convertir en Employé" creates a
+// real, immediately-APPROVED account (server/handlers/hrRecruiting.js), using
+// the same 4 real Global Footprint entities as the Admin Panel (Patch 26) --
+// an employee needs to sit in an entity that actually exists in the game.
+const RECRUITING_ENTITIES = [
+  { id: "ny", label: "New York (Siège)" },
+  { id: "fra", label: "Francfort (Blackwell SE)" },
+  { id: "hk", label: "Hong Kong" },
+  { id: "ldn", label: "Londres" }
+];
+const RECRUITING_GRADES = ["Analyst", "Associate", "Senior Associate", "Vice President", "Director"];
+
+function recruitingPanelHtml() {
+  const stats = appState.candidateStats || { total: 0, converted: 0, byDept: {}, byCity: {} };
+  const candidates = (appState.candidates || []).filter(c => !c.convertedToUserId);
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="panel-title">🌍 Recrutement International</div>
+      <div class="kpi-grid" style="margin-bottom:14px;">
+        <div class="kpi-card"><div class="kpi-label">Candidatures reçues</div><div class="kpi-value">${stats.total}</div></div>
+        <div class="kpi-card"><div class="kpi-label">Converties en employés</div><div class="kpi-value">${stats.converted}</div></div>
+        <div class="kpi-card"><div class="kpi-label">En attente</div><div class="kpi-value">${stats.total - stats.converted}</div></div>
+      </div>
+      <div class="panel-row" style="margin-bottom:14px;">
+        <div class="panel">
+          <div class="panel-title" style="font-size:12px;">Par département</div>
+          <table class="data-table"><tbody>
+            ${Object.keys(stats.byDept).map(d => `<tr><td>${escapeHtml(d)}</td><td class="tnum">${stats.byDept[d]}</td></tr>`).join("") || `<tr><td class="empty-cell">Aucune candidature.</td></tr>`}
+          </tbody></table>
+        </div>
+        <div class="panel">
+          <div class="panel-title" style="font-size:12px;">Par filiale</div>
+          <table class="data-table"><tbody>
+            ${Object.keys(stats.byCity).map(c => `<tr><td>${escapeHtml(c)}</td><td class="tnum">${stats.byCity[c]}</td></tr>`).join("") || `<tr><td class="empty-cell">Aucune candidature.</td></tr>`}
+          </tbody></table>
+        </div>
+      </div>
+      ${candidates.map(c => `
+        <div class="activity-row" style="display:block; padding:10px 0;">
+          <div style="font-weight:700; font-size:13px;">${escapeHtml(c.firstName + " " + c.lastName)} — ${escapeHtml(c.jobTitle || "Candidature spontanée")}</div>
+          <div style="font-size:11px; color:var(--text-muted); margin:2px 0 8px;">${escapeHtml(c.email)}${c.city ? " · " + escapeHtml(c.city) : ""}${c.educationLevel ? " · " + escapeHtml(c.educationLevel) : ""}</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <select data-convert-dept="${c.id}" class="btn-sm">${DESK_OPTIONS.map(d => `<option value="${d.dept}">${escapeHtml(d.label)}</option>`).join("")}</select>
+            <select data-convert-grade="${c.id}" class="btn-sm">${RECRUITING_GRADES.map(g => `<option value="${g}">${g}</option>`).join("")}</select>
+            <select data-convert-entity="${c.id}" class="btn-sm">${RECRUITING_ENTITIES.map(e => `<option value="${e.id}">${escapeHtml(e.label)}</option>`).join("")}</select>
+            <input data-convert-salary="${c.id}" type="number" step="1" min="0" placeholder="Salaire M$/an" style="width:110px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:11.5px;"/>
+            <button data-convert-submit="${c.id}" class="btn-sm">Convertir en Employé</button>
+          </div>
+        </div>
+      `).join("") || `<div class="empty-cell">Aucune candidature en attente.</div>`}
+      <div id="convert-error" class="join-error"></div>
+      <div id="convert-success" style="font-size:11.5px; color:var(--series-green); margin-top:8px;"></div>
+    </div>
+  `;
+}
+
+function bindRecruitingPanel() {
+  document.querySelectorAll("[data-convert-submit]").forEach(el => {
+    el.addEventListener("click", () => {
+      const candidateId = el.getAttribute("data-convert-submit");
+      const errEl = document.getElementById("convert-error");
+      const successEl = document.getElementById("convert-success");
+      if (errEl) errEl.textContent = "";
+      if (successEl) successEl.textContent = "";
+      socket.emit("hr:convertCandidate", {
+        candidateId,
+        assignedDept: document.querySelector(`[data-convert-dept="${candidateId}"]`).value,
+        assignedGrade: document.querySelector(`[data-convert-grade="${candidateId}"]`).value,
+        assignedEntity: document.querySelector(`[data-convert-entity="${candidateId}"]`).value,
+        assignedSalary: Number(document.querySelector(`[data-convert-salary="${candidateId}"]`).value) || 0
+      });
+    });
+  });
+}
+
+socket.on("hr:convertCandidate:rejected", data => {
+  const errEl = document.getElementById("convert-error");
+  if (errEl) errEl.textContent = data.reason;
+});
+
+socket.on("hr:candidateConverted", data => {
+  const successEl = document.getElementById("convert-success");
+  if (successEl) successEl.textContent = "✅ Compte créé pour " + data.email + " — mot de passe temporaire : " + data.tempPassword;
+});
+
+socket.on("hr:candidatesUpdate", data => {
+  if (!window.currentPlayer) return;
+  appState.candidates = data.candidates;
+  appState.candidateStats = data.stats;
+  if (appState.currentPage === "hr") renderApp();
+});
+
 function bindOrgChartPanel() {
   document.querySelectorAll("[data-org-promote]").forEach(el => {
     el.addEventListener("click", () => socket.emit("hr:promotePlayer", { playerId: el.getAttribute("data-org-promote") }));
@@ -204,6 +297,7 @@ function renderHr() {
     <div class="page-sub">Effectif, recrutement, moral des équipes et primes.</div>
     ${taskPanelHtml("hr")}
     ${orgChartPanelHtml()}
+    ${recruitingPanelHtml()}
     ${poachingPanelHtml()}
     ${aiColleaguesPanelHtml()}
     <div class="kpi-grid">
@@ -453,6 +547,7 @@ function bindHr() {
   bindTaskPanel();
   bindMercatoPanel();
   bindOrgChartPanel();
+  bindRecruitingPanel();
 }
 
 PAGE_RENDERERS.hr = renderHr;

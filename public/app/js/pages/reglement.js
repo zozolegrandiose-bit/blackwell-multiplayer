@@ -26,7 +26,7 @@ function renderReglement() {
     `)}
 
     ${reglementSectionHtml("🏢 Rôles &amp; départements", `
-      Chaque joueur choisit un département et un grade à la connexion, jamais réattribué automatiquement. Le département détermine un <b>cluster</b> (A à G) qui donne accès à des pages précises :
+      Le poste de chaque joueur (département, grade, salaire) est assigné par le Super-Admin ou la DRH lors de l'approbation de son compte — plus de choix libre à la connexion. Le personnage est lié au compte : il est retrouvé à l'identique (mails, historique, humeur) à chaque reconnexion. Le département détermine un <b>cluster</b> (A à G) qui donne accès à des pages précises :
       <ul style="margin:8px 0 0 18px; padding:0;">
         <li><b>A — Dealmaking</b> (M&amp;A, ECM, DCM…) : page M&amp;A, Clients</li>
         <li><b>B — Marchés &amp; Recherche</b> : Clients, Marchés</li>
