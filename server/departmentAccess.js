@@ -8,7 +8,9 @@ const { GRADES } = require("./seedData");
 const UNIVERSAL_PAGES = ["overview", "mail", "agenda", "documents", "expenses", "reglement", "terminal", "global"];
 
 const CLUSTER_PAGES = {
-  A: [...UNIVERSAL_PAGES, "ma", "clients"],
+  // Cluster A gains "privateEquity" (Patch 31) -- Principal Investments/LBO is
+  // an extension of dealmaking, same desk family as M&A.
+  A: [...UNIVERSAL_PAGES, "ma", "clients", "privateEquity"],
   B: [...UNIVERSAL_PAGES, "clients", "markets"],
   C: [...UNIVERSAL_PAGES, "clients", "privateBanking"],
   D: [...UNIVERSAL_PAGES, "compliance"],
@@ -17,7 +19,7 @@ const CLUSTER_PAGES = {
   // to arbitrage rate instruments (US 10Y, Euribor), not Trading alone.
   E: [...UNIVERSAL_PAGES, "finance", "markets"],
   F: [...UNIVERSAL_PAGES, "hr"],
-  G: [...UNIVERSAL_PAGES, "strategy", "ma", "clients", "compliance", "finance", "hr", "markets", "privateBanking"]
+  G: [...UNIVERSAL_PAGES, "strategy", "ma", "clients", "compliance", "finance", "hr", "markets", "privateBanking", "privateEquity"]
 };
 
 const DEPARTMENT_CLUSTER = {

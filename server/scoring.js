@@ -37,7 +37,10 @@ const POINT_VALUES = {
   markets_insiderCaught: -30,
   ipo_pitchSubmitted: 10,
   ipo_priced: 30,
-  ipo_intentionSubmitted: 3
+  ipo_intentionSubmitted: 3,
+  pe_structureDeal: 15,
+  pe_exitProfit: 60,
+  pe_exitLoss: 0
 };
 
 // Achievement badges — pure function of the same actionCounts already tracked by

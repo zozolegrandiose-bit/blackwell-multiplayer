@@ -100,6 +100,9 @@ function buildSnapshot(gameState, player) {
   if (player.access.includes("privateBanking")) {
     snapshot.privateBanking = gameState.privateBanking;
   }
+  if (player.access.includes("privateEquity")) {
+    snapshot.privateEquity = gameState.privateEquity;
+  }
   if (player.access.includes("hr")) {
     snapshot.candidates = listCandidates();
     snapshot.candidateStats = candidateStats();

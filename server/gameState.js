@@ -443,7 +443,12 @@ function createGameState() {
     privateBanking: { familyOffices: [] },
     algoBots: [],
     algoInfrastructure: { latencyTier: 0, investedTotal: 0 },
-    hostileTakeovers: []
+    hostileTakeovers: [],
+    // Private Equity / LBO desk (Patch 31) -- the bank's own principal-investing
+    // war chest, separate from financeKPIs.equity and markets.cash so its P&L
+    // (potentially large single-deal swings) is trackable on its own, same
+    // self-contained-pool convention as markets.cash/algoInfrastructure.
+    privateEquity: { fundCapital: 4000, deals: [], realizedPnL: 0 }
   };
   state.maDeals.forEach(d => { if (!d.dataRoom) d.dataRoom = seedDataRoom(d.valuation); });
   return state;
