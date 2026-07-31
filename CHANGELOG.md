@@ -1,5 +1,25 @@
 # Journal des mises à jour
 
+## Patch 31 — Private Equity & LBO (3/5, mega-update V2.0 ULTRA) (2026-07-31)
+
+Troisième volet de la mega-update — un desk entièrement nouveau, contrairement aux deux précédents qui étendaient des systèmes existants. Nouvel onglet "Private Equity" (clusters Dealmaking et Board Of Directors).
+
+### Ajouts
+- **Desk d'Investissement Principal (Merchant Banking)** : la banque investit son propre capital (fonds dédié de 4 000 M$, distinct de la trésorerie de marché et du capital réglementaire) dans des rachats à effet de levier (LBO).
+- **Structuration automatique** : 40 % équity / 40 % dette senior / 20 % dette mezzanine sur la valeur d'entreprise saisie, EBITDA dérivé du multiple d'entrée (5x-14x), taux de la dette indexé sur le taux directeur Fed du moment (server/centralBank.js, Patch 22) + spreads senior/mezzanine.
+- **Horizon de détention & Exit** : chaque LBO se résout automatiquement après un horizon compressé de "3 à 5 ans" (4 à 7 minutes réelles) — multiple de sortie tiré aléatoirement, dette partiellement remboursée entretemps, coût de portage déduit : la plus-value (ou moins-value) est réelle et peut être négative, un vrai risque de perte comme demandé.
+- **P&L visible** : portefeuille en cours et historique des exits clôturés, avec plus/moins-value par opération.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- Simplifications documentées, dans le même esprit que le simulateur DCF simplifié du M&A (Patch 2) : le remboursement de dette pendant la détention (30 % du principal) et le coût d'intérêt (taux moyen × durée nominale de 4 ans) sont des hypothèses forfaitaires, pas une simulation tick-par-tick — ce qui compte est que le résultat final à la sortie reste réellement risqué, pas garanti.
+- Testé : 8 assertions unitaires sur `resolveExit`/`blendedRatePct` (Math.random forcé pour un exit favorable et un exit défavorable, confirmant qu'une perte réelle est possible), 6 assertions unitaires sur l'orchestration du balayage d'exit (`sweepPrivateEquityExits` — reconstitution du capital du fonds, mise à jour du résultat net et du classement, score attribué, deals non échus laissés intacts), 9 assertions de régression live (accès à la page, capital initial, refus multiple hors bornes, structuration réussie avec déduction correcte du capital, refus si capital insuffisant), 5 assertions DOM.
+
 ## Patch 30 — Carrière RPG & Confiance Client (2/5, mega-update V2.0 ULTRA) (2026-07-31)
 
 Deuxième volet de la mega-update. Le système de score/badges du Patch 3 existait déjà (4 paliers : Stagiaire/Confirmé/Senior/Légende) — plutôt que de construire un système d'XP séparé, il devient la vraie progression de carrière demandée : 7 rangs allant de Rookie Analyst à Wall Street Legend, avec un vrai enjeu mécanique (accès aux méga-deals).
