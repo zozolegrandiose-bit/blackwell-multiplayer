@@ -1,11 +1,48 @@
 const MARKET_CATEGORY_COLOR = {
   "Actions": "var(--accent-2)",
+  "Indices": "var(--accent-2)",
   "Obligations": "var(--accent)",
   "Matières Premières": "var(--gold)",
   "Devises": "#5ee0e0",
   "Crypto": "#b58cff",
   "Taux": "var(--gold-dim)"
 };
+
+// Carnet d'ordres Niveau 2 (Patch 29) -- purely a display/informational feature
+// (the request asks for a visible order book, not a new execution/order-type
+// system), so it's synthesized client-side from the instrument's own price and
+// volatility rather than adding new server state. Seeded off price+id so the
+// ladder looks stable between renders of the same tick instead of jittering on
+// every keystroke, and only actually changes when a new price tick arrives.
+function seededRandom01(seed) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
+function roundToQuote(n) {
+  return n < 10 ? Math.round(n * 10000) / 10000 : Math.round(n * 100) / 100;
+}
+
+function orderBookHtml(inst) {
+  const spread = Math.max(inst.price * inst.volatility * 0.15, inst.price * 0.0006);
+  const tick = spread / 3;
+  const seedBase = inst.price * 997 + inst.id.length * 31;
+  const rows = [3, 2, 1].map(i => ({
+    askPrice: roundToQuote(inst.price + tick * i),
+    askSize: Math.round(8 + seededRandom01(seedBase + i) * 90),
+    bidPrice: roundToQuote(inst.price - tick * i),
+    bidSize: Math.round(8 + seededRandom01(seedBase - i) * 90)
+  }));
+  return `
+    <div class="order-book">
+      <div class="order-book-row order-book-header"><span>Taille</span><span>Ask</span></div>
+      ${rows.slice().reverse().map(r => `<div class="order-book-row order-book-ask"><span>${r.askSize}</span><span class="tnum">${r.askPrice}</span></div>`).join("")}
+      <div class="order-book-spread">Spread ${roundToQuote(tick * 2)}</div>
+      ${rows.map(r => `<div class="order-book-row order-book-bid"><span>${r.bidSize}</span><span class="tnum">${r.bidPrice}</span></div>`).join("")}
+      <div class="order-book-row order-book-header"><span>Taille</span><span>Bid</span></div>
+    </div>
+  `;
+}
 
 // Desk Structuration/Trading's step of the Analyste → Risk Manager → Desk Trading
 // workflow — deals validated by Risk (server/handlers/dealWorkflow.js) show up
@@ -316,6 +353,7 @@ function renderMarkets() {
             </div>
             <div class="tnum" style="font-size:16px; font-weight:800; margin-bottom:4px;" data-flash-key="mk-price-${inst.id}" data-flash-val="${inst.price}">${inst.price}</div>
             <div class="sparkline-wrap">${sparklineSvg(inst.history, 180, 32)}</div>
+            ${orderBookHtml(inst)}
             <div style="display:flex; gap:6px; margin-top:8px;">
               <input data-mk-notional="${inst.id}" type="number" step="1" min="1" placeholder="M$" style="width:70px; padding:5px 7px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;"/>
               <select data-mk-side="${inst.id}" style="padding:5px 4px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-900); font-size:12px;">

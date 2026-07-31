@@ -1,5 +1,24 @@
 # Journal des mises à jour
 
+## Patch 29 — Marchés Macro Multi-Actifs (1/5, mega-update V2.0 ULTRA) (2026-07-31)
+
+Premier volet d'une mega-update en 5 patches (29-33) couvrant les nouveaux systèmes demandés qui n'existaient pas encore (moteur macro multi-actifs, rang/réputation RPG, Private Equity/LBO, God Mode admin, cybersécurité). Plusieurs des 10 piliers demandés étaient déjà couverts en profondeur par des patchs précédents (négociation M&A/War Room, Wealth Management, Bâle/régulateur, délits d'initiés, IA collègues/guerre inter-banques, League Tables) — pas retravaillés ici pour éviter de dupliquer l'existant.
+
+### Ajouts
+- **9 nouveaux instruments nommés** : Indices (S&P 500, NASDAQ, CAC 40, Nikkei 225), Devises (GBP/USD, USD/JPY, en plus de l'EUR/USD existant), Taux (Bund Allemand 10Y, en plus de US 10Y/Euribor), Matières Premières (Or, Gaz Naturel, en plus du Brent) — tradeables exactement comme les instruments existants (`markets:buy`/`markets:sell`).
+- **Moteur de corrélation macro étendu** : une décision de la Fed fait chuter le S&P 500 et le NASDAQ (plus sensible, technologique), renforce le dollar (GBP/USD baisse, USD/JPY monte), fait chuter l'or ; une décision de la BCE fait chuter le CAC 40 et bouge le Bund directement comme les autres taux ; l'EUR/USD réagit aux deux à la fois (une hausse Fed ET BCE de même ampleur s'annulent quasiment).
+- **Carnet d'ordres Niveau 2** sur la page Marchés : profondeur Bid/Ask à 3 niveaux par instrument, affiché sous chaque sparkline.
+
+### Retraits
+- Aucun.
+
+### Correctifs
+- Aucun bug connu corrigé — uniquement des ajouts ce patch.
+
+### Notes techniques
+- Le carnet d'ordres Niveau 2 est une fonctionnalité d'affichage pure, synthétisée côté client à partir du prix et de la volatilité de chaque instrument — aucun nouvel état serveur, aucun changement au mécanisme d'exécution `markets:buy`/`markets:sell`.
+- Testé : moteur de corrélation (10 assertions unitaires avec Math.random forcé pour un scénario de hausse Fed+BCE simultanée), rendu du carnet d'ordres (6 assertions DOM), régression live (17 instruments présents dans le snapshot et le ticker global, achat/vente fonctionnel sur un nouvel instrument, position persistée).
+
 ## Patch 28 — Recrutement DRH & Sièges Assignés (4/4) (2026-07-31)
 
 Dernier volet de la restructuration entamée aux Patchs 25-27. Jusqu'ici, un compte approuvé se retrouvait quand même face à l'ancien écran de création de personnage (prénom/nom/grade/département libres, à choisir soi-même). Ce patch termine le raccordement : le poste vient désormais du compte (assigné par le Super-Admin ou par la DRH), et le joueur retrouve le même personnage à chaque connexion au lieu d'en recréer un.

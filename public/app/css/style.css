@@ -337,6 +337,14 @@ input:focus, select:focus, textarea:focus {
 .sparkline-wrap { display: flex; align-items: center; gap: 10px; }
 .tnum { font-variant-numeric: tabular-nums; }
 
+/* ---------- Carnet d'ordres Niveau 2 (Patch 29) ---------- */
+.order-book { margin: 8px 0; font-size: 11px; }
+.order-book-row { display: flex; justify-content: space-between; padding: 1px 4px; }
+.order-book-header { color: var(--text-muted); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.03em; }
+.order-book-ask { background: rgba(239, 68, 68, 0.08); color: var(--series-red); }
+.order-book-bid { background: rgba(34, 197, 94, 0.08); color: var(--series-green); }
+.order-book-spread { text-align: center; font-size: 9.5px; color: var(--text-muted); padding: 2px 0; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); margin: 1px 0; }
+
 /* ---------- Alert banners ---------- */
 .bankruptcy-banner, .victory-banner, .event-banner {
   display: flex;
