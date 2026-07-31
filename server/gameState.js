@@ -37,7 +37,19 @@ const MARKET_INSTRUMENTS_SEED = [
   // other instrument via markets:buy so the Central Bank & Monetary Policy
   // module (server/centralBank.js) can move them with real, arbitrage-able P&L.
   { id: "rate-us10y", name: "US 10Y", category: "Taux", price: 425, volatility: 0.01 },
-  { id: "rate-euribor", name: "Euribor 3M", category: "Taux", price: 350, volatility: 0.01 }
+  { id: "rate-euribor", name: "Euribor 3M", category: "Taux", price: 350, volatility: 0.01 },
+  // Multi-Asset Macro (Patch 29) -- named, region-specific instruments beyond the
+  // single generic bucket per category above. Real-world price scales are fine:
+  // every P&L calc is notional * (price/entryPrice - 1), so it's scale-invariant.
+  { id: "idx-sp500", name: "S&P 500", category: "Indices", price: 5482, volatility: 0.012 },
+  { id: "idx-nasdaq", name: "NASDAQ", category: "Indices", price: 17890, volatility: 0.016 },
+  { id: "idx-cac40", name: "CAC 40", category: "Indices", price: 7920, volatility: 0.011 },
+  { id: "idx-nikkei", name: "Nikkei 225", category: "Indices", price: 39215, volatility: 0.014 },
+  { id: "fx-gbpusd", name: "GBP/USD", category: "Devises", price: 1.27, volatility: 0.006 },
+  { id: "fx-usdjpy", name: "USD/JPY", category: "Devises", price: 156.4, volatility: 0.007 },
+  { id: "rate-bund", name: "Bund Allemand 10Y", category: "Taux", price: 245, volatility: 0.008 },
+  { id: "cmd-gold", name: "Or", category: "Matières Premières", price: 2385, volatility: 0.012 },
+  { id: "cmd-natgas", name: "Gaz Naturel", category: "Matières Premières", price: 2.85, volatility: 0.03 }
 ];
 
 function seedInstrumentHistory(currentPrice, volatility) {

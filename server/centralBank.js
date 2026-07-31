@@ -67,6 +67,30 @@ function runMonetaryPolicyDecision(gameState) {
   applyRippleMove(findInstrument(gameState, "eq-industrial"), direction * 0.008 * (Math.abs(combinedMove) / 25 || 0));
   applyRippleMove(findInstrument(gameState, "crypto"), direction * 0.02 * (Math.abs(combinedMove) / 25 || 0));
 
+  // Multi-Asset Macro Correlation Engine (Patch 29) -- Fed and ECB moves ripple
+  // independently through their own currency/equity block (a Fed-only hike
+  // shouldn't move the CAC 40), plus cross-currency and safe-haven effects a
+  // single combined "risk-off" direction can't express: USD strengthens on a
+  // Fed hike (EUR/USD and GBP/USD fall, USD/JPY rises), gold falls with it
+  // (higher real rates raise the opportunity cost of a non-yielding asset),
+  // and the Bund tracks the ECB rate directly the same way US 10Y/Euribor do.
+  const fedSign = fedMove > 0 ? 1 : fedMove < 0 ? -1 : 0;
+  const ecbSign = ecbMove > 0 ? 1 : ecbMove < 0 ? -1 : 0;
+  const fedScale = Math.abs(fedMove) / 25 || 0;
+  const ecbScale = Math.abs(ecbMove) / 25 || 0;
+
+  const bund = findInstrument(gameState, "rate-bund");
+  if (bund) { bund.price = Math.max(1, round2(bund.price + ecbMove)); bund.history.push(bund.price); }
+
+  applyRippleMove(findInstrument(gameState, "idx-sp500"), -fedSign * 0.012 * fedScale);
+  applyRippleMove(findInstrument(gameState, "idx-nasdaq"), -fedSign * 0.016 * fedScale);
+  applyRippleMove(findInstrument(gameState, "idx-cac40"), -ecbSign * 0.01 * ecbScale);
+  applyRippleMove(findInstrument(gameState, "idx-nikkei"), direction * 0.005 * (Math.abs(combinedMove) / 25 || 0));
+  applyRippleMove(findInstrument(gameState, "cmd-gold"), -fedSign * 0.006 * fedScale);
+  applyRippleMove(findInstrument(gameState, "fx-gbpusd"), -fedSign * 0.0025 * fedScale);
+  applyRippleMove(findInstrument(gameState, "fx-usdjpy"), fedSign * 0.003 * fedScale);
+  applyRippleMove(findInstrument(gameState, "fx-eurusd"), (-fedSign * 0.003 * fedScale) + (ecbSign * 0.003 * ecbScale));
+
   const entry = {
     ts: cb.lastDecisionAt, fedMove, ecbMove,
     fedRateBps: cb.fedRateBps, ecbRateBps: cb.ecbRateBps,
